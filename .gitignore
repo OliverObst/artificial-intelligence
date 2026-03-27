@@ -1,0 +1,61 @@
+# OS and editor clutter
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python build and packaging artefacts
+build/
+dist/
+site/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Python caches and test artefacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local runtime files
+*.log
+*.out
+*.pid
+
+# Jupyter
+.ipynb_checkpoints/
+
+# JavaScript and frontend dependencies
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.parcel-cache/
+
+# JavaScript and frontend build artefacts
+coverage/
+*.tsbuildinfo
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+vite.svg
+

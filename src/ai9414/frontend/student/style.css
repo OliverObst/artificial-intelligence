@@ -1,0 +1,236 @@
+:root {
+  color-scheme: light;
+  --bg: #f4efe4;
+  --panel: rgba(255, 252, 247, 0.92);
+  --ink: #1d242b;
+  --muted: #5d695f;
+  --line: #d6c8aa;
+  --accent: #0e7c66;
+  --accent-strong: #075847;
+  --warm: #d97706;
+  --shadow: 0 24px 60px rgba(30, 37, 31, 0.12);
+  --radius: 22px;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(217, 119, 6, 0.18), transparent 35%),
+    radial-gradient(circle at top right, rgba(14, 124, 102, 0.18), transparent 30%),
+    linear-gradient(180deg, #fbf8f1 0%, var(--bg) 100%);
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+.page-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+.header,
+.layout {
+  display: grid;
+  gap: 20px;
+}
+
+.header {
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  margin-bottom: 20px;
+}
+
+.layout {
+  grid-template-columns: 1.35fr 0.95fr;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid rgba(214, 200, 170, 0.8);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  backdrop-filter: blur(18px);
+}
+
+.visual-panel {
+  min-height: 420px;
+}
+
+.controls-panel {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.explanation-panel {
+  grid-column: 1 / -1;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--warm);
+}
+
+h1,
+h2,
+h3,
+p,
+pre {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 8px;
+  font-size: clamp(2.1rem, 4vw, 3.5rem);
+  line-height: 0.95;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.1rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.badge-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.badge,
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badge-outline {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.counter-card {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  margin: 24px 0;
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, rgba(14, 124, 102, 0.95), rgba(7, 88, 71, 0.95)),
+    linear-gradient(180deg, #0f172a, #1f2937);
+  color: white;
+}
+
+.counter-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.76rem;
+  opacity: 0.8;
+}
+
+.counter-value {
+  font-size: clamp(4rem, 13vw, 7.5rem);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.history-block pre {
+  min-height: 96px;
+  padding: 16px;
+  border-radius: 16px;
+  overflow: auto;
+  background: #f8f4eb;
+  border: 1px solid var(--line);
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+button {
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: var(--accent);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease;
+}
+
+button:hover {
+  background: var(--accent-strong);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  background: #9aa8a0;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.control-block {
+  display: grid;
+  gap: 8px;
+}
+
+select,
+input[type="range"] {
+  width: 100%;
+}
+
+select {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: white;
+}
+
+@media (max-width: 900px) {
+  .header,
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .controls-grid {
+    grid-template-columns: 1fr;
+  }
+}

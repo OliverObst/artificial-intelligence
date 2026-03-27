@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ai9414 Solution Replay</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="solution-shell">
+      <header>
+        <p class="eyebrow">ai9414 solution mode</p>
+        <h1 id="solution-title">Solution Replay</h1>
+        <p id="solution-subtitle">Static replay with no live backend.</p>
+      </header>
+
+      <section class="panel">
+        <div class="controls">
+          <button id="previous-button" type="button">Previous</button>
+          <button id="next-button" type="button">Next</button>
+          <button id="play-button" type="button">Play</button>
+          <button id="reset-button" type="button">Reset</button>
+        </div>
+        <div class="step-panel">
+          <div class="stat">
+            <span>Step</span>
+            <strong id="step-readout">0 / 0</strong>
+          </div>
+          <div class="stat">
+            <span>Label</span>
+            <strong id="step-label">Initial state</strong>
+          </div>
+        </div>
+        <p id="step-annotation">Loading exported trace...</p>
+      </section>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
+

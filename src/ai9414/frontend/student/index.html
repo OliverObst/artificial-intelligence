@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ai9414</title>
+    <link rel="stylesheet" href="/assets/style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="header">
+        <div>
+          <p class="eyebrow">ai9414 platform</p>
+          <h1 id="app-title">Loading...</h1>
+          <p id="app-subtitle" class="muted"></p>
+        </div>
+        <div class="badge-row">
+          <span id="mode-badge" class="badge">student</span>
+          <span id="execution-badge" class="badge badge-outline">precomputed</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel visual-panel">
+          <div class="panel-header">
+            <h2>Main Visual Area</h2>
+            <p class="muted">Placeholder visual state for the infrastructure milestone.</p>
+          </div>
+          <div class="counter-card">
+            <div class="counter-label">Current value</div>
+            <div id="counter-value" class="counter-value">0</div>
+            <div id="status-value" class="status-chip">ready</div>
+          </div>
+          <div class="history-block">
+            <h3>History</h3>
+            <pre id="history-view">[]</pre>
+          </div>
+        </section>
+
+        <aside class="panel controls-panel">
+          <div class="panel-header">
+            <h2>Controls</h2>
+          </div>
+
+          <div class="controls-grid">
+            <button id="previous-button" type="button">Previous</button>
+            <button id="next-button" type="button">Next</button>
+            <button id="reset-button" type="button">Reset</button>
+            <button id="play-button" type="button">Play</button>
+          </div>
+
+          <label class="control-block" for="example-select">
+            <span>Example</span>
+            <select id="example-select"></select>
+          </label>
+
+          <label class="control-block" for="pace-select">
+            <span>Pace</span>
+            <select id="pace-select">
+              <option value="slow">slow</option>
+              <option value="normal">normal</option>
+              <option value="fast">fast</option>
+            </select>
+          </label>
+
+          <div class="control-block">
+            <span>Current step</span>
+            <input id="step-range" type="range" min="0" max="0" value="0" />
+            <div id="step-readout" class="muted">0</div>
+          </div>
+        </aside>
+
+        <section class="panel explanation-panel">
+          <div class="panel-header">
+            <h2>Explanation</h2>
+          </div>
+          <h3 id="step-label">Initial state</h3>
+          <p id="step-annotation">Loading trace data...</p>
+          <p id="step-note" class="muted"></p>
+        </section>
+      </main>
+    </div>
+
+    <script src="/assets/app.js" defer></script>
+  </body>
+</html>
+

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai9414"
+version = "0.1.0"
+description = "Phase 1 infrastructure for the ai9414 educational AI platform."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "UNSW AI9414 platform team" }
+]
+dependencies = [
+  "fastapi>=0.116,<1.0",
+  "pydantic>=2.11,<3.0",
+  "uvicorn>=0.35,<1.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1.0",
+  "pytest>=8.4,<9.0"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai9414"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/ai9414/frontend/student" = "ai9414/frontend/student"
+"src/ai9414/frontend/solution" = "ai9414/frontend/solution"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/examples",
+  "/docs",
+  "/README.md",
+  "/pyproject.toml"
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
