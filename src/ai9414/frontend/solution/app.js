@@ -16,8 +16,10 @@ const appType = () => state.trace?.app_type;
 const isLabyrinth = () => appType() === "labyrinth";
 const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
+const isGraphUcs = () => appType() === "graph_ucs";
 const isGraphReachability = () => isGraphDfs() || isGraphBfs();
 const isWeightedSearch = () => appType() === "search";
+const isWeightedGraphSearch = () => isWeightedSearch() || isGraphUcs();
 
 function deepMerge(base, patch) {
   Object.entries(patch || {}).forEach(([key, value]) => {
@@ -131,6 +133,15 @@ function renderPanelCopy() {
     $("search-legend").classList.add("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.remove("hidden");
+  } else if (isGraphUcs()) {
+    $("left-panel-title").textContent = "Search Tree";
+    $("left-panel-subtitle").textContent = "Static replay of the UCS tree built while exploring the weighted graph.";
+    $("right-panel-title").textContent = "Weighted Spatial Graph";
+    $("right-panel-subtitle").textContent = "Static replay of the cheapest frontier route and final optimal path.";
+    $("search-toggle-grid").classList.remove("hidden");
+    $("search-legend").classList.remove("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
   } else {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the precomputed search tree.";
@@ -164,6 +175,17 @@ function renderMetrics(data) {
     $("metric-3-value").textContent = data.search?.status || "searching";
     $("metric-4-label").textContent = "Seed";
     $("metric-4-value").textContent = String(data.graph?.seed ?? "none");
+    return;
+  }
+  if (isGraphUcs()) {
+    $("metric-1-label").textContent = "Current path cost";
+    $("metric-1-value").textContent = formatNumber(data.search?.current_cost);
+    $("metric-2-label").textContent = "Best cost";
+    $("metric-2-value").textContent = formatNumber(data.search?.best_cost);
+    $("metric-3-label").textContent = "Expanded nodes";
+    $("metric-3-value").textContent = String(data.stats?.expanded || 0);
+    $("metric-4-label").textContent = "Relaxations";
+    $("metric-4-value").textContent = String(data.stats?.relaxed || 0);
     return;
   }
   $("metric-1-label").textContent = "Current path cost";
@@ -229,7 +251,7 @@ function renderTree(data) {
         label
       )
     );
-    if (isWeightedSearch()) {
+    if (isWeightedGraphSearch()) {
       group.appendChild(svgNode("text", { class: "tree-node-cost", y: 24 }, formatNumber(node.path_cost)));
     }
     circles.appendChild(group);
