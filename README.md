@@ -16,7 +16,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - `spatial graph BFS search`
   Start with `python examples/graph_bfs_demo.py`
 - `spatial graph branch-and-bound search`
-  Start with `python examples/search_demo.py`
+  Start with `python examples/graph_branch_and_bound_demo.py`
 
 ## What is included
 
@@ -37,7 +37,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
 pytest
-python examples/search_demo.py
+python examples/graph_branch_and_bound_demo.py
 ```
 
 To start the labyrinth example:
@@ -61,7 +61,7 @@ python examples/graph_bfs_demo.py
 To start the spatial graph branch-and-bound example:
 
 ```bash
-python examples/search_demo.py
+python examples/graph_branch_and_bound_demo.py
 ```
 
 The same install is enough for the labyrinth live-Python stub as well. The
