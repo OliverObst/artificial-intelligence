@@ -1059,6 +1059,189 @@ It receives a weighted graph as a Python dictionary and must return a dictionary
 - visited_order
 `;
 
+const GRAPH_ASTAR_PYTHON_STUB = `from __future__ import annotations
+
+import heapq
+import math
+from typing import Any
+
+from ai9414.search import run_graph_astar_solver
+
+
+def normalise_node_id(raw: Any) -> str:
+    """
+    Convert one node id into a Python string.
+    """
+    return str(raw)
+
+
+def build_adjacency(graph: dict[str, Any]) -> dict[str, list[tuple[str, float]]]:
+    """
+    Build an adjacency list from the weighted graph dictionary.
+    """
+    adjacency = {str(node["id"]): [] for node in graph["nodes"]}
+    for edge in graph["edges"]:
+        left = str(edge["u"])
+        right = str(edge["v"])
+        cost = float(edge["cost"])
+        adjacency[left].append((right, cost))
+        adjacency[right].append((left, cost))
+    for node_id in adjacency:
+        adjacency[node_id].sort(key=lambda item: (item[1], item[0]))
+    return adjacency
+
+
+def heuristic_to_goal(graph: dict[str, Any], node_id: str) -> float:
+    """
+    Return the straight-line distance from node_id to the goal node.
+    """
+    positions = {str(node["id"]): (float(node["x"]), float(node["y"])) for node in graph["nodes"]}
+    goal = normalise_node_id(graph["goal"])
+    return math.dist(positions[node_id], positions[goal])
+
+
+def get_neighbours(adjacency: dict[str, list[tuple[str, float]]], node_id: str) -> list[tuple[str, float]]:
+    """
+    Return neighbouring nodes in deterministic order.
+    """
+    return list(adjacency[node_id])
+
+
+def make_trace_event(
+    step: int,
+    action: str,
+    node_id: str | None,
+    parent: str | None,
+    depth: int,
+    path_cost: float,
+    current_path: list[str],
+    current_cost: float,
+    heuristic: float,
+    priority: float,
+    best_cost: float | None,
+    considered_edge: list[str] | None = None,
+) -> dict[str, Any]:
+    """
+    Build one trace event for the replay.
+    """
+    return {
+        "step": step,
+        "action": action,
+        "node": node_id,
+        "parent": parent,
+        "depth": depth,
+        "path_cost": float(path_cost),
+        "current_path": list(current_path),
+        "current_cost": float(current_cost),
+        "heuristic": float(heuristic),
+        "priority": float(priority),
+        "best_cost": None if best_cost is None else float(best_cost),
+        "considered_edge": None if considered_edge is None else list(considered_edge),
+    }
+
+
+def solve_astar(graph: dict[str, Any]) -> dict[str, Any]:
+    """
+    Solve the weighted graph with A* search.
+
+    This is the main function you are expected to implement.
+    You should replace the TODO section below with a complete A* solver.
+
+    Student responsibilities:
+        - build or use an adjacency structure
+        - compute the heuristic distance from each node to the goal
+        - keep the best known path cost g(n) to each node
+        - order the priority queue by f(n) = g(n) + h(n)
+        - record visited_order
+        - return the final optimal path and best cost
+        - build the trace list
+
+    Important:
+        The heuristic here is straight-line distance to the goal.
+        Because the edge costs are also geometric distances, this heuristic is admissible.
+    """
+    start = normalise_node_id(graph["start"])
+    goal = normalise_node_id(graph["goal"])
+    adjacency = build_adjacency(graph)
+    _ = (goal, adjacency, heapq)
+
+    # TODO:
+    # Replace the placeholder result below with a full A* implementation.
+    start_h = heuristic_to_goal(graph, start)
+    trace = [
+        make_trace_event(
+            0,
+            "start",
+            start,
+            None,
+            0,
+            0.0,
+            [start],
+            0.0,
+            start_h,
+            start_h,
+            None,
+        )
+    ]
+    return {
+        "algorithm": "astar",
+        "status": "error",
+        "message": "Replace the placeholder code inside solve_astar with your full A* implementation.",
+        "trace": trace,
+        "path": [],
+        "best_cost": None,
+        "visited_order": [start],
+    }
+
+
+if __name__ == "__main__":
+    run_graph_astar_solver(solve_astar)
+`;
+
+const GRAPH_ASTAR_PYTHON_REQUIREMENTS = `ai9414
+`;
+
+const GRAPH_ASTAR_PYTHON_README = `# graph a-star solver
+
+This folder runs a tiny local solver for the spatial weighted graph search example.
+The web-app connection is handled for you by ai9414.
+Your job is to implement the A* search logic.
+
+## install
+
+Install the dependency with:
+
+    pip install -r requirements.txt
+
+## run
+
+Start the local solver with:
+
+    python solve_graph.py
+
+The solver starts on the local port expected by the browser app.
+
+## what to implement
+
+Open solve_graph.py and look at:
+
+- build_adjacency(...)
+- heuristic_to_goal(...)
+- get_neighbours(...)
+- make_trace_event(...)
+- solve_astar(...)
+
+The main function is solve_astar(...).
+It receives a weighted graph as a Python dictionary and must return a dictionary containing:
+
+- algorithm
+- status
+- trace
+- path
+- best_cost
+- visited_order
+`;
+
 const WEIGHTED_GRAPH_PYTHON_STUB = `from __future__ import annotations
 
 from typing import Any
@@ -1284,11 +1467,12 @@ const appType = () => state.manifest?.app_type;
 const isLabyrinth = () => appType() === "labyrinth";
 const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
+const isGraphAStar = () => appType() === "graph_astar";
 const isGraphGbfs = () => appType() === "graph_gbfs";
 const isGraphUcs = () => appType() === "graph_ucs";
 const isGraphReachability = () => isGraphDfs() || isGraphBfs();
 const isWeightedSearch = () => appType() === "search";
-const isWeightedGraphSearch = () => isWeightedSearch() || isGraphUcs() || isGraphGbfs();
+const isWeightedGraphSearch = () => isWeightedSearch() || isGraphUcs() || isGraphGbfs() || isGraphAStar();
 const isLivePythonApp = () => Boolean(state.session?.data?.live_python);
 
 const CRC32_TABLE = (() => {
@@ -1757,6 +1941,67 @@ function blankGraphGbfsTrace(graph) {
         found: false,
       },
       stats: { expanded: 0, enqueued: 1 },
+    },
+    steps: [],
+    summary: { step_count: 0, result: "ready" },
+  };
+}
+
+function blankGraphAStarTrace(graph) {
+  const start = graph.start;
+  const goalNode = graph.nodes.find((node) => node.id === graph.goal);
+  const startNode = graph.nodes.find((node) => node.id === start);
+  const startHeuristic =
+    goalNode && startNode ? Math.hypot(startNode.x - goalNode.x, startNode.y - goalNode.y) : 0;
+  return {
+    app_type: "graph_astar",
+    initial_state: {
+      example_title: state.session?.data?.example_title || "Generated weighted graph",
+      example_subtitle:
+        state.session?.data?.example_subtitle ||
+        "Generate a weighted graph, then solve it in live Python mode.",
+      algorithm_label: "A* search",
+      algorithm_note:
+        "This view is ready for A* search. Solve the current weighted graph with Python to populate the trace.",
+      goal_label: "Find the optimal path from start to goal",
+      graph,
+      tree: {
+        nodes: [
+          {
+            tree_id: "t0",
+            graph_node: start,
+            parent: null,
+            depth: 0,
+            path_cost: 0,
+            status: "active",
+            order: 0,
+            x: 0.5,
+            y: 0.12,
+            terminal: false,
+          },
+        ],
+      },
+      search: {
+        active_tree_node: "t0",
+        active_tree_path: ["t0"],
+        best_tree_path: [],
+        final_tree_path: [],
+        current_graph_path: [start],
+        best_graph_path: [],
+        final_graph_path: [],
+        visited_order: [start],
+        explored_graph_edges: [],
+        considered_edge: null,
+        current_cost: 0,
+        current_heuristic: startHeuristic,
+        current_priority: startHeuristic,
+        best_cost: null,
+        explored_count: 1,
+        current_depth: 0,
+        status: "searching",
+        found: false,
+      },
+      stats: { expanded: 0, relaxed: 1 },
     },
     steps: [],
     summary: { step_count: 0, result: "ready" },
@@ -2974,6 +3219,244 @@ function buildGraphGbfsTraceFromBackend(graph, result) {
   };
 }
 
+function buildGraphAStarTraceFromBackend(graph, result) {
+  if (
+    !Array.isArray(result.trace) ||
+    !Array.isArray(result.path) ||
+    !Array.isArray(result.visited_order)
+  ) {
+    throw new Error("Solver returned invalid data.");
+  }
+
+  const rawSnapshots = [];
+  const treeNodes = new Map();
+  const visibleTreeIds = [];
+  const treeIdByRoute = new Map();
+  const exploredEdgeIds = new Set();
+  const visitedOrder = [graph.start];
+  let currentTreeId = "t0";
+  let currentPath = [graph.start];
+  let activeTreePath = ["t0"];
+  let bestPath = [];
+  let finalPath = [];
+  let bestTreePath = [];
+  let finalTreePath = [];
+  let currentCost = 0;
+  let currentHeuristic = 0;
+  let currentPriority = 0;
+  let bestCost = null;
+  let consideredEdge = null;
+  let searchStatus = "searching";
+  const stats = { expanded: 0, relaxed: 1 };
+
+  const root = {
+    tree_id: "t0",
+    graph_node: graph.start,
+    parent: null,
+    depth: 0,
+    path_cost: 0,
+    status: "active",
+    order: 0,
+    x: 0.5,
+    y: 0.12,
+    terminal: false,
+  };
+  treeNodes.set("t0", root);
+  visibleTreeIds.push("t0");
+  treeIdByRoute.set(routeKey([graph.start]), "t0");
+
+  function ensureTreePath(route, terminal = false, pathCost = null) {
+    const ids = [];
+    route.forEach((nodeId, index) => {
+      const prefix = route.slice(0, index + 1);
+      const key = routeKey(prefix);
+      let treeId = treeIdByRoute.get(key);
+      if (!treeId) {
+        const parentRoute = prefix.slice(0, -1);
+        const parentId = treeIdByRoute.get(routeKey(parentRoute)) || null;
+        const parentCost =
+          parentId && treeNodes.get(parentId) ? Number(treeNodes.get(parentId).path_cost || 0) : 0;
+        const nodeCost = index === route.length - 1 && pathCost !== null ? pathCost : parentCost;
+        treeId = `t${visibleTreeIds.length}`;
+        treeNodes.set(treeId, {
+          tree_id: treeId,
+          graph_node: nodeId,
+          parent: parentId,
+          depth: index,
+          path_cost: nodeCost,
+          status: "queued",
+          order: visibleTreeIds.length,
+          terminal: terminal && index === route.length - 1,
+        });
+        visibleTreeIds.push(treeId);
+        treeIdByRoute.set(key, treeId);
+      } else if (index === route.length - 1 && pathCost !== null && treeNodes.get(treeId)) {
+        treeNodes.get(treeId).path_cost = pathCost;
+        treeNodes.get(treeId).terminal = terminal;
+      }
+      ids.push(treeId);
+    });
+    return ids;
+  }
+
+  function snapshot() {
+    return {
+      tree: {
+        nodes: visibleTreeIds.map((treeId) => clone(treeNodes.get(treeId))),
+      },
+      search: {
+        active_tree_node: currentTreeId,
+        active_tree_path: clone(activeTreePath),
+        best_tree_path: clone(bestTreePath),
+        final_tree_path: clone(finalTreePath),
+        current_graph_path: clone(currentPath),
+        best_graph_path: clone(bestPath),
+        final_graph_path: clone(finalPath),
+        visited_order: clone(visitedOrder),
+        explored_graph_edges: Array.from(exploredEdgeIds).map((id) => id.split("--")),
+        considered_edge: consideredEdge ? clone(consideredEdge) : null,
+        current_cost: currentCost,
+        current_heuristic: currentHeuristic,
+        current_priority: currentPriority,
+        best_cost: bestCost,
+        explored_count: visitedOrder.length,
+        current_depth: Math.max(currentPath.length - 1, 0),
+        status: searchStatus,
+        found: finalPath.length > 0,
+      },
+      stats: clone(stats),
+    };
+  }
+
+  result.trace.forEach((step) => {
+    const action = step.action;
+    const nodeId = typeof step.node === "string" ? step.node : null;
+    const parent = typeof step.parent === "string" ? step.parent : null;
+    currentPath = Array.isArray(step.current_path) && step.current_path.length ? clone(step.current_path) : [];
+    currentCost = Number(step.current_cost || 0);
+    currentHeuristic = Number(step.heuristic || 0);
+    currentPriority = Number(step.priority || 0);
+    bestCost = step.best_cost === null || step.best_cost === undefined ? null : Number(step.best_cost);
+    consideredEdge = Array.isArray(step.considered_edge) ? clone(step.considered_edge) : null;
+
+    if (action === "start") {
+      currentPath = currentPath.length ? currentPath : [graph.start];
+      activeTreePath = ensureTreePath(currentPath, false, 0);
+      currentTreeId = activeTreePath[activeTreePath.length - 1] || "t0";
+      searchStatus = "searching";
+    } else if (action === "expand") {
+      stats.expanded += 1;
+      activeTreePath = ensureTreePath(currentPath, nodeId === graph.goal, Number(step.path_cost || currentCost));
+      currentTreeId = activeTreePath[activeTreePath.length - 1] || currentTreeId;
+      if (treeNodes.get(currentTreeId)) {
+        treeNodes.get(currentTreeId).status = "active";
+      }
+      searchStatus = "searching";
+    } else if (action === "consider_edge") {
+      activeTreePath = ensureTreePath(currentPath, false, Number(step.path_cost || currentCost));
+      currentTreeId = activeTreePath[activeTreePath.length - 1] || currentTreeId;
+      if (consideredEdge) {
+        exploredEdgeIds.add(edgeId(consideredEdge[0], consideredEdge[1]));
+      }
+      searchStatus = "considering";
+    } else if (action === "relax") {
+      stats.relaxed += 1;
+      activeTreePath = ensureTreePath(currentPath, nodeId === graph.goal, Number(step.path_cost || currentCost));
+      currentTreeId = activeTreePath[activeTreePath.length - 1] || currentTreeId;
+      if (parent && nodeId) {
+        exploredEdgeIds.add(edgeId(parent, nodeId));
+      }
+      if (nodeId && !visitedOrder.includes(nodeId)) {
+        visitedOrder.push(nodeId);
+      }
+      if (treeNodes.get(currentTreeId)) {
+        treeNodes.get(currentTreeId).status = "queued";
+      }
+      searchStatus = "searching";
+    } else if (action === "found") {
+      finalPath = clone(result.path || currentPath);
+      bestPath = clone(finalPath);
+      activeTreePath = ensureTreePath(finalPath, true, Number(result.best_cost || currentCost));
+      currentTreeId = activeTreePath[activeTreePath.length - 1] || currentTreeId;
+      bestTreePath = clone(activeTreePath);
+      finalTreePath = clone(activeTreePath);
+      finalTreePath.forEach((treeId) => {
+        if (treeNodes.get(treeId)) {
+          treeNodes.get(treeId).status = "final";
+        }
+      });
+      searchStatus = "goal found";
+    } else if (action === "fail") {
+      currentPath = [];
+      activeTreePath = [];
+      currentTreeId = null;
+      consideredEdge = null;
+      searchStatus = "no path";
+    }
+
+    rawSnapshots.push({
+      event_type: action,
+      label:
+        action === "start"
+          ? "Start A*"
+          : action === "expand"
+            ? `Expand ${nodeId}`
+            : action === "consider_edge"
+              ? `Consider ${consideredEdge ? `${consideredEdge[0]} -> ${consideredEdge[1]}` : "edge"}`
+              : action === "relax"
+                ? `Relax ${nodeId}`
+                : action === "found"
+                  ? "Goal found"
+                  : "No path found",
+      annotation:
+        action === "start"
+          ? "The weighted graph is ready. A* starts at the start node."
+          : action === "expand"
+            ? `A* expands ${nodeId} because it has the lowest f-score on the frontier.`
+            : action === "consider_edge"
+              ? "A* checks whether this edge improves the best known path cost to its neighbour."
+              : action === "relax"
+                ? `The route to ${nodeId} improves, so A* updates its frontier priority using g + h.`
+                : action === "found"
+                  ? "A* has removed the goal from the frontier, so the highlighted path is optimal."
+                  : "A* has exhausted the frontier without reaching the goal.",
+      teaching_note:
+        action === "found"
+          ? "With this straight-line heuristic, A* still guarantees an optimal path."
+          : "A* balances path cost so far with the geometric heuristic distance to the goal.",
+      snapshot: snapshot(),
+    });
+  });
+
+  const laidOutNodes = layoutTreeNodes(visibleTreeIds.map((treeId) => treeNodes.get(treeId)));
+  const layoutById = new Map(laidOutNodes.map((node) => [node.tree_id, node]));
+
+  const initialState = blankGraphAStarTrace(graph).initial_state;
+  initialState.example_title = "Live Python weighted graph";
+  initialState.example_subtitle = "Trace returned by your local Python A* backend.";
+  initialState.tree.nodes = initialState.tree.nodes.map((node) => layoutById.get(node.tree_id) || node);
+
+  const steps = rawSnapshots.map((entry, index) => {
+    const snapshot = clone(entry.snapshot);
+    snapshot.tree.nodes = snapshot.tree.nodes.map((node) => layoutById.get(node.tree_id) || node);
+    return {
+      index,
+      event_type: entry.event_type,
+      label: entry.label,
+      annotation: entry.annotation,
+      teaching_note: entry.teaching_note,
+      state_patch: snapshot,
+    };
+  });
+
+  return {
+    app_type: "graph_astar",
+    initial_state: initialState,
+    steps,
+    summary: { step_count: steps.length, result: result.status || "found" },
+  };
+}
+
 function buildSearchTraceFromBackend(graph, result) {
   if (
     !Array.isArray(result.trace) ||
@@ -3245,6 +3728,8 @@ function activeTraceContext() {
     ? blankLabyrinthTrace(state.session.data.labyrinth)
     : isWeightedSearch()
       ? blankSearchTrace(state.session.data.graph)
+      : isGraphAStar()
+        ? blankGraphAStarTrace(state.session.data.graph)
       : isGraphGbfs()
         ? blankGraphGbfsTrace(state.session.data.graph)
       : isGraphUcs()
@@ -3313,6 +3798,11 @@ function renderPanelCopy(data) {
     $("left-panel-subtitle").textContent = "The tree grows in DFS order and keeps backtracked branches visible.";
     $("right-panel-title").textContent = "Labyrinth";
     $("right-panel-subtitle").textContent = "The maze view shows the current route, dead ends, and the final discovered path.";
+  } else if (isGraphAStar()) {
+    $("left-panel-title").textContent = "Search Tree";
+    $("left-panel-subtitle").textContent = "Search states appear here as A* balances the path cost so far with the straight-line heuristic to the goal.";
+    $("right-panel-title").textContent = "Weighted Spatial Graph";
+    $("right-panel-subtitle").textContent = "The weighted graph stays fixed while the replay highlights the current frontier route and the final optimal path.";
   } else if (isGraphGbfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Search states appear here as greedy best-first search follows the most promising-looking frontier node.";
@@ -3363,6 +3853,18 @@ function renderMetrics(data) {
     $("metric-3-value").textContent = data.search?.status || "searching";
     $("metric-4-label").textContent = "Seed";
     $("metric-4-value").textContent = String(data.graph?.seed ?? "none");
+    return;
+  }
+
+  if (isGraphAStar()) {
+    $("metric-1-label").textContent = "Current heuristic";
+    $("metric-1-value").textContent = formatNumber(data.search?.current_heuristic);
+    $("metric-2-label").textContent = "Current priority";
+    $("metric-2-value").textContent = formatNumber(data.search?.current_priority);
+    $("metric-3-label").textContent = "Expanded nodes";
+    $("metric-3-value").textContent = String(data.stats?.expanded || 0);
+    $("metric-4-label").textContent = "Best cost";
+    $("metric-4-value").textContent = formatNumber(data.search?.best_cost);
     return;
   }
 
@@ -3850,6 +4352,8 @@ async function solveWithPython() {
     : {
         algorithm: isWeightedSearch()
           ? "dfbb"
+          : isGraphAStar()
+            ? "astar"
           : isGraphGbfs()
             ? "gbfs"
             : isGraphUcs()
@@ -3876,6 +4380,8 @@ async function solveWithPython() {
       ? buildLabyrinthTraceFromBackend(problemData, payload)
       : isWeightedSearch()
         ? buildSearchTraceFromBackend(problemData, payload)
+      : isGraphAStar()
+        ? buildGraphAStarTraceFromBackend(problemData, payload)
       : isGraphGbfs()
         ? buildGraphGbfsTraceFromBackend(problemData, payload)
       : isGraphUcs()
@@ -3910,6 +4416,12 @@ function downloadPythonStub() {
           { name: "ai9414/requirements.txt", content: WEIGHTED_GRAPH_PYTHON_REQUIREMENTS },
           { name: "ai9414/README.md", content: WEIGHTED_GRAPH_PYTHON_README },
         ]
+      : isGraphAStar()
+        ? [
+            { name: "ai9414/solve_graph.py", content: GRAPH_ASTAR_PYTHON_STUB },
+            { name: "ai9414/requirements.txt", content: GRAPH_ASTAR_PYTHON_REQUIREMENTS },
+            { name: "ai9414/README.md", content: GRAPH_ASTAR_PYTHON_README },
+          ]
       : isGraphGbfs()
         ? [
             { name: "ai9414/solve_graph.py", content: GRAPH_GBFS_PYTHON_STUB },
@@ -3945,6 +4457,8 @@ function downloadPythonStub() {
   anchor.href = url;
   anchor.download = isWeightedSearch()
     ? "weighted-graph-python-stub.zip"
+    : isGraphAStar()
+      ? "graph-astar-python-stub.zip"
     : isGraphGbfs()
       ? "graph-gbfs-python-stub.zip"
     : isGraphUcs()
@@ -3961,6 +4475,8 @@ function downloadPythonStub() {
   setMessage(
     isWeightedSearch()
       ? "Downloaded weighted-graph-python-stub.zip."
+      : isGraphAStar()
+        ? "Downloaded graph-astar-python-stub.zip."
       : isGraphGbfs()
         ? "Downloaded graph-gbfs-python-stub.zip."
       : isGraphUcs()

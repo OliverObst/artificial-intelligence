@@ -1,11 +1,12 @@
 # artificial-intelligence
 
-Phase 1 reference implementation of the `ai9414` educational AI platform, now with six concrete search demos:
+Phase 1 reference implementation of the `ai9414` educational AI platform, now with seven concrete search demos:
 
 - labyrinth DFS search
 - spatial graph DFS search
 - spatial graph BFS search
 - spatial graph greedy best-first search
+- spatial graph A* search
 - spatial graph uniform-cost search
 - spatial graph branch-and-bound search
 
@@ -19,6 +20,8 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
   Start with `python examples/graph_bfs_demo.py`
 - `spatial graph greedy best-first search`
   Start with `python examples/graph_gbfs_demo.py`
+- `spatial graph A* search`
+  Start with `python examples/graph_astar_demo.py`
 - `spatial graph uniform-cost search`
   Start with `python examples/graph_ucs_demo.py`
 - `spatial graph branch-and-bound search`
@@ -32,6 +35,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - precomputed trace replay for a generated spatial graph DFS demo
 - precomputed trace replay for a generated spatial graph BFS demo
 - precomputed trace replay for a generated spatial graph greedy best-first demo
+- precomputed trace replay for a generated spatial graph A* demo
 - precomputed trace replay for a generated spatial graph uniform-cost demo
 - precomputed trace replay for a generated spatial graph branch-and-bound demo
 - static solution replay export with no backend dependency
@@ -70,6 +74,12 @@ To start the spatial graph greedy best-first example:
 
 ```bash
 python examples/graph_gbfs_demo.py
+```
+
+To start the spatial graph A* example:
+
+```bash
+python examples/graph_astar_demo.py
 ```
 
 To start the spatial graph uniform-cost example:
@@ -143,6 +153,16 @@ app.load_example("small")
 app.show()
 ```
 
+Spatial graph A* example:
+
+```python
+from ai9414.graph_astar import GraphAStarDemo
+
+app = GraphAStarDemo()
+app.load_example("small")
+app.show()
+```
+
 Spatial graph branch-and-bound example:
 
 ```python
@@ -209,6 +229,21 @@ if __name__ == "__main__":
     run_graph_bfs_solver(solve_bfs)
 ```
 
+Live graph A* solver wrapper:
+
+```python
+from typing import Any
+from ai9414.search import run_graph_astar_solver
+
+
+def solve_astar(graph: dict[str, Any]) -> dict[str, Any]:
+    ...
+
+
+if __name__ == "__main__":
+    run_graph_astar_solver(solve_astar)
+```
+
 Live graph UCS solver wrapper:
 
 ```python
@@ -262,6 +297,7 @@ src/ai9414/
   demo/
   graph_bfs/
   graph_dfs/
+  graph_astar/
   graph_gbfs/
   graph_ucs/
   labyrinth/

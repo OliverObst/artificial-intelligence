@@ -16,11 +16,12 @@ const appType = () => state.trace?.app_type;
 const isLabyrinth = () => appType() === "labyrinth";
 const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
+const isGraphAStar = () => appType() === "graph_astar";
 const isGraphGbfs = () => appType() === "graph_gbfs";
 const isGraphUcs = () => appType() === "graph_ucs";
 const isGraphReachability = () => isGraphDfs() || isGraphBfs();
 const isWeightedSearch = () => appType() === "search";
-const isWeightedGraphSearch = () => isWeightedSearch() || isGraphUcs() || isGraphGbfs();
+const isWeightedGraphSearch = () => isWeightedSearch() || isGraphUcs() || isGraphGbfs() || isGraphAStar();
 
 function deepMerge(base, patch) {
   Object.entries(patch || {}).forEach(([key, value]) => {
@@ -134,6 +135,15 @@ function renderPanelCopy() {
     $("search-legend").classList.add("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.remove("hidden");
+  } else if (isGraphAStar()) {
+    $("left-panel-title").textContent = "Search Tree";
+    $("left-panel-subtitle").textContent = "Static replay of the A* tree built while exploring the weighted graph.";
+    $("right-panel-title").textContent = "Weighted Spatial Graph";
+    $("right-panel-subtitle").textContent = "Static replay of the cost-plus-heuristic frontier route and final optimal path.";
+    $("search-toggle-grid").classList.remove("hidden");
+    $("search-legend").classList.remove("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
   } else if (isGraphGbfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the greedy best-first tree built while exploring the weighted graph.";
@@ -185,6 +195,17 @@ function renderMetrics(data) {
     $("metric-3-value").textContent = data.search?.status || "searching";
     $("metric-4-label").textContent = "Seed";
     $("metric-4-value").textContent = String(data.graph?.seed ?? "none");
+    return;
+  }
+  if (isGraphAStar()) {
+    $("metric-1-label").textContent = "Current heuristic";
+    $("metric-1-value").textContent = formatNumber(data.search?.current_heuristic);
+    $("metric-2-label").textContent = "Current priority";
+    $("metric-2-value").textContent = formatNumber(data.search?.current_priority);
+    $("metric-3-label").textContent = "Expanded nodes";
+    $("metric-3-value").textContent = String(data.stats?.expanded || 0);
+    $("metric-4-label").textContent = "Best cost";
+    $("metric-4-value").textContent = formatNumber(data.search?.best_cost);
     return;
   }
   if (isGraphGbfs()) {
