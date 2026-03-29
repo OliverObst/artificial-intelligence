@@ -1,6 +1,6 @@
 # artificial-intelligence
 
-Phase 1 reference implementation of the `ai9414` educational AI platform, now with seven concrete search demos:
+Phase 1 reference implementation of the `ai9414` educational AI platform, now with eight concrete demos:
 
 - labyrinth DFS search
 - spatial graph DFS search
@@ -9,6 +9,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - spatial graph A* search
 - spatial graph uniform-cost search
 - spatial graph branch-and-bound search
+- propositional logic DPLL
 
 ## Available demos
 
@@ -26,6 +27,8 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
   Start with `python examples/graph_ucs_demo.py`
 - `spatial graph branch-and-bound search`
   Start with `python examples/graph_branch_and_bound_demo.py`
+- `propositional logic DPLL`
+  Start with `python examples/logic_dpll_demo.py`
 
 ## What is included
 
@@ -38,6 +41,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - precomputed trace replay for a generated spatial graph A* demo
 - precomputed trace replay for a generated spatial graph uniform-cost demo
 - precomputed trace replay for a generated spatial graph branch-and-bound demo
+- precomputed trace replay for a visual DPLL propositional logic demo
 - static solution replay export with no backend dependency
 - deterministic labyrinth presets plus seeded graph generation
 - automated tests and developer documentation
@@ -92,6 +96,12 @@ To start the spatial graph branch-and-bound example:
 
 ```bash
 python examples/graph_branch_and_bound_demo.py
+```
+
+To start the DPLL logic example:
+
+```bash
+python examples/logic_dpll_demo.py
 ```
 
 The same install is enough for the labyrinth live-Python stub as well. The
@@ -181,6 +191,43 @@ from ai9414.graph_ucs import GraphUcsDemo
 
 app = GraphUcsDemo()
 app.load_example("small")
+app.show()
+```
+
+Visual DPLL example:
+
+```python
+from ai9414.logic import DpllDemo
+
+app = DpllDemo()
+app.load_example("unit_chain")
+app.show()
+```
+
+Custom CNF with DPLL:
+
+```python
+from ai9414.logic import DpllDemo
+
+app = DpllDemo()
+app.load_cnf([
+    ["A", "B"],
+    ["~A", "C"],
+    ["~B", "C"],
+])
+app.show()
+```
+
+Entailment with DPLL:
+
+```python
+from ai9414.logic import DpllDemo
+
+app = DpllDemo(mode="entailment")
+app.load_kb(
+    formulas=["A -> B", "B -> C", "A"],
+    query="C",
+)
 app.show()
 ```
 
@@ -289,6 +336,21 @@ if __name__ == "__main__":
     run_weighted_graph_solver(solve_dfbb)
 ```
 
+Live DPLL solver wrapper:
+
+```python
+from typing import Any
+from ai9414.logic import run_dpll_solver
+
+
+def solve_dpll(problem: dict[str, Any], options: dict[str, Any]) -> dict[str, Any]:
+    ...
+
+
+if __name__ == "__main__":
+    run_dpll_solver(solve_dpll)
+```
+
 ## Repository structure
 
 ```text
@@ -301,6 +363,7 @@ src/ai9414/
   graph_gbfs/
   graph_ucs/
   labyrinth/
+  logic/
   search/
   frontend/
 examples/

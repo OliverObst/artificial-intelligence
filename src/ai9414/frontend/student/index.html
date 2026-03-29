@@ -40,6 +40,7 @@
             </div>
           </div>
           <svg id="problem-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Problem view"></svg>
+          <div id="logic-problem-panel" class="logic-panel hidden" role="img" aria-label="Clause view"></div>
         </section>
 
         <section class="panel explanation-panel">
@@ -96,6 +97,14 @@
             <select id="example-select"></select>
           </label>
 
+          <label id="logic-mode-control" class="control-block hidden" for="logic-mode-select">
+            <span>Problem mode</span>
+            <select id="logic-mode-select">
+              <option value="sat">sat</option>
+              <option value="entailment">entailment</option>
+            </select>
+          </label>
+
           <label id="mode-control" class="control-block hidden" for="mode-select">
             <span>Mode</span>
             <select id="mode-select">
@@ -129,6 +138,14 @@
             </select>
           </label>
 
+          <label id="logic-order-control" class="control-block hidden" for="logic-order-select">
+            <span>Variable order</span>
+            <select id="logic-order-select">
+              <option value="alphabetical">alphabetical</option>
+              <option value="appearance">first appearance</option>
+            </select>
+          </label>
+
           <div id="search-toggle-grid" class="toggle-grid">
             <label class="toggle-row" for="show-explored">
               <input id="show-explored" type="checkbox" checked />
@@ -137,6 +154,17 @@
             <label class="toggle-row" for="show-pruned">
               <input id="show-pruned" type="checkbox" checked />
               <span>Show pruned branches</span>
+            </label>
+          </div>
+
+          <div id="logic-toggle-grid" class="toggle-grid hidden">
+            <label class="toggle-row" for="logic-unit-propagation">
+              <input id="logic-unit-propagation" type="checkbox" checked />
+              <span>Use unit propagation</span>
+            </label>
+            <label class="toggle-row" for="logic-pure-literals">
+              <input id="logic-pure-literals" type="checkbox" />
+              <span>Use pure literals</span>
             </label>
           </div>
 
@@ -165,6 +193,13 @@
             <div class="legend-item"><span class="legend-swatch legend-explored"></span>Explored edge</div>
             <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Dead end</div>
             <div class="legend-item"><span class="legend-swatch legend-final"></span>Final path</div>
+          </div>
+
+          <div id="logic-legend" class="legend-grid hidden">
+            <div class="legend-item"><span class="legend-swatch legend-current"></span>Active branch</div>
+            <div class="legend-item"><span class="legend-swatch legend-best"></span>Forced assignment</div>
+            <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Contradiction</div>
+            <div class="legend-item"><span class="legend-swatch legend-final"></span>Solution / entailment</div>
           </div>
         </aside>
       </main>

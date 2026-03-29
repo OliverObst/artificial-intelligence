@@ -1450,6 +1450,131 @@ It receives a weighted graph as a Python dictionary and must return a dictionary
 - visited_order
 `;
 
+const DPLL_PYTHON_STUB = `from __future__ import annotations
+
+from typing import Any
+
+from ai9414.logic import run_dpll_solver
+
+
+def make_event(
+    step: int,
+    action: str,
+    *,
+    node_id: str | None,
+    parent_id: str | None,
+    assignment: dict[str, bool],
+    variable: str | None = None,
+    value: bool | None = None,
+    reason: str | None = None,
+    clause_index: int | None = None,
+) -> dict[str, Any]:
+    return {
+        "step": step,
+        "action": action,
+        "node_id": node_id,
+        "parent_id": parent_id,
+        "assignment": dict(assignment),
+        "variable": variable,
+        "value": value,
+        "reason": reason,
+        "clause_index": clause_index,
+    }
+
+
+def solve_dpll(problem: dict[str, Any], options: dict[str, Any]) -> dict[str, Any]:
+    """
+    Implement your own small DPLL solver here.
+
+    Inputs:
+        problem["clauses"] is a CNF clause list such as:
+            [["A", "B"], ["~A", "C"], ["~B", "C"]]
+        options contains the current UI settings such as:
+            - unit_propagation
+            - pure_literals
+            - variable_order
+
+    Required return shape:
+        {
+            "algorithm": "dpll",
+            "mode": "sat" or "entailment",
+            "status": "satisfiable" / "unsatisfiable" / "entailed" / "not_entailed",
+            "trace": [...],
+            "assignment": {"A": True, "B": False},
+        }
+
+    Trace actions:
+        - start
+        - choose_variable
+        - assign
+        - contradiction
+        - backtrack
+        - solution_found
+        - finished
+    """
+    root_event = make_event(
+        0,
+        "start",
+        node_id="t0",
+        parent_id=None,
+        assignment={},
+    )
+    return {
+        "algorithm": "dpll",
+        "mode": problem["mode"],
+        "status": "error",
+        "message": "Replace the placeholder code inside solve_dpll with your own DPLL implementation.",
+        "trace": [root_event],
+        "assignment": {},
+    }
+
+
+if __name__ == "__main__":
+    run_dpll_solver(solve_dpll)
+`;
+
+const DPLL_PYTHON_REQUIREMENTS = `ai9414
+`;
+
+const DPLL_PYTHON_README = `# visual DPLL solver
+
+This folder runs a tiny local solver for the DPLL logic demo.
+The browser connection and response validation are handled by ai9414.
+Your job is to implement the DPLL reasoning and emit a short event trace.
+
+## install
+
+Install the dependency with:
+
+    pip install -r requirements.txt
+
+## run
+
+Start the local solver with:
+
+    python solve_dpll.py
+
+## what to implement
+
+Open solve_dpll.py and look at:
+
+- make_event(...)
+- solve_dpll(...)
+
+The browser sends:
+
+- problem: the current SAT or entailment task in CNF
+- options: unit propagation, pure literals, and variable order
+
+Your solver returns:
+
+- algorithm
+- mode
+- status
+- trace
+- assignment
+`;
+
 const $svgNode = (name, attributes = {}, text = "") => {
   const node = document.createElementNS("http://www.w3.org/2000/svg", name);
   Object.entries(attributes).forEach(([key, value]) => {
@@ -1464,6 +1589,7 @@ const $svgNode = (name, attributes = {}, text = "") => {
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const appType = () => state.manifest?.app_type;
+const isLogic = () => appType() === "logic";
 const isLabyrinth = () => appType() === "labyrinth";
 const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
@@ -1715,6 +1841,13 @@ function syncControls() {
   $("mode-select").value = state.player.mode;
   $("size-select").value = state.player.size;
   $("seed-input").value = state.player.seed || "";
+  if (isLogic()) {
+    const options = state.session?.data?.options || {};
+    $("logic-mode-select").value = options.problem_mode || "sat";
+    $("logic-unit-propagation").checked = options.unit_propagation !== false;
+    $("logic-pure-literals").checked = options.pure_literals === true;
+    $("logic-order-select").value = options.variable_order || "alphabetical";
+  }
 }
 
 function setMessage(message) {
@@ -1730,6 +1863,124 @@ function stopPlay() {
 
 function playIntervalMs() {
   return Math.round(850 / state.view.playbackSpeed);
+}
+
+function evaluateLogicLiteral(literal, assignment) {
+  const variable = literal.startsWith("~") ? literal.slice(1) : literal;
+  if (!(variable in assignment)) return null;
+  return literal.startsWith("~") ? !assignment[variable] : assignment[variable];
+}
+
+function formatLogicLiteral(literal) {
+  return literal.replace("~", "¬");
+}
+
+function formatLogicClause(clause) {
+  return `(${clause.map((literal) => formatLogicLiteral(literal)).join(" ∨ ")})`;
+}
+
+function evaluateLogicClauses(clauses, assignment) {
+  return clauses.map((clause, index) => {
+    const literals = [];
+    const unassigned = [];
+    let hasTrue = false;
+    clause.forEach((literal) => {
+      const value = evaluateLogicLiteral(literal, assignment);
+      if (value === true) {
+        hasTrue = true;
+      }
+      if (value === null) {
+        unassigned.push(literal);
+      }
+      literals.push({
+        raw: literal,
+        text: formatLogicLiteral(literal),
+        state: value === true ? "true" : value === false ? "false" : "unassigned",
+      });
+    });
+    const status = hasTrue ? "satisfied" : unassigned.length === 0 ? "contradicted" : unassigned.length === 1 ? "unit" : "unresolved";
+    return {
+      index,
+      status,
+      literals,
+      unit_literal: status === "unit" ? unassigned[0] : null,
+      text: formatLogicClause(clause),
+    };
+  });
+}
+
+function logicSummary(clauses, assignment, variables) {
+  return {
+    satisfied: clauses.filter((clause) => clause.status === "satisfied").length,
+    unresolved: clauses.filter((clause) => clause.status === "unresolved").length,
+    unit: clauses.filter((clause) => clause.status === "unit").length,
+    contradicted: clauses.filter((clause) => clause.status === "contradicted").length,
+    assigned_variables: Object.keys(assignment || {}).length,
+    total_variables: variables.length,
+  };
+}
+
+function blankLogicTrace(problem) {
+  const clauses = evaluateLogicClauses(problem.clauses, {});
+  return {
+    app_type: "logic",
+    initial_state: {
+      example_title: state.session?.data?.example_title || problem.title || "Visual DPLL",
+      example_subtitle:
+        state.session?.data?.example_subtitle ||
+        problem.subtitle ||
+        "Load a propositional example and step through DPLL.",
+      algorithm_label: "DPLL",
+      algorithm_note:
+        "This view is ready for DPLL. Solve the current CNF in live Python mode to populate the trace.",
+      goal_label:
+        problem.mode === "sat"
+          ? "Find a satisfying assignment"
+          : "Check whether KB and not query are unsatisfiable",
+      problem_mode: problem.mode,
+      tree: {
+        nodes: [
+          {
+            tree_id: "t0",
+            graph_node: "start",
+            assignment_text: "No assignments",
+            parent: null,
+            depth: 0,
+            path_cost: 0,
+            status: "active",
+            order: 0,
+            x: 0.5,
+            y: 0.12,
+            terminal: false,
+            reason: "start",
+          },
+        ],
+      },
+      search: {
+        active_tree_node: "t0",
+        active_tree_path: ["t0"],
+        best_tree_path: [],
+        final_tree_path: [],
+        finished: false,
+        status: "ready",
+        result: null,
+      },
+      logic: {
+        mode: problem.mode,
+        variables: clone(problem.variables || []),
+        clauses,
+        summary: logicSummary(clauses, {}, problem.variables || []),
+        assignment: [],
+        kb_formulas: clone(problem.kb_formulas || []),
+        query: problem.query || null,
+        entailment_target: problem.entailment_target || null,
+        original_input: clone(problem.original_input || []),
+      },
+      stats: { decisions: 0, forced_assignments: 0, contradictions: 0, backtracks: 0 },
+    },
+    steps: [],
+    summary: { step_count: 0, result: "ready" },
+  };
 }
 
 function blankLabyrinthTrace(labyrinth) {
@@ -3723,8 +3974,289 @@ function buildSearchTraceFromBackend(graph, result) {
   };
 }
 
+function buildLogicTraceFromBackend(problem, result) {
+  if (!Array.isArray(result.trace)) {
+    throw new Error("Solver returned invalid logic trace data.");
+  }
+
+  const treeNodes = new Map();
+  const treeIds = [];
+  const pathById = new Map();
+  const nodeStateById = new Map();
+  const stats = { decisions: 0, forced_assignments: 0, contradictions: 0, backtracks: 0 };
+  let activeTreeNode = "t0";
+  let activeTreePath = ["t0"];
+  let finalTreePath = [];
+  let assignment = {};
+  let assignmentItems = [];
+  let status = "ready";
+  let finalResult = result.status || null;
+
+  treeNodes.set("t0", {
+    tree_id: "t0",
+    graph_node: "start",
+    assignment_text: "No assignments",
+    parent: null,
+    depth: 0,
+    path_cost: 0,
+    status: "active",
+    order: 0,
+    x: 0.5,
+    y: 0.12,
+    terminal: false,
+    reason: "start",
+  });
+  treeIds.push("t0");
+  pathById.set("t0", ["t0"]);
+
+  function clauseSnapshot(currentAssignment) {
+    const clauses = evaluateLogicClauses(problem.clauses, currentAssignment);
+    return {
+      clauses,
+      summary: logicSummary(clauses, currentAssignment, problem.variables || []),
+    };
+  }
+
+  function syncAssignmentItems(currentAssignment, treePath) {
+    const items = [];
+    treePath.slice(1).forEach((treeId) => {
+      const node = treeNodes.get(treeId);
+      if (!node || !node.graph_node.includes("=")) return;
+      const [variable, rawValue] = node.graph_node.split("=").map((part) => part.trim());
+      items.push({
+        variable,
+        value: rawValue === "T",
+        reason: node.reason,
+        clause_index: node.clause_index ?? null,
+        text: `${variable} = ${rawValue}`,
+      });
+    });
+    assignmentItems = items;
+    assignment = clone(currentAssignment);
+  }
+
+  function snapshot() {
+    const logic = clauseSnapshot(assignment);
+    return {
+      tree: {
+        nodes: treeIds.map((treeId) => clone(treeNodes.get(treeId))),
+      },
+      search: {
+        active_tree_node: activeTreeNode,
+        active_tree_path: clone(activeTreePath),
+        best_tree_path: [],
+        final_tree_path: clone(finalTreePath),
+        finished: status === "finished" || status === "satisfiable" || status === "unsatisfiable" || status === "entailed" || status === "not entailed",
+        status,
+        result: finalResult,
+      },
+      logic: {
+        mode: problem.mode,
+        variables: clone(problem.variables || []),
+        clauses: logic.clauses,
+        summary: logic.summary,
+        assignment: clone(assignmentItems),
+        kb_formulas: clone(problem.kb_formulas || []),
+        query: problem.query || null,
+        entailment_target: problem.entailment_target || null,
+        original_input: clone(problem.original_input || []),
+      },
+      stats: clone(stats),
+    };
+  }
+
+  const rawSnapshots = [];
+  result.trace.forEach((step) => {
+    const nodeId = step.node_id;
+    const parentId = step.parent_id;
+    const variable = step.variable;
+    const reason = step.reason;
+    const value = step.value;
+    const currentAssignment = clone(step.assignment || {});
+
+    if (step.action === "start") {
+      activeTreeNode = "t0";
+      activeTreePath = ["t0"];
+      syncAssignmentItems({}, activeTreePath);
+      status = "searching";
+      treeNodes.get("t0").status = "active";
+    } else if (step.action === "choose_variable") {
+      activeTreeNode = nodeId || activeTreeNode;
+      activeTreePath = pathById.get(activeTreeNode) || activeTreePath;
+      syncAssignmentItems(currentAssignment, activeTreePath);
+      status = "branching";
+    } else if (step.action === "assign") {
+      if (!nodeId || !parentId || !variable || typeof value !== "boolean") {
+        throw new Error("Assign events must include node_id, parent_id, variable, and value.");
+      }
+      const valueText = value ? "T" : "F";
+      treeNodes.set(nodeId, {
+        tree_id: nodeId,
+        graph_node: `${variable} = ${valueText}`,
+        assignment_text: Object.entries(currentAssignment)
+          .map(([name, assignmentValue]) => `${name} = ${assignmentValue ? "T" : "F"}`)
+          .join(", "),
+        parent: parentId,
+        depth: Object.keys(currentAssignment).length,
+        path_cost: 0,
+        status: reason === "decision" ? "active" : "forced",
+        order: treeIds.length,
+        x: 0.5,
+        y: 0.12,
+        terminal: false,
+        reason: reason || "decision",
+        clause_index: step.clause_index ?? null,
+      });
+      treeIds.push(nodeId);
+      const parentPath = pathById.get(parentId) || ["t0"];
+      pathById.set(nodeId, parentPath.concat(nodeId));
+      activeTreeNode = nodeId;
+      activeTreePath = pathById.get(nodeId);
+      syncAssignmentItems(currentAssignment, activeTreePath);
+      if (reason === "decision") {
+        stats.decisions += 1;
+        if (treeNodes.get(parentId)) treeNodes.get(parentId).status = "branched";
+        status = "branching";
+      } else {
+        stats.forced_assignments += 1;
+        status = "propagating";
+      }
+    } else if (step.action === "contradiction") {
+      if (nodeId && treeNodes.get(nodeId)) {
+        treeNodes.get(nodeId).status = "contradiction";
+        activeTreeNode = nodeId;
+        activeTreePath = pathById.get(nodeId) || activeTreePath;
+      }
+      syncAssignmentItems(currentAssignment, activeTreePath);
+      stats.contradictions += 1;
+      status = "contradiction";
+    } else if (step.action === "backtrack") {
+      if (nodeId) {
+        activeTreeNode = nodeId;
+        activeTreePath = pathById.get(nodeId) || ["t0"];
+      }
+      syncAssignmentItems(currentAssignment, activeTreePath);
+      if (activeTreeNode && treeNodes.get(activeTreeNode)) {
+        treeNodes.get(activeTreeNode).status = "active";
+      }
+      stats.backtracks += 1;
+      status = "backtracking";
+    } else if (step.action === "solution_found") {
+      if (nodeId && treeNodes.get(nodeId)) {
+        treeNodes.get(nodeId).status = "solution";
+        activeTreeNode = nodeId;
+        activeTreePath = pathById.get(nodeId) || activeTreePath;
+      }
+      syncAssignmentItems(currentAssignment, activeTreePath);
+      finalTreePath = clone(activeTreePath);
+      status = result.mode === "sat" ? "satisfiable" : "not entailed";
+    } else if (step.action === "finished") {
+      syncAssignmentItems(currentAssignment, activeTreePath);
+      if (result.status === "satisfiable" || result.status === "not_entailed") {
+        finalTreePath = clone(activeTreePath);
+      }
+      status =
+        result.status === "not_entailed"
+          ? "not entailed"
+          : result.status === "unsatisfiable"
+            ? "unsatisfiable"
+            : result.status === "entailed"
+              ? "entailed"
+              : result.status;
+    }
+
+    rawSnapshots.push({
+      event_type: step.action,
+      label:
+        step.action === "start"
+          ? "Start DPLL"
+          : step.action === "choose_variable"
+            ? `Choose ${variable}`
+            : step.action === "assign"
+              ? `${reason === "decision" ? "Assign" : "Force"} ${variable} = ${value ? "T" : "F"}`
+              : step.action === "contradiction"
+                ? "Contradiction"
+                : step.action === "backtrack"
+                  ? "Backtrack"
+                  : step.action === "solution_found"
+                    ? "Solution found"
+                    : "Finished",
+      annotation:
+        step.action === "start"
+          ? "The clause list is ready for a DPLL replay."
+          : step.action === "choose_variable"
+            ? `No forced move remains, so DPLL branches on ${variable}.`
+            : step.action === "assign"
+              ? reason === "decision"
+                ? `Choose ${variable} = ${value ? "true" : "false"} as the next branch.`
+                : reason === "unit"
+                  ? `A unit clause forces ${variable} = ${value ? "true" : "false"}.`
+                  : `A pure literal lets DPLL set ${variable} = ${value ? "true" : "false"}.`
+              : step.action === "contradiction"
+                ? "One clause is now false, so the current branch fails."
+                : step.action === "backtrack"
+                  ? "DPLL returns to the previous decision point and tries a different branch."
+                  : step.action === "solution_found"
+                    ? "All clauses are satisfied under the current assignment."
+                    : result.status === "entailed"
+                      ? "KB and not query is unsatisfiable, so the query is entailed."
+                      : result.status === "not_entailed"
+                        ? "KB and not query still has a model, so the query is not entailed."
+                        : result.status === "satisfiable"
+                          ? "A satisfying assignment has been found."
+                          : "Every branch fails, so the CNF is unsatisfiable.",
+      teaching_note:
+        step.action === "backtrack"
+          ? "A failed branch does not end the whole search until every remaining alternative has also failed."
+          : "The tree on the left shows the partial assignments; the clauses on the right show why each step happened.",
+      snapshot: snapshot(),
+    });
+  });
+
+  const laidOutNodes = layoutTreeNodes(treeIds.map((treeId) => treeNodes.get(treeId)));
+  const layoutById = new Map(laidOutNodes.map((node) => [node.tree_id, node]));
+  const initialState = blankLogicTrace(problem).initial_state;
+  initialState.example_title = "Live Python DPLL";
+  initialState.example_subtitle = "Trace returned by your local Python DPLL solver.";
+  initialState.tree.nodes = initialState.tree.nodes.map((node) => layoutById.get(node.tree_id) || node);
+
+  const steps = rawSnapshots.map((entry, index) => {
+    const snapshot = clone(entry.snapshot);
+    snapshot.tree.nodes = snapshot.tree.nodes.map((node) => layoutById.get(node.tree_id) || node);
+    return {
+      index,
+      event_type: entry.event_type,
+      label: entry.label,
+      annotation: entry.annotation,
+      teaching_note: entry.teaching_note,
+      state_patch: snapshot,
+    };
+  });
+
+  return {
+    app_type: "logic",
+    initial_state: initialState,
+    steps,
+    summary: { step_count: steps.length, result: result.status || "ready" },
+  };
+}
+
 function activeTraceContext() {
-  const blankTrace = isLabyrinth()
+  const blankTrace = isLogic()
+    ? blankLogicTrace(state.session.data.logic_problem || state.session.data.problem || {
+        mode: state.session.data.problem_mode || "sat",
+        variables: state.session.data.logic?.variables || [],
+        clauses: (state.session.data.logic?.clauses || []).map((clause) =>
+          clause.literals ? clause.literals.map((literal) => literal.raw) : []
+        ),
+        kb_formulas: state.session.data.logic?.kb_formulas || [],
+        query: state.session.data.logic?.query || null,
+        entailment_target: state.session.data.logic?.entailment_target || null,
+        original_input: state.session.data.logic?.original_input || [],
+        title: state.session.data.example_title || "Visual DPLL",
+        subtitle: state.session.data.example_subtitle || "",
+      })
+    : isLabyrinth()
     ? blankLabyrinthTrace(state.session.data.labyrinth)
     : isWeightedSearch()
       ? blankSearchTrace(state.session.data.graph)
@@ -3781,6 +4313,9 @@ function maxStepCount() {
 }
 
 function statusLabel(data, step) {
+  if (isLogic()) {
+    return data.search?.status || data.search?.result || "ready";
+  }
   if (isLabyrinth() || isGraphReachability()) {
     return data.search?.status || "ready";
   }
@@ -3793,7 +4328,15 @@ function statusLabel(data, step) {
 }
 
 function renderPanelCopy(data) {
-  if (isLabyrinth()) {
+  if (isLogic()) {
+    $("left-panel-title").textContent = "Search Tree";
+    $("left-panel-subtitle").textContent = "Each node is a partial assignment, so the tree shows where DPLL branched and where literals were forced.";
+    $("right-panel-title").textContent = data.problem_mode === "entailment" ? "Knowledge Base and CNF" : "Clause State";
+    $("right-panel-subtitle").textContent =
+      data.problem_mode === "entailment"
+        ? "The original knowledge base stays visible while the CNF clause list shows why KB and not query succeed or fail."
+        : "The clause list shows which clauses are satisfied, unresolved, unit, or contradicted under the current assignment.";
+  } else if (isLabyrinth()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "The tree grows in DFS order and keeps backtracked branches visible.";
     $("right-panel-title").textContent = "Labyrinth";
@@ -3832,6 +4375,17 @@ function renderPanelCopy(data) {
 }
 
 function renderMetrics(data) {
+  if (isLogic()) {
+    $("metric-1-label").textContent = "Assigned variables";
+    $("metric-1-value").textContent = `${data.logic?.summary?.assigned_variables || 0} / ${data.logic?.summary?.total_variables || 0}`;
+    $("metric-2-label").textContent = "Unit clauses";
+    $("metric-2-value").textContent = String(data.logic?.summary?.unit || 0);
+    $("metric-3-label").textContent = "Forced assignments";
+    $("metric-3-value").textContent = String(data.stats?.forced_assignments || 0);
+    $("metric-4-label").textContent = "Backtracks";
+    $("metric-4-value").textContent = String(data.stats?.backtracks || 0);
+    return;
+  }
   if (isLabyrinth()) {
     $("metric-1-label").textContent = "Explored cells";
     $("metric-1-value").textContent = String(data.search?.explored_count || 0);
@@ -3946,17 +4500,41 @@ function renderTree(data) {
       class: classes.join(" "),
       transform: `translate(${node.x * 1000}, ${node.y * 700})`,
     });
-    group.appendChild($svgNode("circle", { class: "tree-node-circle", r: isLabyrinth() ? 38 : 34 }));
-    const label = isLabyrinth() ? String(node.graph_node).replace(", ", ",") : node.graph_node;
-    group.appendChild(
-      $svgNode(
-        "text",
-        { class: isLabyrinth() ? "tree-node-label tree-node-label-labyrinth" : "tree-node-label", y: isLabyrinth() ? 4 : -6 },
-        label
-      )
-    );
-    if (isWeightedGraphSearch()) {
-      group.appendChild($svgNode("text", { class: "tree-node-cost", y: 24 }, formatNumber(node.path_cost)));
+    if (isLogic()) {
+      group.appendChild(
+        $svgNode("rect", {
+          class: "tree-node-card",
+          x: -76,
+          y: -30,
+          width: 152,
+          height: 60,
+          rx: 18,
+        })
+      );
+      group.appendChild($svgNode("text", { class: "tree-node-heading", y: -5 }, node.graph_node));
+      group.appendChild(
+        $svgNode(
+          "text",
+          { class: "tree-node-subtext", y: 14 },
+          node.assignment_text || "No assignments"
+        )
+      );
+      group.appendChild(
+        $svgNode("text", { class: "tree-node-reason", y: 28 }, node.reason || "")
+      );
+    } else {
+      group.appendChild($svgNode("circle", { class: "tree-node-circle", r: isLabyrinth() ? 38 : 34 }));
+      const label = isLabyrinth() ? String(node.graph_node).replace(", ", ",") : node.graph_node;
+      group.appendChild(
+        $svgNode(
+          "text",
+          { class: isLabyrinth() ? "tree-node-label tree-node-label-labyrinth" : "tree-node-label", y: isLabyrinth() ? 4 : -6 },
+          label
+        )
+      );
+      if (isWeightedGraphSearch()) {
+        group.appendChild($svgNode("text", { class: "tree-node-cost", y: 24 }, formatNumber(node.path_cost)));
+      }
     }
     circles.appendChild(group);
   });
@@ -4190,22 +4768,171 @@ function renderLabyrinth(data) {
   svg.appendChild(textGroup);
 }
 
+function renderLogicProblem(data) {
+  const panel = $("logic-problem-panel");
+  panel.innerHTML = "";
+  const logic = data.logic;
+  if (!logic) return;
+
+  const shell = document.createElement("div");
+  shell.className = "logic-shell";
+
+  if (logic.mode === "entailment") {
+    const callout = document.createElement("div");
+    callout.className = "logic-callout";
+    callout.textContent =
+      "To test entailment, the app checks whether the knowledge base together with not query is unsatisfiable.";
+    shell.appendChild(callout);
+  }
+
+  const summaryGrid = document.createElement("div");
+  summaryGrid.className = "logic-summary-grid";
+  [
+    ["Satisfied", logic.summary?.satisfied ?? 0],
+    ["Unresolved", logic.summary?.unresolved ?? 0],
+    ["Unit", logic.summary?.unit ?? 0],
+    ["Contradicted", logic.summary?.contradicted ?? 0],
+    ["Assigned", `${logic.summary?.assigned_variables ?? 0} / ${logic.summary?.total_variables ?? 0}`],
+  ].forEach(([label, value]) => {
+    const card = document.createElement("div");
+    card.className = "logic-summary-card";
+    const title = document.createElement("span");
+    title.className = "logic-summary-label";
+    title.textContent = label;
+    const body = document.createElement("strong");
+    body.className = "logic-summary-value";
+    body.textContent = String(value);
+    card.append(title, body);
+    summaryGrid.appendChild(card);
+  });
+  shell.appendChild(summaryGrid);
+
+  if (logic.mode === "entailment") {
+    const inputPanel = document.createElement("div");
+    inputPanel.className = "logic-input-panel";
+    const heading = document.createElement("h3");
+    heading.className = "logic-section-title";
+    heading.textContent = "Knowledge base";
+    inputPanel.appendChild(heading);
+    const list = document.createElement("div");
+    list.className = "logic-input-list";
+    (logic.kb_formulas || []).forEach((formula) => {
+      const item = document.createElement("div");
+      item.className = "logic-input-item";
+      item.textContent = formula;
+      list.appendChild(item);
+    });
+    const query = document.createElement("div");
+    query.className = "logic-input-item";
+    query.textContent = `query: ${logic.query || ""}`;
+    list.appendChild(query);
+    const target = document.createElement("div");
+    target.className = "logic-callout";
+    target.textContent = logic.entailment_target || "";
+    inputPanel.append(list, target);
+    shell.appendChild(inputPanel);
+  }
+
+  const assignmentPanel = document.createElement("div");
+  assignmentPanel.className = "logic-assignment-panel";
+  const assignmentHeading = document.createElement("h3");
+  assignmentHeading.className = "logic-section-title";
+  assignmentHeading.textContent = "Current assignment";
+  assignmentPanel.appendChild(assignmentHeading);
+  if (!logic.assignment?.length) {
+    const empty = document.createElement("div");
+    empty.className = "logic-assignment-empty";
+    empty.textContent = "No variables have been assigned yet.";
+    assignmentPanel.appendChild(empty);
+  } else {
+    const assignmentList = document.createElement("div");
+    assignmentList.className = "logic-assignment-list";
+    logic.assignment.forEach((entry) => {
+      const row = document.createElement("div");
+      row.className = "logic-assignment-item";
+      const text = document.createElement("span");
+      text.className = "logic-assignment-text";
+      text.textContent = entry.text;
+      const reason = document.createElement("span");
+      reason.className = "logic-assignment-reason";
+      reason.textContent =
+        entry.reason === "decision"
+          ? "decision"
+          : entry.reason === "unit"
+            ? `unit from C${(entry.clause_index ?? 0) + 1}`
+            : "pure literal";
+      row.append(text, reason);
+      assignmentList.appendChild(row);
+    });
+    assignmentPanel.appendChild(assignmentList);
+  }
+  shell.appendChild(assignmentPanel);
+
+  const clausePanel = document.createElement("div");
+  const clauseHeading = document.createElement("h3");
+  clauseHeading.className = "logic-section-title";
+  clauseHeading.textContent = "CNF clauses";
+  clausePanel.appendChild(clauseHeading);
+  const clauseList = document.createElement("div");
+  clauseList.className = "logic-clause-list";
+  (logic.clauses || []).forEach((clause) => {
+    const row = document.createElement("div");
+    row.className = `logic-clause-row ${clause.status}`;
+    const header = document.createElement("div");
+    header.className = "logic-clause-header";
+    const label = document.createElement("span");
+    label.className = "logic-clause-label";
+    label.textContent = `C${clause.index + 1} ${clause.text}`;
+    const state = document.createElement("span");
+    state.className = "logic-clause-state";
+    state.textContent = clause.status;
+    header.append(label, state);
+
+    const literalRow = document.createElement("div");
+    literalRow.className = "logic-literal-row";
+    (clause.literals || []).forEach((literal) => {
+      const chip = document.createElement("span");
+      chip.className = `logic-literal-chip ${literal.state}`;
+      chip.textContent = literal.text;
+      literalRow.appendChild(chip);
+    });
+
+    row.append(header, literalRow);
+    if (clause.status === "unit" && clause.unit_literal) {
+      const footnote = document.createElement("div");
+      footnote.className = "logic-clause-footnote";
+      footnote.textContent = `Forced literal: ${formatLogicLiteral(clause.unit_literal)}`;
+      row.appendChild(footnote);
+    }
+    clauseList.appendChild(row);
+  });
+  clausePanel.appendChild(clauseList);
+  shell.appendChild(clausePanel);
+
+  panel.appendChild(shell);
+}
+
 function renderControls() {
   const livePythonApp = isLivePythonApp();
-  $("example-control-label").textContent = livePythonApp ? "Configuration" : "Example";
+  const generatedProblemApp = livePythonApp && !isLogic();
+  $("example-control-label").textContent = livePythonApp && !isLogic() ? "Configuration" : "Example";
   $("size-control-label").textContent = isLabyrinth() ? "Labyrinth size" : "Graph size";
   $("generate-button").textContent = isLabyrinth() ? "Generate new labyrinth" : "Generate new graph";
   $("mode-control").classList.toggle("hidden", !livePythonApp);
-  $("size-control").classList.toggle("hidden", !livePythonApp);
-  $("seed-control").classList.toggle("hidden", !livePythonApp);
-  $("generate-button").classList.toggle("hidden", !livePythonApp);
+  $("logic-mode-control").classList.toggle("hidden", !isLogic());
+  $("logic-order-control").classList.toggle("hidden", !isLogic());
+  $("size-control").classList.toggle("hidden", !generatedProblemApp);
+  $("seed-control").classList.toggle("hidden", !generatedProblemApp);
+  $("generate-button").classList.toggle("hidden", !generatedProblemApp);
   $("solve-python-button").classList.toggle("hidden", !livePythonApp);
   $("download-stub-button").classList.toggle("hidden", !livePythonApp);
   $("reload-button").classList.toggle("hidden", livePythonApp);
   $("search-toggle-grid").classList.toggle("hidden", !isWeightedGraphSearch());
+  $("logic-toggle-grid").classList.toggle("hidden", !isLogic());
   $("search-legend").classList.toggle("hidden", !isWeightedGraphSearch());
   $("labyrinth-legend").classList.toggle("hidden", !isLabyrinth());
   $("graph-dfs-legend").classList.toggle("hidden", !isGraphReachability());
+  $("logic-legend").classList.toggle("hidden", !isLogic());
 }
 
 function render() {
@@ -4246,7 +4973,11 @@ function render() {
   }
 
   renderTree(data);
-  if (isLabyrinth()) {
+  $("problem-svg").classList.toggle("hidden", isLogic());
+  $("logic-problem-panel").classList.toggle("hidden", !isLogic());
+  if (isLogic()) {
+    renderLogicProblem(data);
+  } else if (isLabyrinth()) {
     renderLabyrinth(data);
   } else if (isGraphReachability()) {
     renderGraphReachability(data);
@@ -4280,6 +5011,8 @@ async function refreshFromServer(response) {
     state.player.size = state.session.data.live_python.size;
     state.player.seed = state.session.data.live_python.seed;
   }
+  const examplesPayload = await requestJson("/api/examples");
+  populateExamples(examplesPayload.examples || []);
   syncControls();
   render();
 }
@@ -4347,7 +5080,28 @@ async function solveWithPython() {
   setMessage("");
   render();
   const backendUrl = state.session.data.live_python?.backend_url || "http://127.0.0.1:9414/solve";
-  const problemPayload = isLabyrinth()
+  const logicProblem =
+    state.session.data.logic_problem ||
+    state.session.data.problem || {
+      mode: state.session.data.problem_mode || "sat",
+      title: state.session.data.example_title || "Visual DPLL",
+      subtitle: state.session.data.example_subtitle || "",
+      variables: state.session.data.logic?.variables || [],
+      clauses: (state.session.data.logic?.clauses || []).map((clause) =>
+        (clause.literals || []).map((literal) => literal.raw)
+      ),
+      kb_formulas: state.session.data.logic?.kb_formulas || [],
+      query: state.session.data.logic?.query || null,
+      entailment_target: state.session.data.logic?.entailment_target || null,
+      original_input: state.session.data.logic?.original_input || [],
+    };
+  const problemPayload = isLogic()
+    ? {
+        algorithm: "dpll",
+        problem: logicProblem,
+        options: clone(state.session.data.options || {}),
+      }
+    : isLabyrinth()
     ? { algorithm: "dfs", labyrinth: state.session.data.labyrinth }
     : {
         algorithm: isWeightedSearch()
@@ -4363,7 +5117,11 @@ async function solveWithPython() {
                 : "dfs",
         graph: state.session.data.graph,
       };
-  const problemData = isLabyrinth() ? state.session.data.labyrinth : state.session.data.graph;
+  const problemData = isLogic()
+    ? logicProblem
+    : isLabyrinth()
+      ? state.session.data.labyrinth
+      : state.session.data.graph;
 
   try {
     const response = await fetch(backendUrl, {
@@ -4376,7 +5134,9 @@ async function solveWithPython() {
     if (!response.ok) {
       throw new Error(payload?.message || "Python backend returned an error.");
     }
-    state.player.liveTrace = isLabyrinth()
+    state.player.liveTrace = isLogic()
+      ? buildLogicTraceFromBackend(problemData, payload)
+      : isLabyrinth()
       ? buildLabyrinthTraceFromBackend(problemData, payload)
       : isWeightedSearch()
         ? buildSearchTraceFromBackend(problemData, payload)
@@ -4410,7 +5170,13 @@ async function solveWithPython() {
 
 function downloadPythonStub() {
   const archive = createZipArchive(
-    isWeightedSearch()
+    isLogic()
+      ? [
+          { name: "ai9414/solve_dpll.py", content: DPLL_PYTHON_STUB },
+          { name: "ai9414/requirements.txt", content: DPLL_PYTHON_REQUIREMENTS },
+          { name: "ai9414/README.md", content: DPLL_PYTHON_README },
+        ]
+      : isWeightedSearch()
       ? [
           { name: "ai9414/solve_weighted_graph.py", content: WEIGHTED_GRAPH_PYTHON_STUB },
           { name: "ai9414/requirements.txt", content: WEIGHTED_GRAPH_PYTHON_REQUIREMENTS },
@@ -4455,7 +5221,9 @@ function downloadPythonStub() {
   const url = window.URL.createObjectURL(archive);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = isWeightedSearch()
+  anchor.download = isLogic()
+    ? "logic-dpll-python-stub.zip"
+    : isWeightedSearch()
     ? "weighted-graph-python-stub.zip"
     : isGraphAStar()
       ? "graph-astar-python-stub.zip"
@@ -4473,7 +5241,9 @@ function downloadPythonStub() {
   anchor.remove();
   window.URL.revokeObjectURL(url);
   setMessage(
-    isWeightedSearch()
+    isLogic()
+      ? "Downloaded logic-dpll-python-stub.zip."
+      : isWeightedSearch()
       ? "Downloaded weighted-graph-python-stub.zip."
       : isGraphAStar()
         ? "Downloaded graph-astar-python-stub.zip."
@@ -4488,6 +5258,15 @@ function downloadPythonStub() {
       : "Downloaded labyrinth-dfs-python-stub.zip."
   );
   render();
+}
+
+async function updateLogicOptions(patch) {
+  stopPlay();
+  setMessage("");
+  const response = await postAction("set_option", patch);
+  const trace = await requestJson("/api/trace");
+  response.trace = trace;
+  await refreshFromServer(response);
 }
 
 function bindEvents() {
@@ -4516,7 +5295,7 @@ function bindEvents() {
     await loadExample(state.session.example_name);
   });
   $("example-select").addEventListener("change", async (event) => {
-    if (isLivePythonApp()) {
+    if (isLivePythonApp() && !isLogic()) {
       stopPlay();
       state.player.size = event.target.value;
       state.player.seed = "";
@@ -4539,12 +5318,26 @@ function bindEvents() {
       setMessage("");
     } else if (!state.player.liveTrace) {
       setMessage(
-        !isLabyrinth()
+        isLogic()
+          ? "Live Python mode is ready. Run your local DPLL solver and replay the returned trace."
+          : !isLabyrinth()
           ? "Live Python mode is ready. Generate a graph or solve the current one with your backend."
           : "Live Python mode is ready. Generate a labyrinth or solve the current one with your backend."
       );
     }
     render();
+  });
+  $("logic-mode-select").addEventListener("change", async (event) => {
+    await updateLogicOptions({ problem_mode: event.target.value });
+  });
+  $("logic-unit-propagation").addEventListener("change", async (event) => {
+    await updateLogicOptions({ unit_propagation: event.target.checked });
+  });
+  $("logic-pure-literals").addEventListener("change", async (event) => {
+    await updateLogicOptions({ pure_literals: event.target.checked });
+  });
+  $("logic-order-select").addEventListener("change", async (event) => {
+    await updateLogicOptions({ variable_order: event.target.value });
   });
   $("size-select").addEventListener("change", (event) => {
     state.player.size = event.target.value;

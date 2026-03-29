@@ -1,6 +1,6 @@
 # ai9414 Architecture Overview
 
-This repository contains the Phase 1 reference infrastructure for the `ai9414` platform together with concrete search demo modules.
+This repository contains the Phase 1 reference infrastructure for the `ai9414` platform together with concrete search and logic demo modules.
 
 ## Included in Phase 1
 
@@ -12,6 +12,7 @@ This repository contains the Phase 1 reference infrastructure for the `ai9414` p
 - Static solution replay export with no backend dependency
 - `ai9414.search.SearchDemo` with deterministic weighted geometric graph examples
 - `ai9414.labyrinth.LabyrinthDemo` with built-in labyrinth playback examples and live-Python handoff
+- `ai9414.logic.DpllDemo` with built-in SAT and entailment playback examples plus live-Python DPLL handoff
 - Depth-first branch-and-bound trace generation in Python
 - Synchronised two-panel replay UI for the search tree and geometric graph
 
@@ -23,6 +24,8 @@ This repository contains the Phase 1 reference infrastructure for the `ai9414` p
 The search demo currently uses `precomputed` mode only, because Phase 1 is validating the replay model rather than incremental execution.
 
 The labyrinth demo also uses `precomputed` mode for built-in examples, then hands off generated mazes to a separate student Python stub in live mode.
+
+The DPLL demo uses the same trace-first precomputed model, but swaps the right-hand geometric view for a clause-state panel and supports both SAT and entailment within the same replay shell.
 
 ## Frontend Contract
 
@@ -66,6 +69,16 @@ src/ai9414/labyrinth/
   models.py
   solver.py
   trace.py
+
+src/ai9414/logic/
+  __init__.py
+  api.py
+  examples.py
+  models.py
+  parser.py
+  solver.py
+  student.py
+  trace.py
 ```
 
 - `api.py`: public `SearchDemo` entry point
@@ -76,3 +89,5 @@ src/ai9414/labyrinth/
 - `models.py` and `configs.py`: graph, tree, and configuration validation models
 
 The labyrinth package follows the same shape, but swaps the weighted-graph world for a grid maze, plain DFS reachability, built-in playback examples, and a live-Python `/solve` workflow.
+
+The logic package follows the same overall contract, but its right-hand panel renders CNF clauses and literal states while the left-hand tree shows DPLL partial assignments, forced literals, contradictions, and backtracking.

@@ -184,6 +184,18 @@ h3 {
   border: 1px solid rgba(111, 123, 131, 0.14);
 }
 
+.logic-panel {
+  min-height: 360px;
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(239, 231, 216, 0.42)),
+    linear-gradient(140deg, rgba(13, 110, 110, 0.05), rgba(159, 85, 39, 0.08));
+  border: 1px solid rgba(111, 123, 131, 0.14);
+  overflow: auto;
+}
+
 .controls-grid,
 .metric-grid,
 .toggle-grid,
@@ -401,6 +413,22 @@ input[type="number"] {
   stroke-dasharray: 8 6;
 }
 
+.tree-node.forced .tree-node-circle {
+  fill: rgba(180, 83, 9, 0.12);
+  stroke: var(--best);
+}
+
+.tree-node.contradiction .tree-node-circle {
+  fill: rgba(140, 94, 75, 0.16);
+  stroke: rgba(140, 94, 75, 0.9);
+}
+
+.tree-node.solution .tree-node-circle {
+  fill: rgba(124, 63, 0, 0.12);
+  stroke: var(--final);
+  stroke-width: 5;
+}
+
 .tree-node.best .tree-node-circle {
   stroke: var(--best);
 }
@@ -426,6 +454,63 @@ input[type="number"] {
 
 .tree-node-label-labyrinth {
   font-size: 16px;
+}
+
+.tree-node-card {
+  fill: #fefcf6;
+  stroke: rgba(95, 107, 115, 0.38);
+  stroke-width: 3;
+}
+
+.tree-node.active .tree-node-card {
+  fill: rgba(13, 110, 110, 0.14);
+  stroke: var(--accent);
+  stroke-width: 5;
+}
+
+.tree-node.forced .tree-node-card {
+  fill: rgba(180, 83, 9, 0.12);
+  stroke: var(--best);
+}
+
+.tree-node.branched .tree-node-card {
+  fill: rgba(13, 110, 110, 0.06);
+}
+
+.tree-node.backtracked .tree-node-card {
+  fill: rgba(95, 107, 115, 0.08);
+}
+
+.tree-node.contradiction .tree-node-card {
+  fill: rgba(140, 94, 75, 0.14);
+  stroke: rgba(140, 94, 75, 0.92);
+}
+
+.tree-node.solution .tree-node-card {
+  fill: rgba(124, 63, 0, 0.12);
+  stroke: var(--final);
+  stroke-width: 5;
+}
+
+.tree-node-heading {
+  font-size: 20px;
+  font-weight: 700;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+
+.tree-node-subtext {
+  font-size: 13px;
+  fill: var(--muted);
+  text-anchor: middle;
+}
+
+.tree-node-reason {
+  font-size: 11px;
+  fill: var(--muted);
+  text-anchor: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .graph-edge {
@@ -571,6 +656,168 @@ input[type="number"] {
   text-anchor: middle;
 }
 
+.logic-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.logic-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.logic-summary-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.logic-summary-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.logic-summary-value {
+  font-weight: 700;
+}
+
+.logic-callout,
+.logic-assignment-panel,
+.logic-input-panel {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.logic-callout {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.logic-section-title {
+  margin: 0 0 10px;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 1.05rem;
+}
+
+.logic-assignment-list,
+.logic-input-list,
+.logic-clause-list {
+  display: grid;
+  gap: 10px;
+}
+
+.logic-assignment-empty {
+  color: var(--muted);
+}
+
+.logic-assignment-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(243, 239, 230, 0.9);
+}
+
+.logic-assignment-text {
+  font-weight: 700;
+}
+
+.logic-assignment-reason {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.logic-input-item {
+  color: var(--ink);
+}
+
+.logic-clause-row {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(111, 123, 131, 0.16);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.logic-clause-row.satisfied {
+  border-color: rgba(13, 110, 110, 0.28);
+  background: rgba(13, 110, 110, 0.08);
+}
+
+.logic-clause-row.unit {
+  border-color: rgba(180, 83, 9, 0.28);
+  background: rgba(180, 83, 9, 0.08);
+}
+
+.logic-clause-row.contradicted {
+  border-color: rgba(140, 94, 75, 0.34);
+  background: rgba(140, 94, 75, 0.12);
+}
+
+.logic-clause-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.logic-clause-label {
+  font-weight: 700;
+}
+
+.logic-clause-state {
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.logic-literal-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.logic-literal-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(243, 239, 230, 0.9);
+  border: 1px solid rgba(111, 123, 131, 0.16);
+  font-weight: 700;
+}
+
+.logic-literal-chip.true {
+  background: rgba(13, 110, 110, 0.16);
+  border-color: rgba(13, 110, 110, 0.28);
+}
+
+.logic-literal-chip.false {
+  background: rgba(140, 94, 75, 0.14);
+  border-color: rgba(140, 94, 75, 0.24);
+}
+
+.logic-literal-chip.unassigned {
+  color: var(--muted);
+}
+
+.logic-clause-footnote {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 @media (max-width: 900px) {
   .header,
   .layout {
@@ -583,7 +830,8 @@ input[type="number"] {
 
   .metric-grid,
   .toggle-grid,
-  .legend-grid {
+  .legend-grid,
+  .logic-summary-grid {
     grid-template-columns: 1fr;
   }
 }

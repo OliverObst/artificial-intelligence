@@ -39,6 +39,7 @@
             </div>
           </div>
           <svg id="problem-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Problem view"></svg>
+          <div id="logic-problem-panel" class="logic-panel hidden" role="img" aria-label="Clause view"></div>
         </section>
 
         <section class="panel explanation-panel">
@@ -125,6 +126,12 @@
             <div class="legend-item"><span class="legend-swatch legend-explored"></span>Explored edge</div>
             <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Dead end</div>
             <div class="legend-item"><span class="legend-swatch legend-final"></span>Final path</div>
+          </div>
+          <div id="logic-legend" class="legend-grid hidden">
+            <div class="legend-item"><span class="legend-swatch legend-current"></span>Active branch</div>
+            <div class="legend-item"><span class="legend-swatch legend-best"></span>Forced assignment</div>
+            <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Contradiction</div>
+            <div class="legend-item"><span class="legend-swatch legend-final"></span>Solution / entailment</div>
           </div>
         </aside>
       </main>

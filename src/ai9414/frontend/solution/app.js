@@ -13,6 +13,7 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const appType = () => state.trace?.app_type;
+const isLogic = () => appType() === "logic";
 const isLabyrinth = () => appType() === "labyrinth";
 const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
@@ -81,6 +82,10 @@ function pathToEdgeIds(path) {
   return ids;
 }
 
+function formatLogicLiteral(literal) {
+  return literal.replace("~", "¬");
+}
+
 async function loadTrace() {
   const response = await fetch("./trace.json");
   state.trace = await response.json();
@@ -108,7 +113,20 @@ function currentStep() {
 }
 
 function renderPanelCopy() {
-  if (isLabyrinth()) {
+  if (isLogic()) {
+    $("left-panel-title").textContent = "Search Tree";
+    $("left-panel-subtitle").textContent = "Static replay of the DPLL assignment tree.";
+    $("right-panel-title").textContent = currentData().problem_mode === "entailment" ? "Knowledge Base and CNF" : "Clause State";
+    $("right-panel-subtitle").textContent =
+      currentData().problem_mode === "entailment"
+        ? "Static replay of the knowledge base view and the CNF used for the entailment test."
+        : "Static replay of the clause statuses under the current partial assignment.";
+    $("search-toggle-grid").classList.add("hidden");
+    $("search-legend").classList.add("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.remove("hidden");
+  } else if (isLabyrinth()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the DFS tree built while exploring the labyrinth.";
     $("right-panel-title").textContent = "Labyrinth";
@@ -171,10 +189,22 @@ function renderPanelCopy() {
     $("search-legend").classList.remove("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
   }
 }
 
 function renderMetrics(data) {
+  if (isLogic()) {
+    $("metric-1-label").textContent = "Assigned variables";
+    $("metric-1-value").textContent = `${data.logic?.summary?.assigned_variables || 0} / ${data.logic?.summary?.total_variables || 0}`;
+    $("metric-2-label").textContent = "Unit clauses";
+    $("metric-2-value").textContent = String(data.logic?.summary?.unit || 0);
+    $("metric-3-label").textContent = "Forced assignments";
+    $("metric-3-value").textContent = String(data.stats?.forced_assignments || 0);
+    $("metric-4-label").textContent = "Backtracks";
+    $("metric-4-value").textContent = String(data.stats?.backtracks || 0);
+    return;
+  }
   if (isLabyrinth()) {
     $("metric-1-label").textContent = "Explored cells";
     $("metric-1-value").textContent = String(data.search?.explored_count || 0);
@@ -284,17 +314,35 @@ function renderTree(data) {
       class: classes.join(" "),
       transform: `translate(${node.x * 1000}, ${node.y * 700})`,
     });
-    group.appendChild(svgNode("circle", { class: "tree-node-circle", r: isLabyrinth() ? 38 : 34 }));
-    const label = isLabyrinth() ? String(node.graph_node).replace(", ", ",") : node.graph_node;
-    group.appendChild(
-      svgNode(
-        "text",
-        { class: isLabyrinth() ? "tree-node-label tree-node-label-labyrinth" : "tree-node-label", y: isLabyrinth() ? 4 : -6 },
-        label
-      )
-    );
-    if (isWeightedGraphSearch()) {
-      group.appendChild(svgNode("text", { class: "tree-node-cost", y: 24 }, formatNumber(node.path_cost)));
+    if (isLogic()) {
+      group.appendChild(
+        svgNode("rect", {
+          class: "tree-node-card",
+          x: -76,
+          y: -30,
+          width: 152,
+          height: 60,
+          rx: 18,
+        })
+      );
+      group.appendChild(svgNode("text", { class: "tree-node-heading", y: -5 }, node.graph_node));
+      group.appendChild(
+        svgNode("text", { class: "tree-node-subtext", y: 14 }, node.assignment_text || "No assignments")
+      );
+      group.appendChild(svgNode("text", { class: "tree-node-reason", y: 28 }, node.reason || ""));
+    } else {
+      group.appendChild(svgNode("circle", { class: "tree-node-circle", r: isLabyrinth() ? 38 : 34 }));
+      const label = isLabyrinth() ? String(node.graph_node).replace(", ", ",") : node.graph_node;
+      group.appendChild(
+        svgNode(
+          "text",
+          { class: isLabyrinth() ? "tree-node-label tree-node-label-labyrinth" : "tree-node-label", y: isLabyrinth() ? 4 : -6 },
+          label
+        )
+      );
+      if (isWeightedGraphSearch()) {
+        group.appendChild(svgNode("text", { class: "tree-node-cost", y: 24 }, formatNumber(node.path_cost)));
+      }
     }
     circles.appendChild(group);
   });
@@ -523,6 +571,145 @@ function renderLabyrinth(data) {
   svg.appendChild(textGroup);
 }
 
+function renderLogicProblem(data) {
+  const panel = $("logic-problem-panel");
+  panel.innerHTML = "";
+  const logic = data.logic;
+  if (!logic) return;
+
+  const shell = document.createElement("div");
+  shell.className = "logic-shell";
+
+  if (logic.mode === "entailment") {
+    const callout = document.createElement("div");
+    callout.className = "logic-callout";
+    callout.textContent =
+      "To test entailment, the app checks whether the knowledge base together with not query is unsatisfiable.";
+    shell.appendChild(callout);
+  }
+
+  const summaryGrid = document.createElement("div");
+  summaryGrid.className = "logic-summary-grid";
+  [
+    ["Satisfied", logic.summary?.satisfied ?? 0],
+    ["Unresolved", logic.summary?.unresolved ?? 0],
+    ["Unit", logic.summary?.unit ?? 0],
+    ["Contradicted", logic.summary?.contradicted ?? 0],
+    ["Assigned", `${logic.summary?.assigned_variables ?? 0} / ${logic.summary?.total_variables ?? 0}`],
+  ].forEach(([label, value]) => {
+    const card = document.createElement("div");
+    card.className = "logic-summary-card";
+    const title = document.createElement("span");
+    title.className = "logic-summary-label";
+    title.textContent = label;
+    const body = document.createElement("strong");
+    body.className = "logic-summary-value";
+    body.textContent = String(value);
+    card.append(title, body);
+    summaryGrid.appendChild(card);
+  });
+  shell.appendChild(summaryGrid);
+
+  if (logic.mode === "entailment") {
+    const inputPanel = document.createElement("div");
+    inputPanel.className = "logic-input-panel";
+    const heading = document.createElement("h3");
+    heading.className = "logic-section-title";
+    heading.textContent = "Knowledge base";
+    inputPanel.appendChild(heading);
+    const list = document.createElement("div");
+    list.className = "logic-input-list";
+    (logic.kb_formulas || []).forEach((formula) => {
+      const item = document.createElement("div");
+      item.className = "logic-input-item";
+      item.textContent = formula;
+      list.appendChild(item);
+    });
+    const query = document.createElement("div");
+    query.className = "logic-input-item";
+    query.textContent = `query: ${logic.query || ""}`;
+    list.appendChild(query);
+    inputPanel.appendChild(list);
+    shell.appendChild(inputPanel);
+  }
+
+  const assignmentPanel = document.createElement("div");
+  assignmentPanel.className = "logic-assignment-panel";
+  const assignmentHeading = document.createElement("h3");
+  assignmentHeading.className = "logic-section-title";
+  assignmentHeading.textContent = "Current assignment";
+  assignmentPanel.appendChild(assignmentHeading);
+  if (!logic.assignment?.length) {
+    const empty = document.createElement("div");
+    empty.className = "logic-assignment-empty";
+    empty.textContent = "No variables have been assigned yet.";
+    assignmentPanel.appendChild(empty);
+  } else {
+    const assignmentList = document.createElement("div");
+    assignmentList.className = "logic-assignment-list";
+    logic.assignment.forEach((entry) => {
+      const row = document.createElement("div");
+      row.className = "logic-assignment-item";
+      const text = document.createElement("span");
+      text.className = "logic-assignment-text";
+      text.textContent = entry.text;
+      const reason = document.createElement("span");
+      reason.className = "logic-assignment-reason";
+      reason.textContent =
+        entry.reason === "decision"
+          ? "decision"
+          : entry.reason === "unit"
+            ? `unit from C${(entry.clause_index ?? 0) + 1}`
+            : "pure literal";
+      row.append(text, reason);
+      assignmentList.appendChild(row);
+    });
+    assignmentPanel.appendChild(assignmentList);
+  }
+  shell.appendChild(assignmentPanel);
+
+  const clausePanel = document.createElement("div");
+  const clauseHeading = document.createElement("h3");
+  clauseHeading.className = "logic-section-title";
+  clauseHeading.textContent = "CNF clauses";
+  clausePanel.appendChild(clauseHeading);
+  const clauseList = document.createElement("div");
+  clauseList.className = "logic-clause-list";
+  (logic.clauses || []).forEach((clause) => {
+    const row = document.createElement("div");
+    row.className = `logic-clause-row ${clause.status}`;
+    const header = document.createElement("div");
+    header.className = "logic-clause-header";
+    const label = document.createElement("span");
+    label.className = "logic-clause-label";
+    label.textContent = `C${clause.index + 1} ${clause.text}`;
+    const stateLabel = document.createElement("span");
+    stateLabel.className = "logic-clause-state";
+    stateLabel.textContent = clause.status;
+    header.append(label, stateLabel);
+    const literalRow = document.createElement("div");
+    literalRow.className = "logic-literal-row";
+    (clause.literals || []).forEach((literal) => {
+      const chip = document.createElement("span");
+      chip.className = `logic-literal-chip ${literal.state}`;
+      chip.textContent = literal.text;
+      literalRow.appendChild(chip);
+    });
+    row.append(header, literalRow);
+    if (clause.status === "unit" && clause.unit_literal) {
+      const footnote = document.createElement("div");
+      footnote.className = "logic-clause-footnote";
+      footnote.textContent = `Forced literal: ${formatLogicLiteral(clause.unit_literal)}`;
+      row.appendChild(footnote);
+    }
+    clauseList.appendChild(row);
+  });
+  clausePanel.appendChild(clauseList);
+  shell.appendChild(clausePanel);
+
+  panel.appendChild(shell);
+}
+
 function render() {
   const data = currentData();
   const step = currentStep();
@@ -538,7 +725,11 @@ function render() {
   $("step-range").value = String(state.stepIndex);
   $("message-banner").classList.add("hidden");
   renderTree(data);
-  if (isLabyrinth()) {
+  $("problem-svg").classList.toggle("hidden", isLogic());
+  $("logic-problem-panel").classList.toggle("hidden", !isLogic());
+  if (isLogic()) {
+    renderLogicProblem(data);
+  } else if (isLabyrinth()) {
     renderLabyrinth(data);
   } else if (isGraphReachability()) {
     renderGraphReachability(data);
