@@ -79,6 +79,12 @@ class BaseEducationalApp(ABC):
     def build_trace(self) -> dict[str, Any]:
         """Build the complete trace bundle for the current state."""
 
+    def handle_app_command(self, command: str, payload: dict[str, Any]) -> dict[str, Any]:
+        raise AI9414Error(
+            code="unsupported_action",
+            message=f"App command '{command}' is not supported by {self.app_type}.",
+        )
+
     def list_examples(self) -> list[str]:
         return []
 
@@ -324,6 +330,15 @@ class BaseEducationalApp(ABC):
                     trace=self.get_trace_payload(),
                     trace_complete=self._trace_bundle.is_complete,
                 ).model_dump()
+
+            if action == "app_command":
+                command = payload.get("command")
+                if not isinstance(command, str):
+                    raise AI9414Error(
+                        code="invalid_action_payload",
+                        message="Action 'app_command' requires a string payload field 'command'.",
+                    )
+                return self.handle_app_command(command, payload)
 
             raise AI9414Error(
                 code="unsupported_action",

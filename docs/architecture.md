@@ -1,6 +1,6 @@
 # ai9414 Architecture Overview
 
-This repository contains the Phase 1 reference infrastructure for the `ai9414` platform.
+This repository contains the Phase 1 reference infrastructure for the `ai9414` platform together with concrete search demo modules.
 
 ## Included in Phase 1
 
@@ -8,14 +8,21 @@ This repository contains the Phase 1 reference infrastructure for the `ai9414` p
 - Common Pydantic schemas for manifest, state, trace, action, and error payloads
 - `BaseEducationalApp` for consistent topic-app behaviour
 - FastAPI app factory and launcher utilities
-- Bundled student frontend shell assets
+- Bundled student and solution replay frontend assets
 - Static solution replay export with no backend dependency
-- Minimal placeholder app proving precomputed and incremental execution modes
+- `ai9414.search.SearchDemo` with deterministic weighted geometric graph examples
+- `ai9414.labyrinth.LabyrinthDemo` with built-in labyrinth playback examples and live-Python handoff
+- Depth-first branch-and-bound trace generation in Python
+- Synchronised two-panel replay UI for the search tree and geometric graph
 
 ## Execution Modes
 
 - `precomputed`: Python builds the full trace before frontend replay.
 - `incremental`: Python computes one step per `next_step` action and can later export a complete trace for solution replay.
+
+The search demo currently uses `precomputed` mode only, because Phase 1 is validating the replay model rather than incremental execution.
+
+The labyrinth demo also uses `precomputed` mode for built-in examples, then hands off generated mazes to a separate student Python stub in live mode.
 
 ## Frontend Contract
 
@@ -30,7 +37,7 @@ The student shell uses the standard routes:
 - `GET /api/examples`
 - `GET /api/errors`
 
-The solution bundle uses static `index.html` plus `trace.json` and performs no backend calls.
+The solution bundle uses static `index.html` plus `trace.json` and performs no backend calls. To support this, the shared `TraceBundle` now carries an `initial_state` snapshot alongside the step patches.
 
 ## Packaging Notes
 
@@ -38,3 +45,34 @@ The solution bundle uses static `index.html` plus `trace.json` and performs no b
 - File access uses package-relative paths that work in installed environments.
 - Students need Python only; Node.js is not required at runtime.
 
+## Search Demo Structure
+
+```text
+src/ai9414/search/
+  __init__.py
+  api.py
+  configs.py
+  examples.py
+  generator.py
+  models.py
+  solver.py
+  trace.py
+
+src/ai9414/labyrinth/
+  __init__.py
+  api.py
+  examples.py
+  generator.py
+  models.py
+  solver.py
+  trace.py
+```
+
+- `api.py`: public `SearchDemo` entry point
+- `examples.py`: deterministic curated examples
+- `generator.py`: sparse geometric graph generation with a guaranteed backbone path
+- `solver.py`: exhaustive DFS with branch-and-bound pruning
+- `trace.py`: fixed tree layout plus trace-bundle construction
+- `models.py` and `configs.py`: graph, tree, and configuration validation models
+
+The labyrinth package follows the same shape, but swaps the weighted-graph world for a grid maze, plain DFS reachability, built-in playback examples, and a live-Python `/solve` workflow.

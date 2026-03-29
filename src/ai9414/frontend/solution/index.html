@@ -4,38 +4,126 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ai9414 Solution Replay</title>
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./student-assets/style.css" />
   </head>
   <body>
-    <div class="solution-shell">
-      <header>
-        <p class="eyebrow">ai9414 solution mode</p>
-        <h1 id="solution-title">Solution Replay</h1>
-        <p id="solution-subtitle">Static replay with no live backend.</p>
+    <div class="page-shell">
+      <header class="header">
+        <div>
+          <p class="eyebrow">ai9414 solution replay</p>
+          <h1 id="solution-title">Loading...</h1>
+          <p id="solution-subtitle" class="muted"></p>
+        </div>
+        <div class="badge-row">
+          <span class="badge">solution</span>
+          <span id="solution-algorithm" class="badge badge-neutral">depth-first branch-and-bound</span>
+        </div>
       </header>
 
-      <section class="panel">
-        <div class="controls">
-          <button id="previous-button" type="button">Previous</button>
-          <button id="next-button" type="button">Next</button>
-          <button id="play-button" type="button">Play</button>
-          <button id="reset-button" type="button">Reset</button>
-        </div>
-        <div class="step-panel">
-          <div class="stat">
-            <span>Step</span>
-            <strong id="step-readout">0 / 0</strong>
+      <main class="layout">
+        <section class="panel visual-panel">
+          <div class="panel-header">
+            <div>
+              <h2 id="left-panel-title">Search Tree</h2>
+              <p id="left-panel-subtitle" class="muted">Static replay of the precomputed search tree.</p>
+            </div>
           </div>
-          <div class="stat">
-            <span>Label</span>
-            <strong id="step-label">Initial state</strong>
+          <svg id="search-tree-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Search tree"></svg>
+        </section>
+
+        <section class="panel visual-panel">
+          <div class="panel-header">
+            <div>
+              <h2 id="right-panel-title">Problem View</h2>
+              <p id="right-panel-subtitle" class="muted">Static replay of the problem world.</p>
+            </div>
           </div>
-        </div>
-        <p id="step-annotation">Loading exported trace...</p>
-      </section>
+          <svg id="problem-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Problem view"></svg>
+        </section>
+
+        <section class="panel explanation-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Explanation</h2>
+              <p id="step-event" class="muted">initialise</p>
+            </div>
+          </div>
+          <div id="message-banner" class="message-banner hidden" role="status"></div>
+          <p id="step-readout" class="muted">0 / 0</p>
+          <h3 id="step-label">Initial state</h3>
+          <p id="step-annotation">Loading exported trace...</p>
+          <p id="step-note" class="muted"></p>
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span id="metric-1-label" class="metric-label">Current path cost</span>
+              <strong id="metric-1-value">0.000</strong>
+            </div>
+            <div class="metric-card">
+              <span id="metric-2-label" class="metric-label">Best cost</span>
+              <strong id="metric-2-value">none</strong>
+            </div>
+            <div class="metric-card">
+              <span id="metric-3-label" class="metric-label">Solutions found</span>
+              <strong id="metric-3-value">0</strong>
+            </div>
+            <div class="metric-card">
+              <span id="metric-4-label" class="metric-label">Pruned branches</span>
+              <strong id="metric-4-value">0</strong>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel controls-panel">
+          <div class="panel-header">
+            <h2>Controls</h2>
+          </div>
+          <div class="controls-grid">
+            <button id="previous-button" type="button">Previous</button>
+            <button id="next-button" type="button">Next</button>
+            <button id="play-button" type="button">Play</button>
+            <button id="pause-button" type="button" class="secondary-button">Pause</button>
+            <button id="reset-button" type="button">Reset</button>
+          </div>
+          <label class="control-block" for="speed-select">
+            <span>Playback speed</span>
+            <select id="speed-select">
+              <option value="0.75">0.75×</option>
+              <option value="1">1.0×</option>
+              <option value="1.5">1.5×</option>
+              <option value="2">2.0×</option>
+              <option value="5">5.0×</option>
+            </select>
+          </label>
+          <div id="search-toggle-grid" class="toggle-grid">
+            <label class="toggle-row" for="show-explored">
+              <input id="show-explored" type="checkbox" checked />
+              <span>Show explored edges</span>
+            </label>
+            <label class="toggle-row" for="show-pruned">
+              <input id="show-pruned" type="checkbox" checked />
+              <span>Show pruned branches</span>
+            </label>
+          </div>
+          <div class="control-block">
+            <span>Current step</span>
+            <input id="step-range" type="range" min="0" max="0" value="0" />
+          </div>
+          <div id="search-legend" class="legend-grid">
+            <div class="legend-item"><span class="legend-swatch legend-current"></span>Current branch</div>
+            <div class="legend-item"><span class="legend-swatch legend-best"></span>Best so far</div>
+            <div class="legend-item"><span class="legend-swatch legend-final"></span>Final path</div>
+            <div class="legend-item"><span class="legend-swatch legend-pruned"></span>Pruned branch</div>
+          </div>
+          <div id="labyrinth-legend" class="legend-grid hidden">
+            <div class="legend-item"><span class="legend-swatch legend-current"></span>Current route</div>
+            <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Dead end</div>
+            <div class="legend-item"><span class="legend-swatch legend-final"></span>Final path</div>
+            <div class="legend-item"><span class="legend-swatch legend-wall"></span>Wall</div>
+          </div>
+        </aside>
+      </main>
     </div>
 
     <script src="./app.js" defer></script>
   </body>
 </html>
-

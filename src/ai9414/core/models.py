@@ -55,6 +55,7 @@ class TraceSummary(AI9414Model):
 
 class TraceStep(AI9414Model):
     index: int
+    event_type: str = "update"
     label: str
     annotation: str = ""
     teaching_note: str | None = None
@@ -66,6 +67,7 @@ class TraceBundle(AI9414Model):
     app_type: str
     trace_id: str
     is_complete: bool = True
+    initial_state: dict[str, Any] = Field(default_factory=dict)
     summary: TraceSummary = Field(default_factory=TraceSummary)
     steps: list[TraceStep] = Field(default_factory=list)
 
@@ -80,6 +82,7 @@ class ActionRequest(AI9414Model):
         "set_option",
         "load_example",
         "load_config",
+        "app_command",
     ]
     payload: dict[str, Any] = Field(default_factory=dict)
 
@@ -97,4 +100,3 @@ class ActionResponse(AI9414Model):
     new_step: TraceStep | dict[str, Any] | None = None
     trace_complete: bool | None = None
     error: StructuredError | None = None
-
