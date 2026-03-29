@@ -1,10 +1,11 @@
 # artificial-intelligence
 
-Phase 1 reference implementation of the `ai9414` educational AI platform, now with five concrete search demos:
+Phase 1 reference implementation of the `ai9414` educational AI platform, now with six concrete search demos:
 
 - labyrinth DFS search
 - spatial graph DFS search
 - spatial graph BFS search
+- spatial graph greedy best-first search
 - spatial graph uniform-cost search
 - spatial graph branch-and-bound search
 
@@ -16,6 +17,8 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
   Start with `python examples/graph_dfs_demo.py`
 - `spatial graph BFS search`
   Start with `python examples/graph_bfs_demo.py`
+- `spatial graph greedy best-first search`
+  Start with `python examples/graph_gbfs_demo.py`
 - `spatial graph uniform-cost search`
   Start with `python examples/graph_ucs_demo.py`
 - `spatial graph branch-and-bound search`
@@ -28,6 +31,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - common JSON schema models
 - precomputed trace replay for a generated spatial graph DFS demo
 - precomputed trace replay for a generated spatial graph BFS demo
+- precomputed trace replay for a generated spatial graph greedy best-first demo
 - precomputed trace replay for a generated spatial graph uniform-cost demo
 - precomputed trace replay for a generated spatial graph branch-and-bound demo
 - static solution replay export with no backend dependency
@@ -60,6 +64,12 @@ To start the spatial graph BFS example:
 
 ```bash
 python examples/graph_bfs_demo.py
+```
+
+To start the spatial graph greedy best-first example:
+
+```bash
+python examples/graph_gbfs_demo.py
 ```
 
 To start the spatial graph uniform-cost example:
@@ -119,6 +129,16 @@ Spatial graph BFS example:
 from ai9414.graph_bfs import GraphBfsDemo
 
 app = GraphBfsDemo()
+app.load_example("small")
+app.show()
+```
+
+Spatial graph greedy best-first example:
+
+```python
+from ai9414.graph_gbfs import GraphGbfsDemo
+
+app = GraphGbfsDemo()
 app.load_example("small")
 app.show()
 ```
@@ -204,6 +224,21 @@ if __name__ == "__main__":
     run_graph_ucs_solver(solve_ucs)
 ```
 
+Live graph greedy best-first solver wrapper:
+
+```python
+from typing import Any
+from ai9414.search import run_graph_gbfs_solver
+
+
+def solve_gbfs(graph: dict[str, Any]) -> dict[str, Any]:
+    ...
+
+
+if __name__ == "__main__":
+    run_graph_gbfs_solver(solve_gbfs)
+```
+
 Live spatial graph branch-and-bound solver wrapper:
 
 ```python
@@ -227,6 +262,7 @@ src/ai9414/
   demo/
   graph_bfs/
   graph_dfs/
+  graph_gbfs/
   graph_ucs/
   labyrinth/
   search/

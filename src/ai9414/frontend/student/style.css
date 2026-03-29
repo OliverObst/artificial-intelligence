@@ -386,6 +386,11 @@ input[type="number"] {
   fill: rgba(13, 110, 110, 0.08);
 }
 
+.tree-node.queued .tree-node-circle {
+  fill: rgba(13, 110, 110, 0.06);
+  stroke: rgba(13, 110, 110, 0.62);
+}
+
 .tree-node.backtracked .tree-node-circle {
   fill: rgba(95, 107, 115, 0.08);
 }
