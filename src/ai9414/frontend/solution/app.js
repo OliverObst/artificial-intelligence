@@ -12,7 +12,10 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 const clone = (value) => JSON.parse(JSON.stringify(value));
-const isLabyrinth = () => state.trace?.app_type === "labyrinth";
+const appType = () => state.trace?.app_type;
+const isLabyrinth = () => appType() === "labyrinth";
+const isGraphDfs = () => appType() === "graph_dfs";
+const isWeightedSearch = () => appType() === "search";
 
 function deepMerge(base, patch) {
   Object.entries(patch || {}).forEach(([key, value]) => {
@@ -107,6 +110,16 @@ function renderPanelCopy() {
     $("search-toggle-grid").classList.add("hidden");
     $("search-legend").classList.add("hidden");
     $("labyrinth-legend").classList.remove("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
+  } else if (isGraphDfs()) {
+    $("left-panel-title").textContent = "Search Tree";
+    $("left-panel-subtitle").textContent = "Static replay of the DFS tree built while exploring the graph.";
+    $("right-panel-title").textContent = "Spatial Graph";
+    $("right-panel-subtitle").textContent = "Static replay of the graph route, explored edges, dead ends, and final discovered path.";
+    $("search-toggle-grid").classList.add("hidden");
+    $("search-legend").classList.add("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.remove("hidden");
   } else {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the precomputed search tree.";
@@ -115,6 +128,7 @@ function renderPanelCopy() {
     $("search-toggle-grid").classList.remove("hidden");
     $("search-legend").classList.remove("hidden");
     $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
   }
 }
 
@@ -128,6 +142,17 @@ function renderMetrics(data) {
     $("metric-3-value").textContent = data.search?.status || "searching";
     $("metric-4-label").textContent = "Seed";
     $("metric-4-value").textContent = String(data.labyrinth?.seed ?? "none");
+    return;
+  }
+  if (isGraphDfs()) {
+    $("metric-1-label").textContent = "Explored nodes";
+    $("metric-1-value").textContent = String(data.search?.explored_count || 0);
+    $("metric-2-label").textContent = "Current depth";
+    $("metric-2-value").textContent = String(data.search?.current_depth || 0);
+    $("metric-3-label").textContent = "Status";
+    $("metric-3-value").textContent = data.search?.status || "searching";
+    $("metric-4-label").textContent = "Seed";
+    $("metric-4-value").textContent = String(data.graph?.seed ?? "none");
     return;
   }
   $("metric-1-label").textContent = "Current path cost";
@@ -193,7 +218,7 @@ function renderTree(data) {
         label
       )
     );
-    if (!isLabyrinth()) {
+    if (isWeightedSearch()) {
       group.appendChild(svgNode("text", { class: "tree-node-cost", y: 24 }, formatNumber(node.path_cost)));
     }
     circles.appendChild(group);
@@ -292,6 +317,74 @@ function renderWeightedGraph(data) {
   svg.appendChild(nodes);
 }
 
+function renderGraphDfs(data) {
+  const svg = $("problem-svg");
+  svg.innerHTML = "";
+  const graph = data.graph;
+  if (!graph) return;
+
+  const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
+  const currentPath = new Set(data.search.current_graph_path || []);
+  const visitedNodes = new Set(data.search.visited_order || []);
+  const deadEndNodes = new Set(data.search.dead_end_nodes || []);
+  const finalPath = new Set(data.search.final_graph_path || []);
+  const exploredEdgeIds = new Set(
+    (data.search.explored_graph_edges || []).map(([u, v]) => edgeId(u, v))
+  );
+  const currentEdgeIds = pathToEdgeIds(data.search.current_graph_path || []);
+  const finalEdgeIds = pathToEdgeIds(data.search.final_graph_path || []);
+
+  const baselines = svgNode("g");
+  const overlays = svgNode("g");
+  const nodes = svgNode("g");
+
+  graph.edges.forEach((edge) => {
+    const left = nodeMap.get(edge.u);
+    const right = nodeMap.get(edge.v);
+    const lineProps = {
+      x1: left.x * 1000,
+      y1: left.y * 700,
+      x2: right.x * 1000,
+      y2: right.y * 700,
+    };
+    baselines.appendChild(svgNode("line", { class: "graph-edge", ...lineProps }));
+
+    const id = edge.id || edgeId(edge.u, edge.v);
+    if (exploredEdgeIds.has(id)) {
+      overlays.appendChild(svgNode("line", { class: "graph-overlay explored", ...lineProps }));
+    }
+    if (currentEdgeIds.has(id)) {
+      overlays.appendChild(svgNode("line", { class: "graph-overlay current", ...lineProps }));
+    }
+    if (finalEdgeIds.has(id)) {
+      overlays.appendChild(svgNode("line", { class: "graph-overlay final", ...lineProps }));
+    }
+  });
+
+  graph.nodes.forEach((node) => {
+    const classes = ["graph-node"];
+    if (node.id === graph.start) classes.push("start");
+    if (node.id === graph.goal) classes.push("goal");
+    if (visitedNodes.has(node.id)) classes.push("visited");
+    if (deadEndNodes.has(node.id)) classes.push("dead-end");
+    if (currentPath.has(node.id)) classes.push("current");
+    if (finalPath.has(node.id)) classes.push("final");
+    const activeNode = (data.search.current_graph_path || []).slice(-1)[0];
+    if (activeNode === node.id) classes.push("active");
+    const group = svgNode("g", {
+      class: classes.join(" "),
+      transform: `translate(${node.x * 1000}, ${node.y * 700})`,
+    });
+    group.appendChild(svgNode("circle", { class: "graph-node-circle", r: 28 }));
+    group.appendChild(svgNode("text", { class: "graph-node-label" }, node.id));
+    nodes.appendChild(group);
+  });
+
+  svg.appendChild(baselines);
+  svg.appendChild(overlays);
+  svg.appendChild(nodes);
+}
+
 function renderLabyrinth(data) {
   const svg = $("problem-svg");
   svg.innerHTML = "";
@@ -372,6 +465,8 @@ function render() {
   renderTree(data);
   if (isLabyrinth()) {
     renderLabyrinth(data);
+  } else if (isGraphDfs()) {
+    renderGraphDfs(data);
   } else {
     renderWeightedGraph(data);
   }

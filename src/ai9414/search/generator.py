@@ -26,6 +26,7 @@ def _generate_positions(node_count: int, seed: int) -> list[GraphNode]:
     rows = math.ceil(node_count / columns)
     cells: list[tuple[int, int]] = [(row, col) for row in range(rows) for col in range(columns)]
     rng.shuffle(cells)
+    cells = cells[:node_count]
     ids = generate_node_ids(node_count)
     nodes: list[GraphNode] = []
 

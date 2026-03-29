@@ -248,6 +248,10 @@ h3 {
   background: #8c5e4b;
 }
 
+.legend-explored {
+  background: rgba(95, 107, 115, 0.72);
+}
+
 .legend-best {
   background: var(--best);
 }
@@ -487,6 +491,15 @@ input[type="number"] {
 
 .graph-node.current .graph-node-circle {
   fill: rgba(13, 110, 110, 0.18);
+}
+
+.graph-node.visited .graph-node-circle {
+  fill: rgba(95, 107, 115, 0.12);
+}
+
+.graph-node.dead-end .graph-node-circle {
+  fill: rgba(140, 94, 75, 0.22);
+  stroke: rgba(140, 94, 75, 0.72);
 }
 
 .graph-node.best .graph-node-circle {

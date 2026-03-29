@@ -86,7 +86,7 @@
             <button id="pause-button" type="button" class="secondary-button">Pause</button>
             <button id="reset-button" type="button">Reset</button>
             <button id="reload-button" type="button" class="secondary-button">Reload example</button>
-            <button id="generate-button" type="button" class="secondary-button">Generate new labyrinth</button>
+            <button id="generate-button" type="button" class="secondary-button">Generate new problem</button>
             <button id="solve-python-button" type="button">Solve with Python</button>
             <button id="download-stub-button" type="button" class="secondary-button">Download Python stub</button>
           </div>
@@ -105,7 +105,7 @@
           </label>
 
           <label id="size-control" class="control-block hidden" for="size-select">
-            <span>Labyrinth size</span>
+            <span id="size-control-label">Labyrinth size</span>
             <select id="size-select">
               <option value="small">small</option>
               <option value="medium">medium</option>
@@ -158,6 +158,13 @@
             <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Dead end</div>
             <div class="legend-item"><span class="legend-swatch legend-final"></span>Final path</div>
             <div class="legend-item"><span class="legend-swatch legend-wall"></span>Wall</div>
+          </div>
+
+          <div id="graph-dfs-legend" class="legend-grid hidden">
+            <div class="legend-item"><span class="legend-swatch legend-current"></span>Current route</div>
+            <div class="legend-item"><span class="legend-swatch legend-explored"></span>Explored edge</div>
+            <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Dead end</div>
+            <div class="legend-item"><span class="legend-swatch legend-final"></span>Final path</div>
           </div>
         </aside>
       </main>
