@@ -103,6 +103,24 @@ def test_configuration_file_loads(valid_config_path, precomputed_demo):
     assert payload["state"]["options"]["playback_speed"] == 1.5
 
 
+def test_weighted_search_demo_exposes_configurations(precomputed_demo):
+    assert precomputed_demo.list_examples() == ["small", "large"]
+
+
+def test_generate_weighted_graph_command_returns_playback_trace(precomputed_demo):
+    payload = precomputed_demo.handle_action(
+        {
+            "action": "app_command",
+            "payload": {"command": "generate_graph", "size": "large", "seed": 41},
+        }
+    )
+    assert payload["ok"] is True
+    assert payload["state"]["data"]["graph"]["size"] == "large"
+    assert payload["state"]["data"]["graph"]["seed"] == 41
+    assert payload["trace"]["summary"]["step_count"] > 0
+    assert payload["trace"]["steps"][-1]["event_type"] == "finished"
+
+
 def test_examples_produce_optimal_paths():
     for example in build_examples().values():
         trace = build_search_trace(example)
@@ -111,15 +129,15 @@ def test_examples_produce_optimal_paths():
         assert math.isclose(final_search["best_cost"], optimal_cost, rel_tol=1e-9)
 
 
-def test_misleading_branch_updates_best_solution_more_than_once():
-    example = build_examples()["misleading_branch"]
+def test_large_weighted_graph_updates_best_solution():
+    example = build_examples()["large"]
     trace = build_search_trace(example)
     best_updates = [step for step in trace.steps if step.event_type == "best_updated"]
-    assert len(best_updates) >= 2
+    assert best_updates
 
 
-def test_strong_pruning_example_emits_prune_events():
-    example = build_examples()["strong_pruning"]
+def test_large_weighted_graph_emits_prune_events():
+    example = build_examples()["large"]
     trace = build_search_trace(example)
     prune_steps = [step for step in trace.steps if step.event_type == "prune"]
     assert prune_steps

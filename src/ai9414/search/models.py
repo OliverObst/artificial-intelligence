@@ -42,6 +42,8 @@ class WeightedGraph(AI9414Model):
     edges: list[GraphEdge]
     start: str
     goal: str
+    seed: int | None = None
+    size: str | None = None
 
     @model_validator(mode="after")
     def validate_references(self) -> "WeightedGraph":

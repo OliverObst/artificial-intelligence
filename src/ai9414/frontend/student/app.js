@@ -662,6 +662,214 @@ It receives a graph as a Python dictionary and must return a dictionary containi
 - visited_order
 `;
 
+const WEIGHTED_GRAPH_PYTHON_STUB = `from __future__ import annotations
+
+from typing import Any
+
+from ai9414.search import run_weighted_graph_solver
+
+
+def normalise_node_id(raw: Any) -> str:
+    """
+    Convert one node id into a Python string.
+    """
+    return str(raw)
+
+
+def build_adjacency(graph: dict[str, Any]) -> dict[str, list[tuple[str, float]]]:
+    """
+    Build an adjacency list from the weighted graph dictionary.
+
+    The graph uses this format:
+        {
+            "nodes": [{"id": "A", "x": 0.1, "y": 0.2}, ...],
+            "edges": [{"u": "A", "v": "B", "cost": 1.7}, ...],
+            "start": "A",
+            "goal": "G"
+        }
+    """
+    adjacency = {str(node["id"]): [] for node in graph["nodes"]}
+    for edge in graph["edges"]:
+        left = str(edge["u"])
+        right = str(edge["v"])
+        cost = float(edge["cost"])
+        adjacency[left].append((right, cost))
+        adjacency[right].append((left, cost))
+    for node_id in adjacency:
+        adjacency[node_id].sort(key=lambda item: (item[1], item[0]))
+    return adjacency
+
+
+def get_neighbours(adjacency: dict[str, list[tuple[str, float]]], node_id: str) -> list[tuple[str, float]]:
+    """
+    Return neighbouring nodes in deterministic branch-and-bound order.
+
+    Important:
+        The order matters. The demo expects a fixed order for a fixed graph.
+    """
+    return list(adjacency[node_id])
+
+
+def make_trace_event(
+    step: int,
+    action: str,
+    node_id: str | None,
+    parent: str | None,
+    depth: int,
+    path_cost: float,
+    current_path: list[str],
+    current_cost: float,
+    best_path: list[str],
+    best_cost: float | None,
+    considered_edge: list[str] | None = None,
+) -> dict[str, Any]:
+    """
+    Build one trace event for the replay.
+
+    The browser uses this event format directly.
+    """
+    return {
+        "step": step,
+        "action": action,
+        "node": node_id,
+        "parent": parent,
+        "depth": depth,
+        "path_cost": float(path_cost),
+        "current_path": list(current_path),
+        "current_cost": float(current_cost),
+        "best_path": list(best_path),
+        "best_cost": None if best_cost is None else float(best_cost),
+        "considered_edge": None if considered_edge is None else list(considered_edge),
+    }
+
+
+def solve_dfbb(graph: dict[str, Any]) -> dict[str, Any]:
+    """
+    Solve the weighted graph with depth-first branch-and-bound.
+
+    This is the main function you are expected to implement.
+    You should replace the TODO section below with a complete solver.
+
+    Student responsibilities:
+        - build or use an adjacency structure
+        - run exhaustive DFS with backtracking
+        - keep the best complete path cost found so far
+        - prune any branch whose partial cost is already too large
+        - record visited_order
+        - return the final optimal path and best cost
+        - build the trace list
+
+    ai9414 responsibilities:
+        - start the local web server
+        - expose the /solve endpoint
+        - pass the graph dictionary into this function
+        - validate the result shape
+        - send the result back to the browser
+
+    Required return format:
+        {
+            "algorithm": "dfbb",
+            "status": "found" or "not_found",
+            "trace": [...],
+            "path": ["A", "C", "G"],
+            "best_cost": 4.7,
+            "visited_order": ["A", "B", "D", "C", "G"],
+        }
+
+    Trace actions:
+        - start
+        - expand
+        - consider_edge
+        - descend
+        - prune
+        - backtrack
+        - solution_found
+        - best_updated
+        - finished
+
+    Important:
+        Plain DFS is not enough here. You are expected to implement
+        depth-first branch-and-bound, not ordinary DFS.
+    """
+    start = normalise_node_id(graph["start"])
+    goal = normalise_node_id(graph["goal"])
+    adjacency = build_adjacency(graph)
+    _ = (goal, adjacency)
+
+    # TODO:
+    # Replace the placeholder result below with a full branch-and-bound solver.
+    trace = [
+        make_trace_event(
+            0,
+            "start",
+            start,
+            None,
+            0,
+            0.0,
+            [start],
+            0.0,
+            [],
+            None,
+        )
+    ]
+    return {
+        "algorithm": "dfbb",
+        "status": "error",
+        "message": "Replace the placeholder code inside solve_dfbb with your full branch-and-bound implementation.",
+        "trace": trace,
+        "path": [],
+        "best_cost": None,
+        "visited_order": [start],
+    }
+
+
+if __name__ == "__main__":
+    run_weighted_graph_solver(solve_dfbb)
+`;
+
+const WEIGHTED_GRAPH_PYTHON_REQUIREMENTS = `ai9414
+`;
+
+const WEIGHTED_GRAPH_PYTHON_README = `# weighted graph branch-and-bound solver
+
+This folder runs a tiny local solver for the weighted graph search example.
+The web-app connection is handled for you by ai9414.
+Your job is to implement the branch-and-bound search logic.
+
+## install
+
+Install the dependency with:
+
+    pip install -r requirements.txt
+
+## run
+
+Start the local solver with:
+
+    python solve_weighted_graph.py
+
+The solver starts on the local port expected by the browser app.
+
+## what to implement
+
+Open solve_weighted_graph.py and look at:
+
+- build_adjacency(...)
+- get_neighbours(...)
+- make_trace_event(...)
+- solve_dfbb(...)
+
+The main function is solve_dfbb(...).
+It receives a weighted graph as a Python dictionary and must return a dictionary containing:
+
+- algorithm
+- status
+- trace
+- path
+- best_cost
+- visited_order
+`;
+
 const $svgNode = (name, attributes = {}, text = "") => {
   const node = document.createElementNS("http://www.w3.org/2000/svg", name);
   Object.entries(attributes).forEach(([key, value]) => {
@@ -681,7 +889,7 @@ const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
 const isGraphReachability = () => isGraphDfs() || isGraphBfs();
 const isWeightedSearch = () => appType() === "search";
-const isLivePythonApp = () => isLabyrinth() || isGraphReachability();
+const isLivePythonApp = () => Boolean(state.session?.data?.live_python);
 
 const CRC32_TABLE = (() => {
   const table = new Uint32Array(256);
@@ -840,6 +1048,10 @@ function pathToEdgeIds(path) {
   return ids;
 }
 
+function routeKey(path) {
+  return path.join("->");
+}
+
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {
     headers: { "Content-Type": "application/json" },
@@ -978,6 +1190,58 @@ function blankLabyrinthTrace(labyrinth) {
         status: "searching",
         found: false,
       },
+    },
+    steps: [],
+    summary: { step_count: 0, result: "ready" },
+  };
+}
+
+function blankSearchTrace(graph) {
+  const start = graph.start;
+  return {
+    app_type: "search",
+    initial_state: {
+      example_title: state.session?.data?.example_title || "Generated weighted graph",
+      example_subtitle:
+        state.session?.data?.example_subtitle ||
+        "Generate a weighted graph, then solve it in live Python mode.",
+      algorithm_label: "Depth-first branch-and-bound",
+      algorithm_note:
+        "This view is ready for depth-first branch-and-bound. Solve the current weighted graph with Python to populate the trace.",
+      goal_label: "Find the optimal path from start to goal",
+      graph,
+      tree: {
+        nodes: [
+          {
+            tree_id: "t0",
+            graph_node: start,
+            parent: null,
+            depth: 0,
+            path_cost: 0,
+            status: "active",
+            order: 0,
+            x: 0.5,
+            y: 0.12,
+            terminal: false,
+          },
+        ],
+      },
+      search: {
+        active_tree_node: "t0",
+        active_tree_path: ["t0"],
+        best_tree_path: [],
+        final_tree_path: [],
+        current_graph_path: [start],
+        best_graph_path: [],
+        final_graph_path: [],
+        explored_graph_edges: [],
+        considered_edge: null,
+        current_cost: 0,
+        best_cost: null,
+        finished: false,
+        status: "searching",
+      },
+      stats: { expanded: 0, pruned: 0, solutions_found: 0, backtracks: 0 },
     },
     steps: [],
     summary: { step_count: 0, result: "ready" },
@@ -1732,16 +1996,280 @@ function buildGraphBfsTraceFromBackend(graph, result) {
   };
 }
 
-function activeTraceContext() {
-  if (isWeightedSearch()) {
-    return { trace: state.serverTrace, snapshots: state.serverSnapshots };
+function buildSearchTraceFromBackend(graph, result) {
+  if (
+    !Array.isArray(result.trace) ||
+    !Array.isArray(result.path) ||
+    !Array.isArray(result.visited_order)
+  ) {
+    throw new Error("Solver returned invalid data.");
   }
 
+  const rawSnapshots = [];
+  const treeNodes = new Map();
+  const visibleTreeIds = [];
+  const treeIdByRoute = new Map();
+  const exploredEdgeIds = new Set();
+  let currentTreeId = "t0";
+  let currentPath = [graph.start];
+  let bestPath = [];
+  let finalPath = [];
+  let activeTreePath = ["t0"];
+  let bestTreePath = [];
+  let finalTreePath = [];
+  let currentCost = 0;
+  let bestCost = null;
+  let consideredEdge = null;
+  let finished = false;
+  const stats = { expanded: 0, pruned: 0, solutions_found: 0, backtracks: 0 };
+
+  const root = {
+    tree_id: "t0",
+    graph_node: graph.start,
+    parent: null,
+    depth: 0,
+    path_cost: 0,
+    status: "active",
+    order: 0,
+    x: 0.5,
+    y: 0.12,
+    terminal: false,
+  };
+  treeNodes.set("t0", root);
+  visibleTreeIds.push("t0");
+  treeIdByRoute.set(routeKey([graph.start]), "t0");
+
+  function ensureTreePath(route) {
+    const ids = [];
+    route.forEach((_, index) => {
+      const treeId = treeIdByRoute.get(routeKey(route.slice(0, index + 1)));
+      if (treeId) ids.push(treeId);
+    });
+    return ids;
+  }
+
+  function snapshot() {
+    return {
+      tree: {
+        nodes: visibleTreeIds.map((treeId) => clone(treeNodes.get(treeId))),
+      },
+      search: {
+        active_tree_node: currentTreeId,
+        active_tree_path: clone(activeTreePath),
+        best_tree_path: clone(bestTreePath),
+        final_tree_path: clone(finalTreePath),
+        current_graph_path: clone(currentPath),
+        best_graph_path: clone(bestPath),
+        final_graph_path: clone(finalPath),
+        explored_graph_edges: Array.from(exploredEdgeIds).map((id) => id.split("--")),
+        considered_edge: consideredEdge ? clone(consideredEdge) : null,
+        current_cost: currentCost,
+        best_cost: bestCost,
+        finished,
+        status: finished ? "finished" : "searching",
+      },
+      stats: clone(stats),
+    };
+  }
+
+  result.trace.forEach((step) => {
+    const action = step.action;
+    const nodeId = typeof step.node === "string" ? step.node : null;
+    const parent = typeof step.parent === "string" ? step.parent : null;
+    const depth = Number(step.depth || 0);
+    const pathCost = Number(step.path_cost || 0);
+    currentPath = clone(step.current_path || []);
+    currentCost = Number(step.current_cost || 0);
+    bestPath = clone(step.best_path || []);
+    bestCost = step.best_cost === null || step.best_cost === undefined ? null : Number(step.best_cost);
+    consideredEdge = Array.isArray(step.considered_edge) ? clone(step.considered_edge) : null;
+
+    if (action === "start") {
+      activeTreePath = ["t0"];
+      currentTreeId = "t0";
+      treeNodes.get("t0").status = "active";
+    } else if (action === "expand") {
+      stats.expanded += 1;
+      const treeId = treeIdByRoute.get(routeKey(currentPath)) || currentTreeId;
+      if (treeNodes.get(treeId)) {
+        treeNodes.get(treeId).status = "active";
+      }
+      currentTreeId = treeId;
+      activeTreePath = ensureTreePath(currentPath);
+    } else if (action === "consider_edge") {
+      activeTreePath = ensureTreePath(currentPath);
+      currentTreeId = activeTreePath[activeTreePath.length - 1] || "t0";
+    } else if (action === "descend") {
+      const parentRoute = currentPath.slice(0, -1);
+      const parentId = treeIdByRoute.get(routeKey(parentRoute)) || currentTreeId;
+      const treeId = `t${visibleTreeIds.length}`;
+      treeNodes.set(treeId, {
+        tree_id: treeId,
+        graph_node: nodeId,
+        parent: parentId,
+        depth,
+        path_cost: pathCost,
+        status: "active",
+        order: visibleTreeIds.length,
+        terminal: nodeId === graph.goal,
+      });
+      visibleTreeIds.push(treeId);
+      treeIdByRoute.set(routeKey(currentPath), treeId);
+      if (parent && nodeId) exploredEdgeIds.add(edgeId(parent, nodeId));
+      if (treeNodes.get(parentId)) {
+        treeNodes.get(parentId).status = "expanded";
+      }
+      activeTreePath = ensureTreePath(currentPath);
+      currentTreeId = treeId;
+    } else if (action === "prune") {
+      stats.pruned += 1;
+      const parentId = treeIdByRoute.get(routeKey(currentPath)) || currentTreeId;
+      const treeId = `t${visibleTreeIds.length}`;
+      const prunedRoute = currentPath.concat(nodeId ? [nodeId] : []);
+      treeNodes.set(treeId, {
+        tree_id: treeId,
+        graph_node: nodeId,
+        parent: parentId,
+        depth,
+        path_cost: pathCost,
+        status: "pruned",
+        order: visibleTreeIds.length,
+        terminal: nodeId === graph.goal,
+      });
+      visibleTreeIds.push(treeId);
+      treeIdByRoute.set(routeKey(prunedRoute), treeId);
+      activeTreePath = ensureTreePath(currentPath);
+      currentTreeId = activeTreePath[activeTreePath.length - 1] || parentId || "t0";
+      if (treeNodes.get(currentTreeId)) {
+        treeNodes.get(currentTreeId).status = "active";
+      }
+    } else if (action === "solution_found") {
+      stats.solutions_found += 1;
+      const treeId = treeIdByRoute.get(routeKey(currentPath)) || currentTreeId;
+      if (treeNodes.get(treeId)) {
+        treeNodes.get(treeId).status = "goal";
+      }
+      activeTreePath = ensureTreePath(currentPath);
+      currentTreeId = treeId;
+    } else if (action === "best_updated") {
+      bestTreePath = ensureTreePath(bestPath);
+      bestTreePath.forEach((treeId) => {
+        if (treeNodes.get(treeId)) {
+          treeNodes.get(treeId).status = "best";
+        }
+      });
+      activeTreePath = ensureTreePath(currentPath);
+      currentTreeId = activeTreePath[activeTreePath.length - 1] || currentTreeId;
+    } else if (action === "backtrack") {
+      stats.backtracks += 1;
+      const backtrackedTreeId = currentTreeIdByPath.get(nodeId);
+      if (backtrackedTreeId && treeNodes.get(backtrackedTreeId)) {
+        treeNodes.get(backtrackedTreeId).status = "backtracked";
+      }
+      activeTreePath = ensureTreePath(currentPath);
+      currentTreeId = activeTreePath[activeTreePath.length - 1] || "t0";
+      if (treeNodes.get(currentTreeId)) {
+        treeNodes.get(currentTreeId).status = "active";
+      }
+    } else if (action === "finished") {
+      finished = true;
+      finalPath = clone(result.path || bestPath);
+      finalTreePath = ensureTreePath(finalPath);
+      finalTreePath.forEach((treeId) => {
+        if (treeNodes.get(treeId)) {
+          treeNodes.get(treeId).status = "final";
+        }
+      });
+      activeTreePath = [];
+      currentTreeId = null;
+      currentPath = [];
+      currentCost = 0;
+      consideredEdge = null;
+    }
+
+    rawSnapshots.push({
+      event_type: action,
+      label:
+        action === "start"
+          ? "Start branch-and-bound"
+          : action === "expand"
+            ? `Expand ${nodeId}`
+            : action === "consider_edge"
+              ? `Consider ${consideredEdge ? `${consideredEdge[0]} -> ${consideredEdge[1]}` : "edge"}`
+              : action === "descend"
+                ? `Descend to ${nodeId}`
+                : action === "prune"
+                  ? `Prune ${nodeId}`
+                  : action === "backtrack"
+                    ? `Backtrack from ${nodeId}`
+                    : action === "solution_found"
+                      ? "Found complete path"
+                      : action === "best_updated"
+                        ? "Update best solution"
+                        : "Search finished",
+      annotation:
+        action === "start"
+          ? "The weighted graph is ready. Branch-and-bound starts at the start node."
+          : action === "expand"
+            ? `Expand ${nodeId} in deterministic neighbour order.`
+            : action === "consider_edge"
+              ? `Check whether the next edge can still improve the current best solution.`
+              : action === "descend"
+                ? `DFS commits to ${nodeId} and continues deeper into the weighted graph.`
+                : action === "prune"
+                  ? `This branch cannot improve the current best solution, so it is pruned.`
+                  : action === "backtrack"
+                    ? `The branch below ${nodeId} is complete, so DFS returns to its parent.`
+                    : action === "solution_found"
+                      ? "A complete path to the goal has been found."
+                      : action === "best_updated"
+                        ? "This complete path is the best solution seen so far."
+                        : "The optimal path is now highlighted.",
+      teaching_note:
+        action === "finished"
+          ? "Optimality comes from exhaustive DFS plus safe best-cost pruning."
+          : "The tree shows search history, while the graph view shows the original weighted problem.",
+      snapshot: snapshot(),
+    });
+  });
+
+  const laidOutNodes = layoutTreeNodes(visibleTreeIds.map((treeId) => treeNodes.get(treeId)));
+  const layoutById = new Map(laidOutNodes.map((node) => [node.tree_id, node]));
+
+  const initialState = blankSearchTrace(graph).initial_state;
+  initialState.example_title = "Live Python weighted graph";
+  initialState.example_subtitle = "Trace returned by your local Python branch-and-bound solver.";
+  initialState.tree.nodes = initialState.tree.nodes.map((node) => layoutById.get(node.tree_id) || node);
+
+  const steps = rawSnapshots.map((entry, index) => {
+    const snapshot = clone(entry.snapshot);
+    snapshot.tree.nodes = snapshot.tree.nodes.map((node) => layoutById.get(node.tree_id) || node);
+    return {
+      index,
+      event_type: entry.event_type,
+      label: entry.label,
+      annotation: entry.annotation,
+      teaching_note: entry.teaching_note,
+      state_patch: snapshot,
+    };
+  });
+
+  return {
+    app_type: "search",
+    initial_state: initialState,
+    steps,
+    summary: { step_count: steps.length, result: result.status || "found" },
+  };
+}
+
+function activeTraceContext() {
   const blankTrace = isLabyrinth()
     ? blankLabyrinthTrace(state.session.data.labyrinth)
-    : isGraphBfs()
-      ? blankGraphBfsTrace(state.session.data.graph)
-      : blankGraphDfsTrace(state.session.data.graph);
+    : isWeightedSearch()
+      ? blankSearchTrace(state.session.data.graph)
+      : isGraphBfs()
+        ? blankGraphBfsTrace(state.session.data.graph)
+        : blankGraphDfsTrace(state.session.data.graph);
   const blankSnapshots = buildSnapshots(blankTrace);
 
   if (state.player.mode === "live") {
@@ -1789,6 +2317,9 @@ function statusLabel(data, step) {
   if (isLabyrinth() || isGraphReachability()) {
     return data.search?.status || "ready";
   }
+  if (isWeightedSearch() && data.search?.status) {
+    return data.search.status;
+  }
   if (data.search?.finished) return "finished";
   if (step.event_type === "backtrack") return "backtracking";
   return "running";
@@ -1812,9 +2343,9 @@ function renderPanelCopy(data) {
     $("right-panel-subtitle").textContent = "The graph view shows the current route, explored edges, dead ends, and the final discovered path.";
   } else {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Search states appear here as the DFS tree expands.";
+    $("left-panel-subtitle").textContent = "Search states appear here as depth-first branch-and-bound explores and prunes branches.";
     $("right-panel-title").textContent = "Geometric Graph";
-    $("right-panel-subtitle").textContent = "The weighted graph stays fixed while the replay highlights the active branch.";
+    $("right-panel-subtitle").textContent = "The weighted graph stays fixed while the replay highlights the active branch, best path, and final optimal path.";
   }
 }
 
@@ -2144,8 +2675,8 @@ function renderLabyrinth(data) {
 function renderControls() {
   const livePythonApp = isLivePythonApp();
   $("example-control-label").textContent = livePythonApp ? "Configuration" : "Example";
-  $("size-control-label").textContent = isGraphReachability() ? "Graph size" : "Labyrinth size";
-  $("generate-button").textContent = isGraphReachability() ? "Generate new graph" : "Generate new labyrinth";
+  $("size-control-label").textContent = isLabyrinth() ? "Labyrinth size" : "Graph size";
+  $("generate-button").textContent = isLabyrinth() ? "Generate new labyrinth" : "Generate new graph";
   $("mode-control").classList.toggle("hidden", !livePythonApp);
   $("size-control").classList.toggle("hidden", !livePythonApp);
   $("seed-control").classList.toggle("hidden", !livePythonApp);
@@ -2268,7 +2799,9 @@ async function generateLabyrinth() {
 
 async function generateGraph() {
   stopPlay();
-  setMessage("Generating a new sparse graph.");
+  setMessage(
+    isWeightedSearch() ? "Generating a new weighted graph." : "Generating a new sparse graph."
+  );
   render();
   const rawSeed = $("seed-input").value.trim();
   const payload = {
@@ -2283,7 +2816,11 @@ async function generateGraph() {
   response.trace = trace;
   state.player.mode = "playback";
   await refreshFromServer(response);
-  setMessage("Generated a new graph. Playback is ready, and you can switch to live Python mode to compare it with your own solver.");
+  setMessage(
+    isWeightedSearch()
+      ? "Generated a new weighted graph. Playback is ready, and you can switch to live Python mode to compare it with your own solver."
+      : "Generated a new graph. Playback is ready, and you can switch to live Python mode to compare it with your own solver."
+  );
   render();
 }
 
@@ -2294,7 +2831,10 @@ async function solveWithPython() {
   const backendUrl = state.session.data.live_python?.backend_url || "http://127.0.0.1:9414/solve";
   const problemPayload = isLabyrinth()
     ? { algorithm: "dfs", labyrinth: state.session.data.labyrinth }
-    : { algorithm: isGraphBfs() ? "bfs" : "dfs", graph: state.session.data.graph };
+    : {
+        algorithm: isWeightedSearch() ? "dfbb" : isGraphBfs() ? "bfs" : "dfs",
+        graph: state.session.data.graph,
+      };
   const problemData = isLabyrinth() ? state.session.data.labyrinth : state.session.data.graph;
 
   try {
@@ -2310,6 +2850,8 @@ async function solveWithPython() {
     }
     state.player.liveTrace = isLabyrinth()
       ? buildLabyrinthTraceFromBackend(problemData, payload)
+      : isWeightedSearch()
+        ? buildSearchTraceFromBackend(problemData, payload)
       : isGraphBfs()
         ? buildGraphBfsTraceFromBackend(problemData, payload)
         : buildGraphDfsTraceFromBackend(problemData, payload);
@@ -2334,7 +2876,13 @@ async function solveWithPython() {
 
 function downloadPythonStub() {
   const archive = createZipArchive(
-    isGraphBfs()
+    isWeightedSearch()
+      ? [
+          { name: "ai9414/solve_weighted_graph.py", content: WEIGHTED_GRAPH_PYTHON_STUB },
+          { name: "ai9414/requirements.txt", content: WEIGHTED_GRAPH_PYTHON_REQUIREMENTS },
+          { name: "ai9414/README.md", content: WEIGHTED_GRAPH_PYTHON_README },
+        ]
+      : isGraphBfs()
       ? [
           { name: "ai9414/solve_graph.py", content: GRAPH_BFS_PYTHON_STUB },
           { name: "ai9414/requirements.txt", content: GRAPH_BFS_PYTHON_REQUIREMENTS },
@@ -2355,7 +2903,9 @@ function downloadPythonStub() {
   const url = window.URL.createObjectURL(archive);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = isGraphBfs()
+  anchor.download = isWeightedSearch()
+    ? "weighted-graph-python-stub.zip"
+    : isGraphBfs()
     ? "graph-bfs-python-stub.zip"
     : isGraphDfs()
       ? "graph-dfs-python-stub.zip"
@@ -2365,7 +2915,9 @@ function downloadPythonStub() {
   anchor.remove();
   window.URL.revokeObjectURL(url);
   setMessage(
-    isGraphBfs()
+    isWeightedSearch()
+      ? "Downloaded weighted-graph-python-stub.zip."
+      : isGraphBfs()
       ? "Downloaded graph-bfs-python-stub.zip."
       : isGraphDfs()
       ? "Downloaded graph-dfs-python-stub.zip."
@@ -2406,7 +2958,7 @@ function bindEvents() {
       state.player.seed = "";
       $("size-select").value = state.player.size;
       $("seed-input").value = "";
-      if (isGraphReachability()) {
+      if (!isLabyrinth()) {
         await generateGraph();
       } else {
         await generateLabyrinth();
@@ -2423,7 +2975,7 @@ function bindEvents() {
       setMessage("");
     } else if (!state.player.liveTrace) {
       setMessage(
-        isGraphReachability()
+        !isLabyrinth()
           ? "Live Python mode is ready. Generate a graph or solve the current one with your backend."
           : "Live Python mode is ready. Generate a labyrinth or solve the current one with your backend."
       );
@@ -2453,7 +3005,7 @@ function bindEvents() {
     render();
   });
   $("generate-button").addEventListener("click", async () => {
-    if (isGraphReachability()) {
+    if (!isLabyrinth()) {
       await generateGraph();
       return;
     }

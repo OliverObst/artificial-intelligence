@@ -6,7 +6,7 @@ import copy
 from typing import Any
 
 from ai9414.core.models import TraceBundle, TraceStep, TraceSummary
-from ai9414.search.models import SearchExample
+from ai9414.search.models import SearchExample, WeightedGraph
 from ai9414.search.solver import solve_weighted_graph
 
 
@@ -49,8 +49,67 @@ def _layout_tree(nodes: list[dict[str, Any]]) -> dict[str, tuple[float, float]]:
     }
 
 
-def build_search_trace(example: SearchExample) -> TraceBundle:
-    result = solve_weighted_graph(example.graph)
+def build_blank_search_bundle(graph: WeightedGraph) -> TraceBundle:
+    initial_state = {
+        "example_title": "Generated weighted graph",
+        "example_subtitle": "Generate a graph, then switch to live Python mode to solve it with your own backend.",
+        "algorithm_label": "Depth-first branch-and-bound",
+        "algorithm_note": (
+            "This view is ready for depth-first branch-and-bound. "
+            "Solve the current weighted graph with Python to populate the trace."
+        ),
+        "goal_label": "Find the optimal path from start to goal",
+        "graph": graph.model_dump(),
+        "tree": {
+            "nodes": [
+                {
+                    "tree_id": "t0",
+                    "graph_node": graph.start,
+                    "parent": None,
+                    "depth": 0,
+                    "path_cost": 0.0,
+                    "status": "active",
+                    "order": 0,
+                    "x": 0.5,
+                    "y": 0.12,
+                    "terminal": False,
+                }
+            ]
+        },
+        "search": {
+            "active_tree_node": "t0",
+            "active_tree_path": ["t0"],
+            "best_tree_path": [],
+            "final_tree_path": [],
+            "current_graph_path": [graph.start],
+            "best_graph_path": [],
+            "final_graph_path": [],
+            "explored_graph_edges": [],
+            "considered_edge": None,
+            "current_cost": 0.0,
+            "best_cost": None,
+            "finished": False,
+            "status": "searching",
+        },
+        "stats": {"expanded": 0, "pruned": 0, "solutions_found": 0, "backtracks": 0},
+    }
+    return TraceBundle(
+        app_type="search",
+        trace_id="search-empty",
+        is_complete=True,
+        initial_state=initial_state,
+        summary=TraceSummary(step_count=0, result="ready"),
+        steps=[],
+    )
+
+
+def build_search_trace_from_definition(
+    graph: WeightedGraph,
+    *,
+    title: str,
+    subtitle: str,
+) -> TraceBundle:
+    result = solve_weighted_graph(graph)
 
     all_tree_nodes = result.initial_data["tree"]["nodes"]
     for raw_step in result.raw_steps:
@@ -59,8 +118,8 @@ def build_search_trace(example: SearchExample) -> TraceBundle:
     layout = _layout_tree(all_tree_nodes)
 
     initial_state = copy.deepcopy(result.initial_data)
-    initial_state["example_title"] = example.title
-    initial_state["example_subtitle"] = example.subtitle
+    initial_state["example_title"] = title
+    initial_state["example_subtitle"] = subtitle
     for node in initial_state["tree"]["nodes"]:
         node["x"], node["y"] = layout[node["tree_id"]]
 
@@ -87,4 +146,12 @@ def build_search_trace(example: SearchExample) -> TraceBundle:
         initial_state=initial_state,
         summary=TraceSummary(step_count=len(steps), result="success"),
         steps=steps,
+    )
+
+
+def build_search_trace(example: SearchExample) -> TraceBundle:
+    return build_search_trace_from_definition(
+        example.graph,
+        title=example.title,
+        subtitle=example.subtitle,
     )

@@ -2,30 +2,30 @@
 
 Phase 1 reference implementation of the `ai9414` educational AI platform, now with four concrete search demos:
 
-- weighted geometric graph search
 - labyrinth DFS search
 - spatial graph DFS search
 - spatial graph BFS search
+- spatial graph branch-and-bound search
 
 ## Available demos
 
-- `weighted geometric graph search`
-  Start with `python examples/search_demo.py`
 - `labyrinth DFS search`
   Start with `python examples/labyrinth_demo.py`
 - `spatial graph DFS search`
   Start with `python examples/graph_dfs_demo.py`
 - `spatial graph BFS search`
   Start with `python examples/graph_bfs_demo.py`
+- `spatial graph branch-and-bound search`
+  Start with `python examples/search_demo.py`
 
 ## What is included
 
 - shared `ai9414` namespace package
 - common FastAPI launcher and route contract
 - common JSON schema models
-- precomputed trace replay for a weighted geometric graph search demo
 - precomputed trace replay for a generated spatial graph DFS demo
 - precomputed trace replay for a generated spatial graph BFS demo
+- precomputed trace replay for a generated spatial graph branch-and-bound demo
 - static solution replay export with no backend dependency
 - deterministic labyrinth presets plus seeded graph generation
 - automated tests and developer documentation
@@ -40,22 +40,28 @@ pytest
 python examples/search_demo.py
 ```
 
-To start the labyrinth example instead:
+To start the labyrinth example:
 
 ```bash
 python examples/labyrinth_demo.py
 ```
 
-To start the spatial graph DFS example instead:
+To start the spatial graph DFS example:
 
 ```bash
 python examples/graph_dfs_demo.py
 ```
 
-To start the spatial graph BFS example instead:
+To start the spatial graph BFS example:
 
 ```bash
 python examples/graph_bfs_demo.py
+```
+
+To start the spatial graph branch-and-bound example:
+
+```bash
+python examples/search_demo.py
 ```
 
 The same install is enough for the labyrinth live-Python stub as well. The
@@ -75,16 +81,7 @@ print(output_dir)
 PY
 ```
 
-## Student-facing example
-
-```python
-from ai9414.search import SearchDemo
-
-app = SearchDemo(node_count=16, seed=7)
-app.load_example("default_sparse_graph")
-app.set_options(playback_speed=1.0)
-app.show()
-```
+## Student-facing examples
 
 Labyrinth example:
 
@@ -113,6 +110,17 @@ from ai9414.graph_bfs import GraphBfsDemo
 
 app = GraphBfsDemo()
 app.load_example("small")
+app.show()
+```
+
+Spatial graph branch-and-bound example:
+
+```python
+from ai9414.search import SearchDemo
+
+app = SearchDemo()
+app.load_example("small")
+app.set_options(playback_speed=1.0)
 app.show()
 ```
 
@@ -159,6 +167,21 @@ def solve_bfs(graph: dict[str, Any]) -> dict[str, Any]:
 
 if __name__ == "__main__":
     run_graph_bfs_solver(solve_bfs)
+```
+
+Live spatial graph branch-and-bound solver wrapper:
+
+```python
+from typing import Any
+from ai9414.search import run_weighted_graph_solver
+
+
+def solve_dfbb(graph: dict[str, Any]) -> dict[str, Any]:
+    ...
+
+
+if __name__ == "__main__":
+    run_weighted_graph_solver(solve_dfbb)
 ```
 
 ## Repository structure

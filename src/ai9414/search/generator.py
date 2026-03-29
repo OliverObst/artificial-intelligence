@@ -8,6 +8,11 @@ from typing import Iterable
 
 from ai9414.search.models import GraphEdge, GraphNode, WeightedGraph
 
+SIZE_NODE_COUNTS = {
+    "small": 16,
+    "large": 18,
+}
+
 
 def euclidean_distance(a: GraphNode, b: GraphNode) -> float:
     return math.hypot(a.x - b.x, a.y - b.y)
@@ -130,7 +135,12 @@ def build_graph_from_pairs(
     return WeightedGraph(nodes=nodes, edges=edges, start=start, goal=goal)
 
 
-def generate_sparse_geometric_graph(node_count: int = 16, seed: int = 7) -> WeightedGraph:
+def generate_sparse_geometric_graph(
+    node_count: int = 16,
+    seed: int = 7,
+    *,
+    size: str | None = None,
+) -> WeightedGraph:
     nodes = _generate_positions(node_count, seed)
     start, goal = _choose_start_goal(nodes)
     backbone = _choose_backbone(nodes, start, goal, seed)
@@ -153,4 +163,17 @@ def generate_sparse_geometric_graph(node_count: int = 16, seed: int = 7) -> Weig
         for _, neighbour_id in neighbours[:degree_target]:
             edge_pairs.add(tuple(sorted((node.id, neighbour_id))))
 
-    return build_graph_from_pairs(nodes, edge_pairs, start=start, goal=goal)
+    graph = build_graph_from_pairs(nodes, edge_pairs, start=start, goal=goal)
+    graph.seed = seed
+    graph.size = size
+    return graph
+
+
+def generate_weighted_graph(*, size: str = "small", seed: int = 7) -> WeightedGraph:
+    if size not in SIZE_NODE_COUNTS:
+        raise ValueError(f"Unknown graph size '{size}'.")
+    return generate_sparse_geometric_graph(
+        node_count=SIZE_NODE_COUNTS[size],
+        seed=seed,
+        size=size,
+    )

@@ -53,6 +53,7 @@ class _TraceRecorder:
         self.final_graph_path: list[str] = []
         self.final_tree_path: list[str] = []
         self.finished = False
+        self.status = "searching"
         self.stats = {"expanded": 0, "pruned": 0, "solutions_found": 0, "backtracks": 0}
         self.tree_counter = 0
         self.trace_id = f"search-{uuid4().hex[:8]}"
@@ -114,6 +115,7 @@ class _TraceRecorder:
                 "current_cost": round(self.current_cost, 3),
                 "best_cost": None if self.best_cost is None else round(self.best_cost, 3),
                 "finished": self.finished,
+                "status": self.status,
             },
             "stats": copy.deepcopy(self.stats),
         }
@@ -153,7 +155,7 @@ def build_adjacency(graph: WeightedGraph) -> dict[str, list[tuple[str, float]]]:
         adjacency[edge.u].append((edge.v, edge.cost))
         adjacency[edge.v].append((edge.u, edge.cost))
     for node_id, neighbours in adjacency.items():
-        neighbours.sort(key=lambda item: (item[0], item[1]))
+        neighbours.sort(key=lambda item: (item[1], item[0]))
         adjacency[node_id] = neighbours
     return adjacency
 
@@ -185,10 +187,12 @@ def solve_weighted_graph(graph: WeightedGraph) -> SolverResult:
         recorder.active_tree_node = tree_id
         recorder.current_cost = cost_so_far
         recorder.set_status(tree_id, "active")
+        recorder.status = "searching"
 
         if graph_node == graph.goal:
             recorder.stats["solutions_found"] += 1
             recorder.set_status(tree_id, "goal")
+            recorder.status = "solution found"
             recorder.record(
                 event_type="solution_found",
                 label=f"Found a complete path to {graph.goal}",
@@ -226,6 +230,7 @@ def solve_weighted_graph(graph: WeightedGraph) -> SolverResult:
 
         for neighbour, edge_cost in adjacency[graph_node]:
             recorder.considered_edge = [graph_node, neighbour]
+            recorder.status = "considering"
             recorder.record(
                 event_type="consider_edge",
                 label=f"Consider {graph_node} -> {neighbour}",
@@ -239,6 +244,7 @@ def solve_weighted_graph(graph: WeightedGraph) -> SolverResult:
             next_cost = cost_so_far + edge_cost
             if neighbour in recorder.current_graph_path:
                 recorder.stats["pruned"] += 1
+                recorder.status = "pruned"
                 recorder.create_tree_node(
                     graph_node=neighbour,
                     parent=tree_id,
@@ -260,6 +266,7 @@ def solve_weighted_graph(graph: WeightedGraph) -> SolverResult:
 
             if recorder.best_cost is not None and next_cost >= recorder.best_cost:
                 recorder.stats["pruned"] += 1
+                recorder.status = "pruned"
                 recorder.create_tree_node(
                     graph_node=neighbour,
                     parent=tree_id,
@@ -293,6 +300,7 @@ def solve_weighted_graph(graph: WeightedGraph) -> SolverResult:
             recorder.active_tree_node = child_id
             recorder.current_cost = next_cost
             recorder.add_explored_edge(graph_node, neighbour)
+            recorder.status = "searching"
             recorder.record(
                 event_type="descend",
                 label=f"Descend to {neighbour}",
@@ -313,6 +321,7 @@ def solve_weighted_graph(graph: WeightedGraph) -> SolverResult:
             recorder.active_tree_node = tree_id
             recorder.current_cost = cost_so_far
             recorder.stats["backtracks"] += 1
+            recorder.status = "backtracking"
             recorder.record(
                 event_type="backtrack",
                 label=f"Backtrack from {neighbour}",
@@ -341,6 +350,7 @@ def solve_weighted_graph(graph: WeightedGraph) -> SolverResult:
     recorder.current_cost = 0.0
     recorder.considered_edge = None
     recorder.finished = True
+    recorder.status = "finished"
     recorder.record(
         event_type="finished",
         label="Search finished",
