@@ -14,7 +14,9 @@ const $ = (id) => document.getElementById(id);
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const appType = () => state.trace?.app_type;
 const isLabyrinth = () => appType() === "labyrinth";
+const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
+const isGraphReachability = () => isGraphDfs() || isGraphBfs();
 const isWeightedSearch = () => appType() === "search";
 
 function deepMerge(base, patch) {
@@ -111,6 +113,15 @@ function renderPanelCopy() {
     $("search-legend").classList.add("hidden");
     $("labyrinth-legend").classList.remove("hidden");
     $("graph-dfs-legend").classList.add("hidden");
+  } else if (isGraphBfs()) {
+    $("left-panel-title").textContent = "Search Tree";
+    $("left-panel-subtitle").textContent = "Static replay of the BFS tree built while exploring the graph.";
+    $("right-panel-title").textContent = "Spatial Graph";
+    $("right-panel-subtitle").textContent = "Static replay of the highlighted route, explored edges, visited nodes, and final discovered path.";
+    $("search-toggle-grid").classList.add("hidden");
+    $("search-legend").classList.add("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.remove("hidden");
   } else if (isGraphDfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the DFS tree built while exploring the graph.";
@@ -144,7 +155,7 @@ function renderMetrics(data) {
     $("metric-4-value").textContent = String(data.labyrinth?.seed ?? "none");
     return;
   }
-  if (isGraphDfs()) {
+  if (isGraphReachability()) {
     $("metric-1-label").textContent = "Explored nodes";
     $("metric-1-value").textContent = String(data.search?.explored_count || 0);
     $("metric-2-label").textContent = "Current depth";
@@ -317,7 +328,7 @@ function renderWeightedGraph(data) {
   svg.appendChild(nodes);
 }
 
-function renderGraphDfs(data) {
+function renderGraphReachability(data) {
   const svg = $("problem-svg");
   svg.innerHTML = "";
   const graph = data.graph;
@@ -465,8 +476,8 @@ function render() {
   renderTree(data);
   if (isLabyrinth()) {
     renderLabyrinth(data);
-  } else if (isGraphDfs()) {
-    renderGraphDfs(data);
+  } else if (isGraphReachability()) {
+    renderGraphReachability(data);
   } else {
     renderWeightedGraph(data);
   }

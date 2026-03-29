@@ -1,10 +1,22 @@
 # artificial-intelligence
 
-Phase 1 reference implementation of the `ai9414` educational AI platform, now with three concrete search demos:
+Phase 1 reference implementation of the `ai9414` educational AI platform, now with four concrete search demos:
 
 - weighted geometric graph search
 - labyrinth DFS search
 - spatial graph DFS search
+- spatial graph BFS search
+
+## Available demos
+
+- `weighted geometric graph search`
+  Start with `python examples/search_demo.py`
+- `labyrinth DFS search`
+  Start with `python examples/labyrinth_demo.py`
+- `spatial graph DFS search`
+  Start with `python examples/graph_dfs_demo.py`
+- `spatial graph BFS search`
+  Start with `python examples/graph_bfs_demo.py`
 
 ## What is included
 
@@ -13,6 +25,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - common JSON schema models
 - precomputed trace replay for a weighted geometric graph search demo
 - precomputed trace replay for a generated spatial graph DFS demo
+- precomputed trace replay for a generated spatial graph BFS demo
 - static solution replay export with no backend dependency
 - deterministic labyrinth presets plus seeded graph generation
 - automated tests and developer documentation
@@ -37,6 +50,12 @@ To start the spatial graph DFS example instead:
 
 ```bash
 python examples/graph_dfs_demo.py
+```
+
+To start the spatial graph BFS example instead:
+
+```bash
+python examples/graph_bfs_demo.py
 ```
 
 The same install is enough for the labyrinth live-Python stub as well. The
@@ -87,6 +106,16 @@ app.load_example("small")
 app.show()
 ```
 
+Spatial graph BFS example:
+
+```python
+from ai9414.graph_bfs import GraphBfsDemo
+
+app = GraphBfsDemo()
+app.load_example("small")
+app.show()
+```
+
 Live labyrinth solver wrapper:
 
 ```python
@@ -117,12 +146,29 @@ if __name__ == "__main__":
     run_graph_solver(solve_dfs)
 ```
 
+Live graph BFS solver wrapper:
+
+```python
+from typing import Any
+from ai9414.search import run_graph_bfs_solver
+
+
+def solve_bfs(graph: dict[str, Any]) -> dict[str, Any]:
+    ...
+
+
+if __name__ == "__main__":
+    run_graph_bfs_solver(solve_bfs)
+```
+
 ## Repository structure
 
 ```text
 src/ai9414/
   core/
   demo/
+  graph_bfs/
+  graph_dfs/
   labyrinth/
   search/
   frontend/

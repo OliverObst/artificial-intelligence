@@ -462,6 +462,206 @@ It receives a graph as a Python dictionary and must return a dictionary containi
 - visited_order
 `;
 
+const GRAPH_BFS_PYTHON_STUB = `from __future__ import annotations
+
+from collections import deque
+from typing import Any
+
+from ai9414.search import run_graph_bfs_solver
+
+
+def normalise_node_id(raw: Any) -> str:
+    """
+    Convert one node id into a Python string.
+
+    Example:
+        normalise_node_id("A") returns "A".
+    """
+    return str(raw)
+
+
+def build_adjacency(graph: dict[str, Any]) -> dict[str, list[str]]:
+    """
+    Build an adjacency list from the graph dictionary.
+
+    The graph uses this format:
+        {
+            "nodes": [{"id": "A", "x": 0.1, "y": 0.2}, ...],
+            "edges": [{"u": "A", "v": "B"}, ...],
+            "start": "A",
+            "goal": "G"
+        }
+    """
+    adjacency = {str(node["id"]): [] for node in graph["nodes"]}
+    for edge in graph["edges"]:
+        left = str(edge["u"])
+        right = str(edge["v"])
+        adjacency[left].append(right)
+        adjacency[right].append(left)
+    for node_id in adjacency:
+        adjacency[node_id].sort()
+    return adjacency
+
+
+def get_neighbours(adjacency: dict[str, list[str]], node_id: str) -> list[str]:
+    """
+    Return neighbouring nodes in deterministic BFS order.
+
+    Important:
+        The order matters. BFS visits each layer in this neighbour order.
+    """
+    return list(adjacency[node_id])
+
+
+def reconstruct_path(parents: dict[str, str | None], goal: str) -> list[str]:
+    """
+    Reconstruct the final path from the start node to the goal node.
+    """
+    path: list[str] = []
+    current: str | None = goal
+    while current is not None:
+        path.append(current)
+        current = parents[current]
+    path.reverse()
+    return path
+
+
+def make_trace_event(
+    step: int,
+    action: str,
+    node_id: str | None,
+    parent: str | None,
+    depth: int,
+    route: list[str],
+) -> dict[str, Any]:
+    """
+    Build one trace event for the replay.
+
+    The browser uses this event format directly.
+    """
+    return {
+        "step": step,
+        "action": action,
+        "node": node_id,
+        "parent": parent,
+        "depth": depth,
+        "route": list(route),
+    }
+
+
+def solve_bfs(graph: dict[str, Any]) -> dict[str, Any]:
+    """
+    Solve the graph using breadth-first search and return a full result.
+
+    This is the main function you are expected to implement.
+    You should replace the TODO section below with a complete iterative BFS.
+
+    Student responsibilities:
+        - build or use an adjacency structure
+        - run BFS
+        - record visited_order
+        - reconstruct the final path
+        - build the trace list
+
+    ai9414 responsibilities:
+        - start the local web server
+        - expose the /solve endpoint
+        - pass the graph dictionary into this function
+        - validate the result shape
+        - send the result back to the browser
+
+    Required return format:
+        {
+            "algorithm": "bfs",
+            "status": "found" or "not_found",
+            "trace": [...],
+            "path": ["A", "B", "G"],
+            "visited_order": ["A", "B", "D", "G"],
+        }
+
+    Trace actions:
+        - start: emit once at the start node
+        - expand: emit when BFS discovers a new node
+        - found: emit once when the goal is reached
+        - fail: emit once if the frontier empties and no goal path exists
+
+    Suggested plan:
+        1. Parse the start and goal ids.
+        2. Build the adjacency list.
+        3. Initialise a queue, visited set, parents, trace, visited_order, and step.
+        4. Emit the start event.
+        5. While the queue is not empty:
+           - pop the next node from the front of the queue
+           - visit each unvisited neighbour in deterministic order
+           - record its parent, visited_order, and route from the start
+           - emit an expand event and push it onto the queue
+           - if the neighbour is the goal, emit found and return
+        6. If the loop finishes, emit fail and return not_found
+    """
+    start = normalise_node_id(graph["start"])
+    goal = normalise_node_id(graph["goal"])
+    adjacency = build_adjacency(graph)
+    _ = (goal, adjacency, deque)
+
+    # TODO:
+    # Replace the placeholder result below with a full iterative BFS.
+    trace = [make_trace_event(0, "start", start, None, 0, [start])]
+    return {
+        "algorithm": "bfs",
+        "status": "error",
+        "message": "Replace the placeholder code inside solve_bfs with your full BFS implementation.",
+        "trace": trace,
+        "path": [],
+        "visited_order": [start],
+    }
+
+
+if __name__ == "__main__":
+    run_graph_bfs_solver(solve_bfs)
+`;
+
+const GRAPH_BFS_PYTHON_REQUIREMENTS = `ai9414
+`;
+
+const GRAPH_BFS_PYTHON_README = `# graph bfs solver
+
+This folder runs a tiny local solver for the spatial graph search example.
+The web-app connection is handled for you by ai9414.
+Your job is to implement the BFS logic.
+
+## install
+
+Install the dependency with:
+
+    pip install -r requirements.txt
+
+## run
+
+Start the local solver with:
+
+    python solve_graph.py
+
+The solver starts on the local port expected by the browser app.
+
+## what to implement
+
+Open solve_graph.py and look at:
+
+- build_adjacency(...)
+- get_neighbours(...)
+- reconstruct_path(...)
+- solve_bfs(...)
+
+The main function is solve_bfs(...).
+It receives a graph as a Python dictionary and must return a dictionary containing:
+
+- algorithm
+- status
+- trace
+- path
+- visited_order
+`;
+
 const $svgNode = (name, attributes = {}, text = "") => {
   const node = document.createElementNS("http://www.w3.org/2000/svg", name);
   Object.entries(attributes).forEach(([key, value]) => {
@@ -477,9 +677,11 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const appType = () => state.manifest?.app_type;
 const isLabyrinth = () => appType() === "labyrinth";
+const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
+const isGraphReachability = () => isGraphDfs() || isGraphBfs();
 const isWeightedSearch = () => appType() === "search";
-const isLivePythonApp = () => isLabyrinth() || isGraphDfs();
+const isLivePythonApp = () => isLabyrinth() || isGraphReachability();
 
 const CRC32_TABLE = (() => {
   const table = new Uint32Array(256);
@@ -794,6 +996,54 @@ function blankGraphDfsTrace(graph) {
       algorithm_label: "Depth-first search",
       algorithm_note:
         "This view is ready for DFS reachability. Solve the current graph with Python to populate the trace.",
+      goal_label: "Find any path from start to goal",
+      graph,
+      tree: {
+        nodes: [
+          {
+            tree_id: "t0",
+            graph_node: start,
+            parent: null,
+            depth: 0,
+            path_cost: 0,
+            status: "active",
+            order: 0,
+            x: 0.5,
+            y: 0.12,
+          },
+        ],
+      },
+      search: {
+        active_tree_node: "t0",
+        active_tree_path: ["t0"],
+        current_graph_path: [start],
+        visited_order: [start],
+        dead_end_nodes: [],
+        final_graph_path: [],
+        explored_graph_edges: [],
+        explored_count: 1,
+        current_depth: 0,
+        status: "searching",
+        found: false,
+      },
+    },
+    steps: [],
+    summary: { step_count: 0, result: "ready" },
+  };
+}
+
+function blankGraphBfsTrace(graph) {
+  const start = graph.start;
+  return {
+    app_type: "graph_bfs",
+    initial_state: {
+      example_title: state.session?.data?.example_title || "Generated graph",
+      example_subtitle:
+        state.session?.data?.example_subtitle ||
+        "Generate a graph, then solve it in live Python mode.",
+      algorithm_label: "Breadth-first search",
+      algorithm_note:
+        "This view is ready for BFS reachability. Solve the current graph with Python to populate the trace.",
       goal_label: "Find any path from start to goal",
       graph,
       tree: {
@@ -1296,6 +1546,192 @@ function buildGraphDfsTraceFromBackend(graph, result) {
   };
 }
 
+function buildGraphBfsTraceFromBackend(graph, result) {
+  if (!Array.isArray(result.trace) || !Array.isArray(result.path) || !Array.isArray(result.visited_order)) {
+    throw new Error("Solver returned invalid data.");
+  }
+
+  const rawSnapshots = [];
+  const treeNodes = new Map();
+  const visibleTreeIds = [];
+  const treeIdByNode = new Map();
+  const visitedOrder = [];
+  const activeTreePath = [];
+  const exploredEdgeIds = new Set();
+  let currentGraphPath = [graph.start];
+  let currentTreeId = "t0";
+  let counter = 1;
+  let finalGraphPath = [];
+  let searchStatus = "searching";
+
+  const root = {
+    tree_id: "t0",
+    graph_node: graph.start,
+    parent: null,
+    depth: 0,
+    path_cost: 0,
+    status: "active",
+    order: 0,
+    x: 0.5,
+    y: 0.12,
+  };
+  treeNodes.set("t0", root);
+  visibleTreeIds.push("t0");
+  treeIdByNode.set(graph.start, "t0");
+  visitedOrder.push(graph.start);
+  activeTreePath.push("t0");
+
+  function snapshot() {
+    return {
+      tree: {
+        nodes: visibleTreeIds.map((treeId) => clone(treeNodes.get(treeId))),
+      },
+      search: {
+        active_tree_node: currentTreeId,
+        active_tree_path: clone(activeTreePath),
+        current_graph_path: clone(currentGraphPath),
+        visited_order: clone(visitedOrder),
+        dead_end_nodes: [],
+        final_graph_path: clone(finalGraphPath),
+        explored_graph_edges: Array.from(exploredEdgeIds).map((id) => id.split("--")),
+        explored_count: visitedOrder.length,
+        current_depth: Math.max(currentGraphPath.length - 1, 0),
+        status: searchStatus,
+        found: finalGraphPath.length > 0,
+      },
+    };
+  }
+
+  result.trace.forEach((step) => {
+    const action = step.action;
+    const nodeId = typeof step.node === "string" ? step.node : null;
+    const parent = typeof step.parent === "string" ? step.parent : null;
+    const route = Array.isArray(step.route) ? clone(step.route) : [];
+
+    if (action === "start") {
+      currentGraphPath = route.length ? route : [graph.start];
+      searchStatus = "searching";
+    } else if (action === "expand") {
+      const parentId = treeIdByNode.get(parent);
+      const treeId = `t${counter}`;
+      counter += 1;
+      treeNodes.set(treeId, {
+        tree_id: treeId,
+        graph_node: nodeId,
+        parent: parentId,
+        depth: Number(step.depth || 0),
+        path_cost: Number(step.depth || 0),
+        status: "active",
+        order: visibleTreeIds.length,
+      });
+      visibleTreeIds.push(treeId);
+      treeIdByNode.set(nodeId, treeId);
+      if (parent && nodeId) exploredEdgeIds.add(edgeId(parent, nodeId));
+      currentGraphPath = route;
+      if (!visitedOrder.includes(nodeId)) {
+        visitedOrder.push(nodeId);
+      }
+      activeTreePath.length = 0;
+      currentGraphPath.forEach((routeNode) => {
+        const routeTreeId = treeIdByNode.get(routeNode);
+        if (routeTreeId) activeTreePath.push(routeTreeId);
+      });
+      currentTreeId = treeId;
+      if (parentId && treeNodes.get(parentId)) {
+        treeNodes.get(parentId).status = "expanded";
+      }
+      searchStatus = "searching";
+    } else if (action === "found") {
+      if (nodeId && !treeIdByNode.has(nodeId)) {
+        const parentId = treeIdByNode.get(parent);
+        const treeId = `t${counter}`;
+        counter += 1;
+        treeNodes.set(treeId, {
+          tree_id: treeId,
+          graph_node: nodeId,
+          parent: parentId,
+          depth: Number(step.depth || 0),
+          path_cost: Number(step.depth || 0),
+          status: "final",
+          order: visibleTreeIds.length,
+        });
+        visibleTreeIds.push(treeId);
+        treeIdByNode.set(nodeId, treeId);
+      }
+      currentGraphPath = route.length ? route : clone(result.path || []);
+      finalGraphPath = clone(result.path || currentGraphPath);
+      activeTreePath.length = 0;
+      currentGraphPath.forEach((routeNode) => {
+        const routeTreeId = treeIdByNode.get(routeNode);
+        if (routeTreeId) {
+          activeTreePath.push(routeTreeId);
+          treeNodes.get(routeTreeId).status = "final";
+        }
+      });
+      currentTreeId = activeTreePath[activeTreePath.length - 1] || currentTreeId;
+      searchStatus = "goal found";
+    } else if (action === "fail") {
+      currentGraphPath = [];
+      activeTreePath.length = 0;
+      currentTreeId = null;
+      searchStatus = "no path";
+    }
+
+    rawSnapshots.push({
+      event_type: action,
+      label:
+        action === "start"
+          ? "Start BFS"
+          : action === "expand"
+            ? `Expand ${nodeId}`
+            : action === "found"
+              ? "Goal found"
+              : "No path found",
+      annotation:
+        action === "start"
+          ? "The graph is ready. BFS starts at the start node."
+          : action === "expand"
+            ? `BFS discovers ${nodeId} and adds it to the next frontier layer.`
+            : action === "found"
+              ? "BFS has reached the goal and the successful path is now highlighted."
+              : "BFS has exhausted the reachable graph without finding the goal.",
+      teaching_note:
+        action === "found"
+          ? "In an unweighted graph, BFS reaches the goal on a shallowest path."
+          : "The tree shows discovery order, while the graph view shows the route to the highlighted node.",
+      snapshot: snapshot(),
+    });
+  });
+
+  const laidOutNodes = layoutTreeNodes(visibleTreeIds.map((treeId) => treeNodes.get(treeId)));
+  const layoutById = new Map(laidOutNodes.map((node) => [node.tree_id, node]));
+
+  const initialState = blankGraphBfsTrace(graph).initial_state;
+  initialState.example_title = "Live Python graph";
+  initialState.example_subtitle = "Trace returned by your local Python BFS backend.";
+  initialState.tree.nodes = initialState.tree.nodes.map((node) => layoutById.get(node.tree_id) || node);
+
+  const steps = rawSnapshots.map((entry, index) => {
+    const snapshot = clone(entry.snapshot);
+    snapshot.tree.nodes = snapshot.tree.nodes.map((node) => layoutById.get(node.tree_id) || node);
+    return {
+      index,
+      event_type: entry.event_type,
+      label: entry.label,
+      annotation: entry.annotation,
+      teaching_note: entry.teaching_note,
+      state_patch: snapshot,
+    };
+  });
+
+  return {
+    app_type: "graph_bfs",
+    initial_state: initialState,
+    steps,
+    summary: { step_count: steps.length, result: result.status || "found" },
+  };
+}
+
 function activeTraceContext() {
   if (isWeightedSearch()) {
     return { trace: state.serverTrace, snapshots: state.serverSnapshots };
@@ -1303,7 +1739,9 @@ function activeTraceContext() {
 
   const blankTrace = isLabyrinth()
     ? blankLabyrinthTrace(state.session.data.labyrinth)
-    : blankGraphDfsTrace(state.session.data.graph);
+    : isGraphBfs()
+      ? blankGraphBfsTrace(state.session.data.graph)
+      : blankGraphDfsTrace(state.session.data.graph);
   const blankSnapshots = buildSnapshots(blankTrace);
 
   if (state.player.mode === "live") {
@@ -1348,7 +1786,7 @@ function maxStepCount() {
 }
 
 function statusLabel(data, step) {
-  if (isLabyrinth() || isGraphDfs()) {
+  if (isLabyrinth() || isGraphReachability()) {
     return data.search?.status || "ready";
   }
   if (data.search?.finished) return "finished";
@@ -1362,6 +1800,11 @@ function renderPanelCopy(data) {
     $("left-panel-subtitle").textContent = "The tree grows in DFS order and keeps backtracked branches visible.";
     $("right-panel-title").textContent = "Labyrinth";
     $("right-panel-subtitle").textContent = "The maze view shows the current route, dead ends, and the final discovered path.";
+  } else if (isGraphBfs()) {
+    $("left-panel-title").textContent = "Search Tree";
+    $("left-panel-subtitle").textContent = "The tree grows in BFS order and shows how the frontier expands level by level.";
+    $("right-panel-title").textContent = "Spatial Graph";
+    $("right-panel-subtitle").textContent = "The graph view shows the highlighted route, explored edges, visited nodes, and the final discovered path.";
   } else if (isGraphDfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "The tree grows in DFS order and keeps backtracked branches visible.";
@@ -1388,7 +1831,7 @@ function renderMetrics(data) {
     return;
   }
 
-  if (isGraphDfs()) {
+  if (isGraphReachability()) {
     $("metric-1-label").textContent = "Explored nodes";
     $("metric-1-value").textContent = String(data.search?.explored_count || 0);
     $("metric-2-label").textContent = "Current depth";
@@ -1562,7 +2005,7 @@ function renderWeightedGraph(data) {
   svg.appendChild(nodes);
 }
 
-function renderGraphDfs(data) {
+function renderGraphReachability(data) {
   const svg = $("problem-svg");
   svg.innerHTML = "";
   const graph = data.graph;
@@ -1701,8 +2144,8 @@ function renderLabyrinth(data) {
 function renderControls() {
   const livePythonApp = isLivePythonApp();
   $("example-control-label").textContent = livePythonApp ? "Configuration" : "Example";
-  $("size-control-label").textContent = isGraphDfs() ? "Graph size" : "Labyrinth size";
-  $("generate-button").textContent = isGraphDfs() ? "Generate new graph" : "Generate new labyrinth";
+  $("size-control-label").textContent = isGraphReachability() ? "Graph size" : "Labyrinth size";
+  $("generate-button").textContent = isGraphReachability() ? "Generate new graph" : "Generate new labyrinth";
   $("mode-control").classList.toggle("hidden", !livePythonApp);
   $("size-control").classList.toggle("hidden", !livePythonApp);
   $("seed-control").classList.toggle("hidden", !livePythonApp);
@@ -1713,7 +2156,7 @@ function renderControls() {
   $("search-toggle-grid").classList.toggle("hidden", !isWeightedSearch());
   $("search-legend").classList.toggle("hidden", !isWeightedSearch());
   $("labyrinth-legend").classList.toggle("hidden", !isLabyrinth());
-  $("graph-dfs-legend").classList.toggle("hidden", !isGraphDfs());
+  $("graph-dfs-legend").classList.toggle("hidden", !isGraphReachability());
 }
 
 function render() {
@@ -1756,8 +2199,8 @@ function render() {
   renderTree(data);
   if (isLabyrinth()) {
     renderLabyrinth(data);
-  } else if (isGraphDfs()) {
-    renderGraphDfs(data);
+  } else if (isGraphReachability()) {
+    renderGraphReachability(data);
   } else {
     renderWeightedGraph(data);
   }
@@ -1851,7 +2294,7 @@ async function solveWithPython() {
   const backendUrl = state.session.data.live_python?.backend_url || "http://127.0.0.1:9414/solve";
   const problemPayload = isLabyrinth()
     ? { algorithm: "dfs", labyrinth: state.session.data.labyrinth }
-    : { algorithm: "dfs", graph: state.session.data.graph };
+    : { algorithm: isGraphBfs() ? "bfs" : "dfs", graph: state.session.data.graph };
   const problemData = isLabyrinth() ? state.session.data.labyrinth : state.session.data.graph;
 
   try {
@@ -1867,7 +2310,9 @@ async function solveWithPython() {
     }
     state.player.liveTrace = isLabyrinth()
       ? buildLabyrinthTraceFromBackend(problemData, payload)
-      : buildGraphDfsTraceFromBackend(problemData, payload);
+      : isGraphBfs()
+        ? buildGraphBfsTraceFromBackend(problemData, payload)
+        : buildGraphDfsTraceFromBackend(problemData, payload);
     state.player.liveSnapshots = buildSnapshots(state.player.liveTrace);
     state.player.stepIndex = 0;
     state.player.mode = "live";
@@ -1889,7 +2334,13 @@ async function solveWithPython() {
 
 function downloadPythonStub() {
   const archive = createZipArchive(
-    isGraphDfs()
+    isGraphBfs()
+      ? [
+          { name: "ai9414/solve_graph.py", content: GRAPH_BFS_PYTHON_STUB },
+          { name: "ai9414/requirements.txt", content: GRAPH_BFS_PYTHON_REQUIREMENTS },
+          { name: "ai9414/README.md", content: GRAPH_BFS_PYTHON_README },
+        ]
+      : isGraphDfs()
       ? [
           { name: "ai9414/solve_graph.py", content: GRAPH_PYTHON_STUB },
           { name: "ai9414/requirements.txt", content: GRAPH_PYTHON_REQUIREMENTS },
@@ -1904,13 +2355,19 @@ function downloadPythonStub() {
   const url = window.URL.createObjectURL(archive);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = isGraphDfs() ? "graph-dfs-python-stub.zip" : "labyrinth-dfs-python-stub.zip";
+  anchor.download = isGraphBfs()
+    ? "graph-bfs-python-stub.zip"
+    : isGraphDfs()
+      ? "graph-dfs-python-stub.zip"
+      : "labyrinth-dfs-python-stub.zip";
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
   window.URL.revokeObjectURL(url);
   setMessage(
-    isGraphDfs()
+    isGraphBfs()
+      ? "Downloaded graph-bfs-python-stub.zip."
+      : isGraphDfs()
       ? "Downloaded graph-dfs-python-stub.zip."
       : "Downloaded labyrinth-dfs-python-stub.zip."
   );
@@ -1949,7 +2406,7 @@ function bindEvents() {
       state.player.seed = "";
       $("size-select").value = state.player.size;
       $("seed-input").value = "";
-      if (isGraphDfs()) {
+      if (isGraphReachability()) {
         await generateGraph();
       } else {
         await generateLabyrinth();
@@ -1966,7 +2423,7 @@ function bindEvents() {
       setMessage("");
     } else if (!state.player.liveTrace) {
       setMessage(
-        isGraphDfs()
+        isGraphReachability()
           ? "Live Python mode is ready. Generate a graph or solve the current one with your backend."
           : "Live Python mode is ready. Generate a labyrinth or solve the current one with your backend."
       );
@@ -1996,7 +2453,7 @@ function bindEvents() {
     render();
   });
   $("generate-button").addEventListener("click", async () => {
-    if (isGraphDfs()) {
+    if (isGraphReachability()) {
       await generateGraph();
       return;
     }
