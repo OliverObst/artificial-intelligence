@@ -1,6 +1,6 @@
 # ai9414 Architecture Overview
 
-This repository contains the Phase 1 reference infrastructure for the `ai9414` platform together with concrete search and logic demo modules.
+This repository contains the Phase 1 reference infrastructure for the `ai9414` platform together with concrete search, CSP, logic, and planning demo modules.
 
 ## Included in Phase 1
 

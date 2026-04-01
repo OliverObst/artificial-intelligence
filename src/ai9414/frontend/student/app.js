@@ -9,6 +9,8 @@ const state = {
     showExploredEdges: true,
     showPrunedBranches: true,
     showPlannerTrace: false,
+    showCspDomains: true,
+    cspViewMode: "trace",
     planningSelectedAction: "",
   },
   player: {
@@ -1713,6 +1715,75 @@ Your solver returns:
 - optional stats
 `;
 
+const CSP_PYTHON_STUB = `from __future__ import annotations
+
+from typing import Any
+
+from ai9414.csp import build_unimplemented_csp_result, run_csp_solver
+
+
+def solve_csp(problem: dict[str, Any], options: dict[str, Any]) -> dict[str, Any]:
+    """
+    Solve the map-colouring CSP and return a replayable event trace.
+
+    The browser sends:
+        - problem: variables, domains, neighbours, colours, and geometry
+        - options: algorithm and ordering choices from the UI
+
+    Your solver should return:
+        - algorithm
+        - status
+        - events
+        - optional assignment and stats
+    """
+    _ = (problem, options)
+
+    # TODO:
+    # Replace this placeholder with your own backtracking + forward checking solver.
+    return build_unimplemented_csp_result()
+
+
+if __name__ == "__main__":
+    run_csp_solver(solve_csp)
+`;
+
+const CSP_PYTHON_REQUIREMENTS = `ai9414
+`;
+
+const CSP_PYTHON_README = `# csp map-colouring solver
+
+This folder runs a tiny local solver for the CSP map-colouring demo.
+The browser connection and replay formatting are handled by ai9414.
+Your job is to return an event trace for backtracking + forward checking.
+
+## install
+
+Install the dependency with:
+
+    pip install -r requirements.txt
+
+## run
+
+Start the local solver with:
+
+    python solve_csp.py
+
+## what to implement
+
+Open solve_csp.py and implement solve_csp(...).
+The browser sends:
+
+- problem
+- options
+
+Your solver returns:
+
+- algorithm
+- status
+- events
+- optional assignment and stats
+`;
+
 const $svgNode = (name, attributes = {}, text = "") => {
   const node = document.createElementNS("http://www.w3.org/2000/svg", name);
   Object.entries(attributes).forEach(([key, value]) => {
@@ -1729,6 +1800,7 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 const appType = () => state.manifest?.app_type;
 const isStrips = () => appType() === "strips";
 const isLogic = () => appType() === "logic";
+const isCsp = () => appType() === "csp";
 const isLabyrinth = () => appType() === "labyrinth";
 const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
@@ -1978,6 +2050,8 @@ function syncControls() {
   $("show-explored").checked = state.view.showExploredEdges;
   $("show-pruned").checked = state.view.showPrunedBranches;
   $("show-planner-trace").checked = state.view.showPlannerTrace;
+  $("show-csp-domains").checked = state.view.showCspDomains;
+  $("csp-view-select").value = state.view.cspViewMode;
   $("mode-select").value = state.player.mode;
   $("size-select").value = state.player.size;
   $("seed-input").value = state.player.seed || "";
@@ -1987,6 +2061,13 @@ function syncControls() {
     $("logic-unit-propagation").checked = options.unit_propagation !== false;
     $("logic-pure-literals").checked = options.pure_literals === true;
     $("logic-order-select").value = options.variable_order || "alphabetical";
+  }
+  if (isCsp()) {
+    const options = state.session?.data?.options || {};
+    $("csp-algorithm-select").value = options.algorithm || "backtracking_forward_checking";
+    $("csp-variable-order-select").value = options.variable_ordering || "fixed";
+    $("csp-value-order-select").value = options.value_ordering || "default";
+    $("csp-colour-select").value = String(options.num_colours || 3);
   }
 }
 
@@ -2118,6 +2199,73 @@ function blankLogicTrace(problem) {
       },
       stats: { decisions: 0, forced_assignments: 0, contradictions: 0, backtracks: 0 },
     },
+    steps: [],
+    summary: { step_count: 0, result: "ready" },
+  };
+}
+
+function blankCspTrace(problem, snapshot) {
+  return {
+    app_type: "csp",
+    initial_state: clone(snapshot || {
+      example_title: problem?.title || "Map-colouring CSP",
+      example_subtitle:
+        problem?.subtitle || "Load a map-colouring example and step through the CSP search.",
+      algorithm_label: "Backtracking + forward checking",
+      algorithm_note:
+        "This view is ready for CSP search. Solve the current map-colouring problem in live Python mode to populate the replay.",
+      goal_label: "Assign colours so every neighbouring pair differs",
+      csp_problem: clone(problem || {}),
+      csp: {
+        variables: (problem?.regions || []).map((region) => ({
+          variable: region,
+          domain: clone(problem?.domains?.[region] || problem?.colours || []),
+          assigned_value: null,
+          status: "unchanged",
+          changed: false,
+          is_focus: false,
+          is_failed: false,
+          degree: problem?.neighbours?.[region]?.length || 0,
+        })),
+        assignments: {},
+        domains: clone(problem?.domains || {}),
+        focus_variable: null,
+        failed_variable: null,
+        last_changes: [],
+        trace_entries: [],
+        current_entry_index: null,
+      },
+      tree: {
+        nodes: [
+          {
+            tree_id: "t0",
+            graph_node: "start",
+            assignment_text: "No assignments",
+            parent: null,
+            depth: 0,
+            status: "active",
+            order: 0,
+            x: 0.5,
+            y: 0.16,
+          },
+        ],
+      },
+      search: {
+        active_tree_node: "t0",
+        active_tree_path: ["t0"],
+        best_tree_path: [],
+        final_tree_path: [],
+        finished: false,
+        status: "ready",
+        result: null,
+      },
+      stats: {
+        assignments: 0,
+        prunes: 0,
+        backtracks: 0,
+        wipeouts: 0,
+      },
+    }),
     steps: [],
     summary: { step_count: 0, result: "ready" },
   };
@@ -4422,7 +4570,9 @@ function buildLogicTraceFromBackend(problem, result) {
 }
 
 function activeTraceContext() {
-  const blankTrace = isStrips()
+  const blankTrace = isCsp()
+    ? blankCspTrace(state.session.data.csp_problem, state.session.data)
+    : isStrips()
     ? blankStripsTrace(state.session.data.strips_problem, state.session.data)
     : isLogic()
     ? blankLogicTrace(state.session.data.logic_problem || state.session.data.problem || {
@@ -4495,6 +4645,9 @@ function maxStepCount() {
 }
 
 function statusLabel(data, step) {
+  if (isCsp()) {
+    return data.search?.status || "ready";
+  }
   if (isStrips()) {
     return data.search?.status || "ready";
   }
@@ -4513,7 +4666,14 @@ function statusLabel(data, step) {
 }
 
 function renderPanelCopy(data) {
-  if (isStrips()) {
+  if (isCsp()) {
+    $("left-panel-title").textContent = "CSP State";
+    $("left-panel-subtitle").textContent =
+      "Variables, domains, and the decision trace stay aligned with the map colouring on the right.";
+    $("right-panel-title").textContent = "Map View";
+    $("right-panel-subtitle").textContent =
+      "The map shows assigned colours directly and keeps the remaining candidate colours visible for every unassigned region.";
+  } else if (isStrips()) {
     $("left-panel-title").textContent = "Planning State";
     $("left-panel-subtitle").textContent =
       "Predicates, applicable actions, and the grounded plan stay aligned with the rendered office world.";
@@ -4567,6 +4727,19 @@ function renderPanelCopy(data) {
 }
 
 function renderMetrics(data) {
+  if (isCsp()) {
+    const assigned = Object.keys(data.csp?.assignments || {}).length;
+    const total = data.csp?.variables?.length || 0;
+    $("metric-1-label").textContent = "Assigned variables";
+    $("metric-1-value").textContent = `${assigned} / ${total}`;
+    $("metric-2-label").textContent = "Pruned values";
+    $("metric-2-value").textContent = String(data.stats?.prunes || 0);
+    $("metric-3-label").textContent = "Backtracks";
+    $("metric-3-value").textContent = String(data.stats?.backtracks || 0);
+    $("metric-4-label").textContent = "Wipe-outs";
+    $("metric-4-value").textContent = String(data.stats?.wipeouts || 0);
+    return;
+  }
   if (isStrips()) {
     const planLength = data.planning?.plan?.length || 0;
     $("metric-1-label").textContent = "Plan step";
@@ -4658,6 +4831,253 @@ function renderMetrics(data) {
   $("metric-3-value").textContent = String(data.stats?.solutions_found || 0);
   $("metric-4-label").textContent = "Pruned branches";
   $("metric-4-value").textContent = String(data.stats?.pruned || 0);
+}
+
+function cspColourValue(problem, colour) {
+  return problem?.colour_values?.[colour] || "#d1c6b8";
+}
+
+function renderCspTree(container, data) {
+  const nodes = data.tree?.nodes || [];
+  if (!nodes.length) {
+    container.textContent = "The search tree will appear here as assignments are tried.";
+    return;
+  }
+
+  const svg = $svgNode("svg", {
+    class: "csp-tree-svg",
+    viewBox: "0 0 1000 320",
+    role: "img",
+    "aria-label": "CSP search tree",
+  });
+  const nodeMap = new Map(nodes.map((node) => [node.tree_id, node]));
+  const activePath = new Set(data.search?.active_tree_path || []);
+  const finalPath = new Set(data.search?.final_tree_path || []);
+
+  const links = $svgNode("g");
+  const cards = $svgNode("g");
+
+  nodes.forEach((node) => {
+    if (!node.parent || !nodeMap.has(node.parent)) return;
+    const parent = nodeMap.get(node.parent);
+    const classes = ["csp-tree-link"];
+    if (activePath.has(node.tree_id) && activePath.has(node.parent)) classes.push("active");
+    if (finalPath.has(node.tree_id) && finalPath.has(node.parent)) classes.push("final");
+    links.appendChild(
+      $svgNode("line", {
+        class: classes.join(" "),
+        x1: parent.x * 1000,
+        y1: parent.y * 320,
+        x2: node.x * 1000,
+        y2: node.y * 320,
+      })
+    );
+  });
+
+  nodes.forEach((node) => {
+    const group = $svgNode("g", {
+      class: `csp-tree-node ${node.status || ""}`,
+      transform: `translate(${node.x * 1000}, ${node.y * 320})`,
+    });
+    group.appendChild(
+      $svgNode("rect", {
+        class: "csp-tree-card",
+        x: -78,
+        y: -30,
+        width: 156,
+        height: 60,
+        rx: 18,
+      })
+    );
+    group.appendChild($svgNode("text", { class: "csp-tree-heading", y: -4 }, node.graph_node));
+    group.appendChild(
+      $svgNode("text", { class: "csp-tree-subtext", y: 16 }, node.assignment_text || "No assignments")
+    );
+    cards.appendChild(group);
+  });
+
+  svg.append(links, cards);
+  container.appendChild(svg);
+}
+
+function renderCspPanel(data) {
+  const panel = $("csp-panel");
+  panel.innerHTML = "";
+  const csp = data.csp;
+  const problem = data.csp_problem;
+  if (!csp || !problem) return;
+
+  const shell = document.createElement("div");
+  shell.className = "csp-shell";
+
+  const stateSection = document.createElement("section");
+  stateSection.className = "csp-section";
+  const stateHeading = document.createElement("h3");
+  stateHeading.className = "csp-section-title";
+  stateHeading.textContent = "Current CSP state";
+  const stateCopy = document.createElement("p");
+  stateCopy.className = "csp-copy";
+  stateCopy.textContent = `Variables are the regions, domains are the remaining colours, and every edge says neighbouring regions must differ. Current focus: ${csp.focus_variable || "none"}.`;
+  stateSection.append(stateHeading, stateCopy);
+
+  const table = document.createElement("table");
+  table.className = "csp-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Variable</th>
+        <th>Current domain</th>
+        <th>Assigned</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+  `;
+  const body = document.createElement("tbody");
+  (csp.variables || []).forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.className = row.status || "unchanged";
+
+    const variable = document.createElement("td");
+    variable.textContent = row.variable;
+
+    const domain = document.createElement("td");
+    const domainList = document.createElement("div");
+    domainList.className = "csp-domain-list";
+    if ((row.domain || []).length) {
+      row.domain.forEach((colour) => {
+        const chip = document.createElement("span");
+        chip.className = "csp-domain-chip";
+        const dot = document.createElement("span");
+        dot.className = "csp-colour-dot";
+        dot.style.background = cspColourValue(problem, colour);
+        chip.append(dot, document.createTextNode(colour));
+        domainList.appendChild(chip);
+      });
+    } else {
+      const chip = document.createElement("span");
+      chip.className = "csp-domain-chip empty";
+      chip.textContent = "empty";
+      domainList.appendChild(chip);
+    }
+    domain.appendChild(domainList);
+
+    const assigned = document.createElement("td");
+    assigned.textContent = row.assigned_value || "—";
+
+    const status = document.createElement("td");
+    const pill = document.createElement("span");
+    pill.className = `csp-status-pill ${row.status || "unchanged"}`;
+    pill.textContent = row.status || "unchanged";
+    status.appendChild(pill);
+
+    tr.append(variable, domain, assigned, status);
+    body.appendChild(tr);
+  });
+  table.appendChild(body);
+  stateSection.appendChild(table);
+  shell.appendChild(stateSection);
+
+  const lowerSection = document.createElement("section");
+  lowerSection.className = "csp-section";
+  const lowerHeading = document.createElement("h3");
+  lowerHeading.className = "csp-section-title";
+  lowerHeading.textContent = state.view.cspViewMode === "tree" ? "Search tree" : "Decision trace";
+  lowerSection.appendChild(lowerHeading);
+
+  if (state.view.cspViewMode === "tree") {
+    renderCspTree(lowerSection, data);
+  } else {
+    const traceList = document.createElement("div");
+    traceList.className = "csp-trace-list";
+    (csp.trace_entries || []).forEach((entry, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `csp-trace-row${index === csp.current_entry_index ? " current" : ""}`;
+      button.dataset.stepIndex = String(index + 1);
+      const meta = document.createElement("span");
+      meta.className = "csp-trace-meta";
+      meta.textContent = entry.action.replaceAll("_", " ");
+      const text = document.createElement("span");
+      text.className = "csp-trace-text";
+      text.textContent = entry.text;
+      button.append(meta, text);
+      traceList.appendChild(button);
+    });
+    if (!(csp.trace_entries || []).length) {
+      const empty = document.createElement("p");
+      empty.className = "csp-copy";
+      empty.textContent = "The decision trace will appear here once the search starts.";
+      lowerSection.appendChild(empty);
+    } else {
+      lowerSection.appendChild(traceList);
+    }
+  }
+
+  shell.appendChild(lowerSection);
+  panel.appendChild(shell);
+}
+
+function renderCspMap(data) {
+  const svg = $("problem-svg");
+  svg.innerHTML = "";
+  const problem = data.csp_problem;
+  const csp = data.csp;
+  if (!problem || !csp) return;
+
+  const assignments = csp.assignments || {};
+  const domains = csp.domains || {};
+  const changed = new Set((csp.last_changes || []).map((change) => change.variable));
+  const focus = csp.focus_variable;
+  const failed = csp.failed_variable;
+
+  const polygons = $svgNode("g");
+  const labels = $svgNode("g");
+  const markers = $svgNode("g");
+
+  (problem.regions || []).forEach((region) => {
+    const geometry = problem.geometry?.[region];
+    if (!geometry) return;
+    const fill = assignments[region] ? cspColourValue(problem, assignments[region]) : "rgba(255, 252, 246, 0.92)";
+    const classes = ["csp-region"];
+    if (region === focus) classes.push("focus");
+    if (changed.has(region)) classes.push("reduced");
+    if (region === failed || !(domains[region] || []).length) classes.push("failed");
+    polygons.appendChild(
+      $svgNode("polygon", {
+        class: classes.join(" "),
+        points: geometry.points.map(([x, y]) => `${x},${y}`).join(" "),
+        style: `fill: ${fill};`,
+      })
+    );
+    labels.appendChild(
+      $svgNode("text", { class: "csp-region-label", x: geometry.label[0], y: geometry.label[1] }, region.toUpperCase())
+    );
+
+    if (!state.view.showCspDomains || assignments[region]) return;
+    const remaining = domains[region] || [];
+    if (!remaining.length) {
+      const anchor = geometry.domain_anchor || [geometry.label[0], geometry.label[1] + 30];
+      markers.appendChild($svgNode("circle", { class: "csp-domain-empty", cx: anchor[0], cy: anchor[1], r: 12 }));
+      markers.appendChild($svgNode("line", { class: "csp-domain-cross", x1: anchor[0] - 5, y1: anchor[1] - 5, x2: anchor[0] + 5, y2: anchor[1] + 5 }));
+      markers.appendChild($svgNode("line", { class: "csp-domain-cross", x1: anchor[0] + 5, y1: anchor[1] - 5, x2: anchor[0] - 5, y2: anchor[1] + 5 }));
+      return;
+    }
+    const anchor = geometry.domain_anchor || [geometry.label[0], geometry.label[1] + 30];
+    const width = (remaining.length - 1) * 22;
+    remaining.forEach((colour, index) => {
+      markers.appendChild(
+        $svgNode("circle", {
+          class: "csp-domain-marker",
+          cx: anchor[0] - width / 2 + index * 22,
+          cy: anchor[1],
+          r: 8,
+          fill: cspColourValue(problem, colour),
+        })
+      );
+    });
+  });
+
+  svg.append(polygons, labels, markers);
 }
 
 function renderTree(data) {
@@ -5531,26 +5951,33 @@ function renderStripsWorld(data) {
 
 function renderControls() {
   const livePythonApp = isLivePythonApp();
-  const generatedProblemApp = livePythonApp && !isLogic() && !isStrips();
+  const generatedProblemApp = livePythonApp && !isLogic() && !isStrips() && !isCsp();
   $("example-control-label").textContent = generatedProblemApp ? "Configuration" : "Example";
   $("size-control-label").textContent = isLabyrinth() ? "Labyrinth size" : "Graph size";
   $("generate-button").textContent = isLabyrinth() ? "Generate new labyrinth" : "Generate new graph";
   $("mode-control").classList.toggle("hidden", !livePythonApp);
   $("logic-mode-control").classList.toggle("hidden", !isLogic());
   $("logic-order-control").classList.toggle("hidden", !isLogic());
+  $("csp-algorithm-control").classList.toggle("hidden", !isCsp());
+  $("csp-variable-order-control").classList.toggle("hidden", !isCsp());
+  $("csp-value-order-control").classList.toggle("hidden", !isCsp());
+  $("csp-colour-control").classList.toggle("hidden", !isCsp());
+  $("csp-view-control").classList.toggle("hidden", !isCsp());
   $("planning-toggle-grid").classList.toggle("hidden", !isStrips());
+  $("csp-toggle-grid").classList.toggle("hidden", !isCsp());
   $("size-control").classList.toggle("hidden", !generatedProblemApp);
   $("seed-control").classList.toggle("hidden", !generatedProblemApp);
   $("generate-button").classList.toggle("hidden", !generatedProblemApp);
   $("solve-python-button").classList.toggle("hidden", !livePythonApp);
   $("download-stub-button").classList.toggle("hidden", !livePythonApp);
-  $("reload-button").classList.toggle("hidden", livePythonApp && !isStrips());
+  $("reload-button").classList.toggle("hidden", livePythonApp && !isStrips() && !isLogic() && !isCsp());
   $("search-toggle-grid").classList.toggle("hidden", !isWeightedGraphSearch());
   $("logic-toggle-grid").classList.toggle("hidden", !isLogic());
   $("search-legend").classList.toggle("hidden", !isWeightedGraphSearch());
   $("labyrinth-legend").classList.toggle("hidden", !isLabyrinth());
   $("graph-dfs-legend").classList.toggle("hidden", !isGraphReachability());
   $("logic-legend").classList.toggle("hidden", !isLogic());
+  $("csp-legend").classList.toggle("hidden", !isCsp());
 }
 
 function render() {
@@ -5590,10 +6017,13 @@ function render() {
     banner.classList.add("hidden");
   }
 
-  $("search-tree-svg").classList.toggle("hidden", isStrips());
+  $("search-tree-svg").classList.toggle("hidden", isStrips() || isCsp());
+  $("csp-panel").classList.toggle("hidden", !isCsp());
   $("planning-panel").classList.toggle("hidden", !isStrips());
   $("planning-world-panel").classList.toggle("hidden", !isStrips());
-  if (isStrips()) {
+  if (isCsp()) {
+    renderCspPanel(data);
+  } else if (isStrips()) {
     renderPlanningInternal(data);
     renderPlanningWorldPanel(data);
   } else {
@@ -5603,6 +6033,8 @@ function render() {
   $("logic-problem-panel").classList.toggle("hidden", !isLogic());
   if (isLogic()) {
     renderLogicProblem(data);
+  } else if (isCsp()) {
+    renderCspMap(data);
   } else if (isStrips()) {
     renderStripsWorld(data);
   } else if (isLabyrinth()) {
@@ -5731,6 +6163,12 @@ async function solveWithPython() {
         problem: logicProblem,
         options: clone(state.session.data.options || {}),
       }
+    : isCsp()
+    ? {
+        algorithm: "backtracking_forward_checking",
+        problem: clone(state.session.data.csp_problem),
+        options: clone(state.session.data.options || {}),
+      }
     : isStrips()
     ? {
         algorithm: "strips_bfs",
@@ -5754,6 +6192,8 @@ async function solveWithPython() {
       };
   const problemData = isLogic()
     ? logicProblem
+    : isCsp()
+      ? state.session.data.csp_problem
     : isStrips()
       ? state.session.data.strips_problem
     : isLabyrinth()
@@ -5773,6 +6213,8 @@ async function solveWithPython() {
     }
     state.player.liveTrace = isLogic()
       ? buildLogicTraceFromBackend(problemData, payload)
+      : isCsp()
+      ? payload.trace_bundle
       : isStrips()
       ? payload.trace_bundle
       : isLabyrinth()
@@ -5815,6 +6257,12 @@ function downloadPythonStub() {
           { name: "ai9414/solve_dpll.py", content: DPLL_PYTHON_STUB },
           { name: "ai9414/requirements.txt", content: DPLL_PYTHON_REQUIREMENTS },
           { name: "ai9414/README.md", content: DPLL_PYTHON_README },
+        ]
+      : isCsp()
+      ? [
+          { name: "ai9414/solve_csp.py", content: CSP_PYTHON_STUB },
+          { name: "ai9414/requirements.txt", content: CSP_PYTHON_REQUIREMENTS },
+          { name: "ai9414/README.md", content: CSP_PYTHON_README },
         ]
       : isStrips()
       ? [
@@ -5869,6 +6317,8 @@ function downloadPythonStub() {
   anchor.href = url;
   anchor.download = isLogic()
     ? "logic-dpll-python-stub.zip"
+    : isCsp()
+    ? "csp-map-colouring-python-stub.zip"
     : isStrips()
     ? "strips-planning-python-stub.zip"
     : isWeightedSearch()
@@ -5891,6 +6341,8 @@ function downloadPythonStub() {
   setMessage(
     isLogic()
       ? "Downloaded logic-dpll-python-stub.zip."
+      : isCsp()
+      ? "Downloaded csp-map-colouring-python-stub.zip."
       : isStrips()
       ? "Downloaded strips-planning-python-stub.zip."
       : isWeightedSearch()
@@ -5911,6 +6363,15 @@ function downloadPythonStub() {
 }
 
 async function updateLogicOptions(patch) {
+  stopPlay();
+  setMessage("");
+  const response = await postAction("set_option", patch);
+  const trace = await requestJson("/api/trace");
+  response.trace = trace;
+  await refreshFromServer(response);
+}
+
+async function updateCspOptions(patch) {
   stopPlay();
   setMessage("");
   const response = await postAction("set_option", patch);
@@ -5948,7 +6409,7 @@ function bindEvents() {
     await loadExample(state.session.example_name);
   });
   $("example-select").addEventListener("change", async (event) => {
-    if (isLivePythonApp() && !isLogic() && !isStrips()) {
+    if (isLivePythonApp() && !isLogic() && !isStrips() && !isCsp()) {
       stopPlay();
       state.player.size = event.target.value;
       state.player.seed = "";
@@ -5974,6 +6435,8 @@ function bindEvents() {
       setMessage(
         isLogic()
           ? "Live Python mode is ready. Run your local DPLL solver and replay the returned trace."
+          : isCsp()
+          ? "Live Python mode is ready. Run your local CSP solver and replay the returned trace."
           : isStrips()
           ? "Live Python mode is ready. Run your local STRIPS planner and replay the returned plan."
           : !isLabyrinth()
@@ -5995,6 +6458,22 @@ function bindEvents() {
   $("logic-order-select").addEventListener("change", async (event) => {
     await updateLogicOptions({ variable_order: event.target.value });
   });
+  $("csp-algorithm-select").addEventListener("change", async (event) => {
+    await updateCspOptions({ algorithm: event.target.value });
+  });
+  $("csp-variable-order-select").addEventListener("change", async (event) => {
+    await updateCspOptions({ variable_ordering: event.target.value });
+  });
+  $("csp-value-order-select").addEventListener("change", async (event) => {
+    await updateCspOptions({ value_ordering: event.target.value });
+  });
+  $("csp-colour-select").addEventListener("change", async (event) => {
+    await updateCspOptions({ num_colours: Number(event.target.value) });
+  });
+  $("csp-view-select").addEventListener("change", (event) => {
+    state.view.cspViewMode = event.target.value;
+    render();
+  });
   $("size-select").addEventListener("change", (event) => {
     state.player.size = event.target.value;
   });
@@ -6014,6 +6493,10 @@ function bindEvents() {
   });
   $("show-planner-trace").addEventListener("change", (event) => {
     state.view.showPlannerTrace = event.target.checked;
+    render();
+  });
+  $("show-csp-domains").addEventListener("change", (event) => {
+    state.view.showCspDomains = event.target.checked;
     render();
   });
   $("step-range").addEventListener("input", (event) => {
@@ -6051,6 +6534,15 @@ function bindEvents() {
     if (actionSignature) {
       state.view.planningSelectedAction = actionSignature;
     }
+    render();
+  });
+  $("csp-panel").addEventListener("click", (event) => {
+    const target = event.target.closest("button");
+    if (!target) return;
+    const { stepIndex } = target.dataset;
+    if (!stepIndex) return;
+    stopPlay();
+    state.player.stepIndex = Math.max(0, Math.min(Number(stepIndex), maxStepCount()));
     render();
   });
 }

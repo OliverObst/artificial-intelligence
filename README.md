@@ -1,6 +1,6 @@
 # artificial-intelligence
 
-Phase 1 reference implementation of the `ai9414` educational AI platform, now with nine concrete demos:
+Phase 1 reference implementation of the `ai9414` educational AI platform, now with ten concrete demos:
 
 - labyrinth DFS search
 - spatial graph DFS search
@@ -10,6 +10,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - spatial graph uniform-cost search
 - spatial graph branch-and-bound search
 - propositional logic DPLL
+- CSP map colouring
 - STRIPS planning
 
 ## Available demos
@@ -30,6 +31,8 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
   Start with `python examples/graph_branch_and_bound_demo.py`
 - `propositional logic DPLL`
   Start with `python examples/logic_dpll_demo.py`
+- `CSP map colouring`
+  Start with `python examples/csp_demo.py`
 - `STRIPS planning`
   Start with `python examples/strips_demo.py`
 
@@ -45,6 +48,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - precomputed trace replay for a generated spatial graph uniform-cost demo
 - precomputed trace replay for a generated spatial graph branch-and-bound demo
 - precomputed trace replay for a visual DPLL propositional logic demo
+- precomputed trace replay for a visual CSP map-colouring demo
 - precomputed trace replay for a visual STRIPS planning demo
 - static solution replay export with no backend dependency
 - deterministic labyrinth presets plus seeded graph generation
@@ -106,6 +110,12 @@ To start the DPLL logic example:
 
 ```bash
 python examples/logic_dpll_demo.py
+```
+
+To start the CSP map-colouring example:
+
+```bash
+python examples/csp_demo.py
 ```
 
 To start the STRIPS planning example:
@@ -211,6 +221,36 @@ from ai9414.logic import DpllDemo
 
 app = DpllDemo()
 app.load_example("unit_chain")
+app.show()
+```
+
+Visual CSP example:
+
+```python
+from ai9414.csp import CSPDemo
+
+app = CSPDemo(example="australia")
+app.set_algorithm("backtracking_forward_checking")
+app.show()
+```
+
+Custom CSP map:
+
+```python
+from ai9414.csp import CSPDemo
+
+app = CSPDemo()
+app.load_map_problem(
+    regions=["a", "b", "c", "d"],
+    adjacency={
+        "a": ["b", "c"],
+        "b": ["a", "c", "d"],
+        "c": ["a", "b", "d"],
+        "d": ["b", "c"],
+    },
+    colours=["red", "green", "blue"],
+)
+app.set_variable_ordering("mrv")
 app.show()
 ```
 

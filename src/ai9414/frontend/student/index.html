@@ -30,6 +30,7 @@
             </div>
           </div>
           <svg id="search-tree-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Search tree"></svg>
+          <div id="csp-panel" class="csp-panel hidden" role="img" aria-label="Constraint satisfaction state"></div>
           <div id="planning-panel" class="planning-panel hidden" role="img" aria-label="Planning state"></div>
         </section>
 
@@ -148,6 +149,47 @@
             </select>
           </label>
 
+          <label id="csp-algorithm-control" class="control-block hidden" for="csp-algorithm-select">
+            <span>Algorithm</span>
+            <select id="csp-algorithm-select">
+              <option value="backtracking_forward_checking">backtracking + forward checking</option>
+            </select>
+          </label>
+
+          <label id="csp-variable-order-control" class="control-block hidden" for="csp-variable-order-select">
+            <span>Variable ordering</span>
+            <select id="csp-variable-order-select">
+              <option value="fixed">fixed order</option>
+              <option value="first_unassigned">first unassigned</option>
+              <option value="mrv">MRV</option>
+            </select>
+          </label>
+
+          <label id="csp-value-order-control" class="control-block hidden" for="csp-value-order-select">
+            <span>Value ordering</span>
+            <select id="csp-value-order-select">
+              <option value="default">domain order</option>
+              <option value="random">random (seeded)</option>
+            </select>
+          </label>
+
+          <label id="csp-colour-control" class="control-block hidden" for="csp-colour-select">
+            <span>Number of colours</span>
+            <select id="csp-colour-select">
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </label>
+
+          <label id="csp-view-control" class="control-block hidden" for="csp-view-select">
+            <span>Lower-left view</span>
+            <select id="csp-view-select">
+              <option value="trace">decision trace</option>
+              <option value="tree">search tree</option>
+            </select>
+          </label>
+
           <div id="search-toggle-grid" class="toggle-grid">
             <label class="toggle-row" for="show-explored">
               <input id="show-explored" type="checkbox" checked />
@@ -174,6 +216,13 @@
             <label class="toggle-row" for="show-planner-trace">
               <input id="show-planner-trace" type="checkbox" />
               <span>Show planner trace</span>
+            </label>
+          </div>
+
+          <div id="csp-toggle-grid" class="toggle-grid hidden">
+            <label class="toggle-row" for="show-csp-domains">
+              <input id="show-csp-domains" type="checkbox" checked />
+              <span>Show domains on map</span>
             </label>
           </div>
 
@@ -209,6 +258,13 @@
             <div class="legend-item"><span class="legend-swatch legend-best"></span>Forced assignment</div>
             <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Contradiction</div>
             <div class="legend-item"><span class="legend-swatch legend-final"></span>Solution / entailment</div>
+          </div>
+
+          <div id="csp-legend" class="legend-grid hidden">
+            <div class="legend-item"><span class="legend-swatch legend-current"></span>Current focus</div>
+            <div class="legend-item"><span class="legend-swatch legend-best"></span>Reduced domain</div>
+            <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Domain wipe-out</div>
+            <div class="legend-item"><span class="legend-swatch legend-final"></span>Assigned colour</div>
           </div>
         </aside>
       </main>

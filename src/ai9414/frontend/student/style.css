@@ -1138,6 +1138,297 @@ input[type="number"] {
   dominant-baseline: middle;
 }
 
+.csp-panel {
+  min-height: 360px;
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(239, 231, 216, 0.42)),
+    linear-gradient(140deg, rgba(13, 110, 110, 0.05), rgba(159, 85, 39, 0.08));
+  border: 1px solid rgba(111, 123, 131, 0.14);
+  overflow: auto;
+}
+
+.csp-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.csp-section {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.csp-section-title {
+  margin: 0 0 12px;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 1.05rem;
+}
+
+.csp-copy {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.csp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.94rem;
+}
+
+.csp-table th,
+.csp-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(111, 123, 131, 0.12);
+  text-align: left;
+  vertical-align: top;
+}
+
+.csp-table th {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.csp-table tr.focus {
+  background: rgba(13, 110, 110, 0.08);
+}
+
+.csp-table tr.reduced {
+  background: rgba(180, 83, 9, 0.08);
+}
+
+.csp-table tr.wipeout {
+  background: rgba(140, 94, 75, 0.14);
+}
+
+.csp-domain-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.csp-domain-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(243, 239, 230, 0.92);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.csp-domain-chip.empty {
+  background: rgba(140, 94, 75, 0.12);
+  border-color: rgba(140, 94, 75, 0.24);
+  color: rgba(96, 50, 35, 0.95);
+}
+
+.csp-colour-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 40, 48, 0.14);
+}
+
+.csp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(243, 239, 230, 0.92);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.csp-status-pill.assigned {
+  background: rgba(124, 63, 0, 0.12);
+  border-color: rgba(124, 63, 0, 0.18);
+  color: var(--final);
+}
+
+.csp-status-pill.reduced {
+  background: rgba(180, 83, 9, 0.12);
+  border-color: rgba(180, 83, 9, 0.18);
+  color: var(--best);
+}
+
+.csp-status-pill.focus {
+  background: rgba(13, 110, 110, 0.12);
+  border-color: rgba(13, 110, 110, 0.18);
+  color: var(--accent);
+}
+
+.csp-status-pill.wipeout {
+  background: rgba(140, 94, 75, 0.14);
+  border-color: rgba(140, 94, 75, 0.22);
+  color: #714633;
+}
+
+.csp-trace-list {
+  display: grid;
+  gap: 8px;
+  max-height: 300px;
+  overflow: auto;
+}
+
+.csp-trace-row {
+  width: 100%;
+  text-align: left;
+  background: rgba(243, 239, 230, 0.92);
+  color: var(--ink);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.csp-trace-row:hover {
+  background: rgba(232, 241, 239, 0.96);
+}
+
+.csp-trace-row.current {
+  background: rgba(13, 110, 110, 0.14);
+  border-color: rgba(13, 110, 110, 0.24);
+}
+
+.csp-trace-meta {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.csp-trace-text {
+  display: block;
+  line-height: 1.45;
+}
+
+.csp-tree-svg {
+  display: block;
+  width: 100%;
+  height: 320px;
+  border-radius: 16px;
+  background: rgba(248, 244, 236, 0.88);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.csp-tree-link {
+  fill: none;
+  stroke: rgba(95, 107, 115, 0.28);
+  stroke-width: 3;
+}
+
+.csp-tree-link.active {
+  stroke: var(--accent);
+  stroke-width: 4;
+}
+
+.csp-tree-link.final {
+  stroke: var(--final);
+  stroke-width: 4;
+}
+
+.csp-tree-card {
+  fill: rgba(255, 255, 255, 0.94);
+  stroke: rgba(95, 107, 115, 0.36);
+  stroke-width: 2.5;
+}
+
+.csp-tree-node.active .csp-tree-card {
+  fill: rgba(13, 110, 110, 0.12);
+  stroke: var(--accent);
+}
+
+.csp-tree-node.branched .csp-tree-card {
+  fill: rgba(13, 110, 110, 0.05);
+}
+
+.csp-tree-node.backtracked .csp-tree-card {
+  fill: rgba(95, 107, 115, 0.08);
+}
+
+.csp-tree-node.contradiction .csp-tree-card {
+  fill: rgba(140, 94, 75, 0.12);
+  stroke: rgba(140, 94, 75, 0.72);
+}
+
+.csp-tree-node.solution .csp-tree-card {
+  fill: rgba(124, 63, 0, 0.12);
+  stroke: var(--final);
+  stroke-width: 4;
+}
+
+.csp-tree-heading {
+  fill: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.csp-tree-subtext {
+  fill: var(--muted);
+  font-size: 12px;
+  text-anchor: middle;
+}
+
+.csp-region {
+  stroke: rgba(95, 107, 115, 0.42);
+  stroke-width: 3;
+  fill: rgba(255, 252, 246, 0.92);
+  transition: fill 140ms ease, stroke 140ms ease, transform 140ms ease;
+}
+
+.csp-region.focus {
+  stroke: var(--accent);
+  stroke-width: 5;
+}
+
+.csp-region.reduced {
+  stroke: var(--best);
+  stroke-width: 4;
+}
+
+.csp-region.failed {
+  fill: rgba(140, 94, 75, 0.18);
+  stroke: rgba(140, 94, 75, 0.84);
+  stroke-width: 5;
+}
+
+.csp-region-label {
+  fill: var(--ink);
+  font-size: 24px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.csp-domain-marker {
+  stroke: rgba(31, 40, 48, 0.16);
+  stroke-width: 1.5;
+}
+
+.csp-domain-empty {
+  fill: rgba(140, 94, 75, 0.88);
+}
+
+.csp-domain-cross {
+  stroke: white;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
 @media (max-width: 900px) {
   .header,
   .layout {
@@ -1154,5 +1445,10 @@ input[type="number"] {
   .logic-summary-grid,
   .planning-world-summary {
     grid-template-columns: 1fr;
+  }
+
+  .csp-table th,
+  .csp-table td {
+    font-size: 0.82rem;
   }
 }

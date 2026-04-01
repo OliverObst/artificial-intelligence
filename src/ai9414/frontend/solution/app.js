@@ -8,6 +8,8 @@ const state = {
     showExploredEdges: true,
     showPrunedBranches: true,
     showPlannerTrace: false,
+    showCspDomains: true,
+    cspViewMode: "trace",
     planningSelectedAction: "",
   },
 };
@@ -17,6 +19,7 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 const appType = () => state.trace?.app_type;
 const isStrips = () => appType() === "strips";
 const isLogic = () => appType() === "logic";
+const isCsp = () => appType() === "csp";
 const isLabyrinth = () => appType() === "labyrinth";
 const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
@@ -116,7 +119,21 @@ function currentStep() {
 }
 
 function renderPanelCopy() {
-  if (isStrips()) {
+  if (isCsp()) {
+    $("left-panel-title").textContent = "CSP State";
+    $("left-panel-subtitle").textContent = "Static replay of the variables, domains, and decision trace.";
+    $("right-panel-title").textContent = "Map View";
+    $("right-panel-subtitle").textContent = "Static replay of the map colouring and live domain changes on each region.";
+    $("search-toggle-grid").classList.add("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.remove("hidden");
+    $("csp-toggle-grid").classList.remove("hidden");
+    $("search-legend").classList.add("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.remove("hidden");
+  } else if (isStrips()) {
     $("left-panel-title").textContent = "Planning State";
     $("left-panel-subtitle").textContent =
       "Static replay of the symbolic state, applicable actions, and grounded plan.";
@@ -125,10 +142,13 @@ function renderPanelCopy() {
       "Static replay of the rendered office map that is derived from the symbolic facts.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.remove("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
     $("search-legend").classList.add("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
   } else if (isLogic()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the DPLL assignment tree.";
@@ -138,10 +158,14 @@ function renderPanelCopy() {
         ? "Static replay of the knowledge base view and the CNF used for the entailment test."
         : "Static replay of the clause statuses under the current partial assignment.";
     $("search-toggle-grid").classList.add("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
     $("search-legend").classList.add("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.remove("hidden");
+    $("csp-legend").classList.add("hidden");
   } else if (isLabyrinth()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the DFS tree built while exploring the labyrinth.";
@@ -149,8 +173,13 @@ function renderPanelCopy() {
     $("right-panel-subtitle").textContent = "Static replay of the maze route, dead ends, and final discovered path.";
     $("search-toggle-grid").classList.add("hidden");
     $("search-legend").classList.add("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
     $("labyrinth-legend").classList.remove("hidden");
     $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
   } else if (isGraphBfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the BFS tree built while exploring the graph.";
@@ -158,8 +187,13 @@ function renderPanelCopy() {
     $("right-panel-subtitle").textContent = "Static replay of the highlighted route, explored edges, visited nodes, and final discovered path.";
     $("search-toggle-grid").classList.add("hidden");
     $("search-legend").classList.add("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.remove("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
   } else if (isGraphDfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the DFS tree built while exploring the graph.";
@@ -167,49 +201,86 @@ function renderPanelCopy() {
     $("right-panel-subtitle").textContent = "Static replay of the graph route, explored edges, dead ends, and final discovered path.";
     $("search-toggle-grid").classList.add("hidden");
     $("search-legend").classList.add("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.remove("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
   } else if (isGraphAStar()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the A* tree built while exploring the weighted graph.";
     $("right-panel-title").textContent = "Weighted Spatial Graph";
     $("right-panel-subtitle").textContent = "Static replay of the cost-plus-heuristic frontier route and final optimal path.";
     $("search-toggle-grid").classList.remove("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
     $("search-legend").classList.remove("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
   } else if (isGraphGbfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the greedy best-first tree built while exploring the weighted graph.";
     $("right-panel-title").textContent = "Weighted Spatial Graph";
     $("right-panel-subtitle").textContent = "Static replay of the heuristic-driven route and the final path found.";
     $("search-toggle-grid").classList.remove("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
     $("search-legend").classList.remove("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
   } else if (isGraphUcs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the UCS tree built while exploring the weighted graph.";
     $("right-panel-title").textContent = "Weighted Spatial Graph";
     $("right-panel-subtitle").textContent = "Static replay of the cheapest frontier route and final optimal path.";
     $("search-toggle-grid").classList.remove("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
     $("search-legend").classList.remove("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
   } else {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the precomputed search tree.";
     $("right-panel-title").textContent = "Geometric Graph";
     $("right-panel-subtitle").textContent = "Static replay of the weighted graph.";
     $("search-toggle-grid").classList.remove("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
     $("search-legend").classList.remove("hidden");
     $("labyrinth-legend").classList.add("hidden");
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
   }
 }
 
 function renderMetrics(data) {
+  if (isCsp()) {
+    const assigned = Object.keys(data.csp?.assignments || {}).length;
+    const total = data.csp?.variables?.length || 0;
+    $("metric-1-label").textContent = "Assigned variables";
+    $("metric-1-value").textContent = `${assigned} / ${total}`;
+    $("metric-2-label").textContent = "Pruned values";
+    $("metric-2-value").textContent = String(data.stats?.prunes || 0);
+    $("metric-3-label").textContent = "Backtracks";
+    $("metric-3-value").textContent = String(data.stats?.backtracks || 0);
+    $("metric-4-label").textContent = "Wipe-outs";
+    $("metric-4-value").textContent = String(data.stats?.wipeouts || 0);
+    return;
+  }
   if (isStrips()) {
     const planLength = data.planning?.plan?.length || 0;
     $("metric-1-label").textContent = "Plan step";
@@ -296,6 +367,229 @@ function renderMetrics(data) {
   $("metric-3-value").textContent = String(data.stats?.solutions_found || 0);
   $("metric-4-label").textContent = "Pruned branches";
   $("metric-4-value").textContent = String(data.stats?.pruned || 0);
+}
+
+function cspColourValue(problem, colour) {
+  return problem?.colour_values?.[colour] || "#d1c6b8";
+}
+
+function renderCspTree(container, data) {
+  const nodes = data.tree?.nodes || [];
+  if (!nodes.length) {
+    container.textContent = "The search tree will appear here as assignments are tried.";
+    return;
+  }
+
+  const svg = svgNode("svg", {
+    class: "csp-tree-svg",
+    viewBox: "0 0 1000 320",
+    role: "img",
+    "aria-label": "CSP search tree",
+  });
+  const nodeMap = new Map(nodes.map((node) => [node.tree_id, node]));
+  const activePath = new Set(data.search?.active_tree_path || []);
+  const finalPath = new Set(data.search?.final_tree_path || []);
+  const links = svgNode("g");
+  const cards = svgNode("g");
+
+  nodes.forEach((node) => {
+    if (!node.parent || !nodeMap.has(node.parent)) return;
+    const parent = nodeMap.get(node.parent);
+    const classes = ["csp-tree-link"];
+    if (activePath.has(node.tree_id) && activePath.has(node.parent)) classes.push("active");
+    if (finalPath.has(node.tree_id) && finalPath.has(node.parent)) classes.push("final");
+    links.appendChild(
+      svgNode("line", {
+        class: classes.join(" "),
+        x1: parent.x * 1000,
+        y1: parent.y * 320,
+        x2: node.x * 1000,
+        y2: node.y * 320,
+      })
+    );
+  });
+
+  nodes.forEach((node) => {
+    const group = svgNode("g", {
+      class: `csp-tree-node ${node.status || ""}`,
+      transform: `translate(${node.x * 1000}, ${node.y * 320})`,
+    });
+    group.appendChild(svgNode("rect", { class: "csp-tree-card", x: -78, y: -30, width: 156, height: 60, rx: 18 }));
+    group.appendChild(svgNode("text", { class: "csp-tree-heading", y: -4 }, node.graph_node));
+    group.appendChild(svgNode("text", { class: "csp-tree-subtext", y: 16 }, node.assignment_text || "No assignments"));
+    cards.appendChild(group);
+  });
+
+  svg.append(links, cards);
+  container.appendChild(svg);
+}
+
+function renderCspPanel(data) {
+  const panel = $("csp-panel");
+  panel.innerHTML = "";
+  const csp = data.csp;
+  const problem = data.csp_problem;
+  if (!csp || !problem) return;
+
+  const shell = document.createElement("div");
+  shell.className = "csp-shell";
+
+  const stateSection = document.createElement("section");
+  stateSection.className = "csp-section";
+  const stateHeading = document.createElement("h3");
+  stateHeading.className = "csp-section-title";
+  stateHeading.textContent = "Current CSP state";
+  const stateCopy = document.createElement("p");
+  stateCopy.className = "csp-copy";
+  stateCopy.textContent = `Static replay of the variable table and the current focus region. Focus: ${csp.focus_variable || "none"}.`;
+  stateSection.append(stateHeading, stateCopy);
+
+  const table = document.createElement("table");
+  table.className = "csp-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Variable</th>
+        <th>Current domain</th>
+        <th>Assigned</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+  `;
+  const body = document.createElement("tbody");
+  (csp.variables || []).forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.className = row.status || "unchanged";
+
+    const variable = document.createElement("td");
+    variable.textContent = row.variable;
+
+    const domain = document.createElement("td");
+    const domainList = document.createElement("div");
+    domainList.className = "csp-domain-list";
+    if ((row.domain || []).length) {
+      row.domain.forEach((colour) => {
+        const chip = document.createElement("span");
+        chip.className = "csp-domain-chip";
+        const dot = document.createElement("span");
+        dot.className = "csp-colour-dot";
+        dot.style.background = cspColourValue(problem, colour);
+        chip.append(dot, document.createTextNode(colour));
+        domainList.appendChild(chip);
+      });
+    } else {
+      const chip = document.createElement("span");
+      chip.className = "csp-domain-chip empty";
+      chip.textContent = "empty";
+      domainList.appendChild(chip);
+    }
+    domain.appendChild(domainList);
+
+    const assigned = document.createElement("td");
+    assigned.textContent = row.assigned_value || "—";
+
+    const status = document.createElement("td");
+    const pill = document.createElement("span");
+    pill.className = `csp-status-pill ${row.status || "unchanged"}`;
+    pill.textContent = row.status || "unchanged";
+    status.appendChild(pill);
+
+    tr.append(variable, domain, assigned, status);
+    body.appendChild(tr);
+  });
+  table.appendChild(body);
+  stateSection.appendChild(table);
+  shell.appendChild(stateSection);
+
+  const lowerSection = document.createElement("section");
+  lowerSection.className = "csp-section";
+  const lowerHeading = document.createElement("h3");
+  lowerHeading.className = "csp-section-title";
+  lowerHeading.textContent = state.view.cspViewMode === "tree" ? "Search tree" : "Decision trace";
+  lowerSection.appendChild(lowerHeading);
+
+  if (state.view.cspViewMode === "tree") {
+    renderCspTree(lowerSection, data);
+  } else {
+    const traceList = document.createElement("div");
+    traceList.className = "csp-trace-list";
+    (csp.trace_entries || []).forEach((entry, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `csp-trace-row${index === csp.current_entry_index ? " current" : ""}`;
+      button.dataset.stepIndex = String(index + 1);
+      const meta = document.createElement("span");
+      meta.className = "csp-trace-meta";
+      meta.textContent = entry.action.replaceAll("_", " ");
+      const text = document.createElement("span");
+      text.className = "csp-trace-text";
+      text.textContent = entry.text;
+      button.append(meta, text);
+      traceList.appendChild(button);
+    });
+    lowerSection.appendChild(traceList);
+  }
+
+  shell.appendChild(lowerSection);
+  panel.appendChild(shell);
+}
+
+function renderCspMap(data) {
+  const svg = $("problem-svg");
+  svg.innerHTML = "";
+  const problem = data.csp_problem;
+  const csp = data.csp;
+  if (!problem || !csp) return;
+
+  const assignments = csp.assignments || {};
+  const domains = csp.domains || {};
+  const changed = new Set((csp.last_changes || []).map((change) => change.variable));
+  const focus = csp.focus_variable;
+  const failed = csp.failed_variable;
+  const polygons = svgNode("g");
+  const labels = svgNode("g");
+  const markers = svgNode("g");
+
+  (problem.regions || []).forEach((region) => {
+    const geometry = problem.geometry?.[region];
+    if (!geometry) return;
+    const fill = assignments[region] ? cspColourValue(problem, assignments[region]) : "rgba(255, 252, 246, 0.92)";
+    const classes = ["csp-region"];
+    if (region === focus) classes.push("focus");
+    if (changed.has(region)) classes.push("reduced");
+    if (region === failed || !(domains[region] || []).length) classes.push("failed");
+    polygons.appendChild(
+      svgNode("polygon", {
+        class: classes.join(" "),
+        points: geometry.points.map(([x, y]) => `${x},${y}`).join(" "),
+        style: `fill: ${fill};`,
+      })
+    );
+    labels.appendChild(svgNode("text", { class: "csp-region-label", x: geometry.label[0], y: geometry.label[1] }, region.toUpperCase()));
+    if (!state.view.showCspDomains || assignments[region]) return;
+    const remaining = domains[region] || [];
+    const anchor = geometry.domain_anchor || [geometry.label[0], geometry.label[1] + 30];
+    if (!remaining.length) {
+      markers.appendChild(svgNode("circle", { class: "csp-domain-empty", cx: anchor[0], cy: anchor[1], r: 12 }));
+      markers.appendChild(svgNode("line", { class: "csp-domain-cross", x1: anchor[0] - 5, y1: anchor[1] - 5, x2: anchor[0] + 5, y2: anchor[1] + 5 }));
+      markers.appendChild(svgNode("line", { class: "csp-domain-cross", x1: anchor[0] + 5, y1: anchor[1] - 5, x2: anchor[0] - 5, y2: anchor[1] + 5 }));
+      return;
+    }
+    const width = (remaining.length - 1) * 22;
+    remaining.forEach((colour, index) => {
+      markers.appendChild(
+        svgNode("circle", {
+          class: "csp-domain-marker",
+          cx: anchor[0] - width / 2 + index * 22,
+          cy: anchor[1],
+          r: 8,
+          fill: cspColourValue(problem, colour),
+        })
+      );
+    });
+  });
+
+  svg.append(polygons, labels, markers);
 }
 
 function renderTree(data) {
@@ -1135,10 +1429,13 @@ function render() {
   $("step-range").max = String(max);
   $("step-range").value = String(state.stepIndex);
   $("message-banner").classList.add("hidden");
-  $("search-tree-svg").classList.toggle("hidden", isStrips());
+  $("search-tree-svg").classList.toggle("hidden", isStrips() || isCsp());
+  $("csp-panel").classList.toggle("hidden", !isCsp());
   $("planning-panel").classList.toggle("hidden", !isStrips());
   $("planning-world-panel").classList.toggle("hidden", !isStrips());
-  if (isStrips()) {
+  if (isCsp()) {
+    renderCspPanel(data);
+  } else if (isStrips()) {
     renderPlanningInternal(data);
     renderPlanningWorldPanel(data);
   } else {
@@ -1148,6 +1445,8 @@ function render() {
   $("logic-problem-panel").classList.toggle("hidden", !isLogic());
   if (isLogic()) {
     renderLogicProblem(data);
+  } else if (isCsp()) {
+    renderCspMap(data);
   } else if (isStrips()) {
     renderStripsWorld(data);
   } else if (isLabyrinth()) {
@@ -1224,6 +1523,16 @@ window.addEventListener("DOMContentLoaded", async () => {
     render();
   });
 
+  $("show-csp-domains").addEventListener("change", (event) => {
+    state.view.showCspDomains = event.target.checked;
+    render();
+  });
+
+  $("csp-view-select").addEventListener("change", (event) => {
+    state.view.cspViewMode = event.target.value;
+    render();
+  });
+
   $("step-range").addEventListener("input", (event) => {
     stopPlay();
     state.stepIndex = Math.max(0, Math.min(Number(event.target.value), state.trace.steps.length));
@@ -1250,6 +1559,16 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (actionSignature) {
       state.view.planningSelectedAction = actionSignature;
     }
+    render();
+  });
+
+  $("csp-panel").addEventListener("click", (event) => {
+    const target = event.target.closest("button");
+    if (!target) return;
+    const { stepIndex } = target.dataset;
+    if (!stepIndex) return;
+    stopPlay();
+    state.stepIndex = Math.max(0, Math.min(Number(stepIndex), state.trace.steps.length));
     render();
   });
 });

@@ -29,6 +29,7 @@
             </div>
           </div>
           <svg id="search-tree-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Search tree"></svg>
+          <div id="csp-panel" class="csp-panel hidden" role="img" aria-label="Constraint satisfaction state"></div>
           <div id="planning-panel" class="planning-panel hidden" role="img" aria-label="Planning state"></div>
         </section>
 
@@ -113,6 +114,19 @@
               <span>Show planner trace</span>
             </label>
           </div>
+          <label id="csp-view-control" class="control-block hidden" for="csp-view-select">
+            <span>Lower-left view</span>
+            <select id="csp-view-select">
+              <option value="trace">decision trace</option>
+              <option value="tree">search tree</option>
+            </select>
+          </label>
+          <div id="csp-toggle-grid" class="toggle-grid hidden">
+            <label class="toggle-row" for="show-csp-domains">
+              <input id="show-csp-domains" type="checkbox" checked />
+              <span>Show domains on map</span>
+            </label>
+          </div>
           <div class="control-block">
             <span>Current step</span>
             <input id="step-range" type="range" min="0" max="0" value="0" />
@@ -140,6 +154,12 @@
             <div class="legend-item"><span class="legend-swatch legend-best"></span>Forced assignment</div>
             <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Contradiction</div>
             <div class="legend-item"><span class="legend-swatch legend-final"></span>Solution / entailment</div>
+          </div>
+          <div id="csp-legend" class="legend-grid hidden">
+            <div class="legend-item"><span class="legend-swatch legend-current"></span>Current focus</div>
+            <div class="legend-item"><span class="legend-swatch legend-best"></span>Reduced domain</div>
+            <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Domain wipe-out</div>
+            <div class="legend-item"><span class="legend-swatch legend-final"></span>Assigned colour</div>
           </div>
         </aside>
       </main>
