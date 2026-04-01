@@ -1,6 +1,6 @@
 # artificial-intelligence
 
-Phase 1 reference implementation of the `ai9414` educational AI platform, now with eight concrete demos:
+Phase 1 reference implementation of the `ai9414` educational AI platform, now with nine concrete demos:
 
 - labyrinth DFS search
 - spatial graph DFS search
@@ -10,6 +10,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - spatial graph uniform-cost search
 - spatial graph branch-and-bound search
 - propositional logic DPLL
+- STRIPS planning
 
 ## Available demos
 
@@ -29,6 +30,8 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
   Start with `python examples/graph_branch_and_bound_demo.py`
 - `propositional logic DPLL`
   Start with `python examples/logic_dpll_demo.py`
+- `STRIPS planning`
+  Start with `python examples/strips_demo.py`
 
 ## What is included
 
@@ -42,6 +45,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - precomputed trace replay for a generated spatial graph uniform-cost demo
 - precomputed trace replay for a generated spatial graph branch-and-bound demo
 - precomputed trace replay for a visual DPLL propositional logic demo
+- precomputed trace replay for a visual STRIPS planning demo
 - static solution replay export with no backend dependency
 - deterministic labyrinth presets plus seeded graph generation
 - automated tests and developer documentation
@@ -102,6 +106,12 @@ To start the DPLL logic example:
 
 ```bash
 python examples/logic_dpll_demo.py
+```
+
+To start the STRIPS planning example:
+
+```bash
+python examples/strips_demo.py
 ```
 
 The same install is enough for the labyrinth live-Python stub as well. The
@@ -203,6 +213,43 @@ app = DpllDemo()
 app.load_example("unit_chain")
 app.show()
 ```
+
+Visual STRIPS planning example:
+
+```python
+from ai9414.strips import StripsDemo
+
+app = StripsDemo()
+app.load_example("canonical_delivery")
+app.show()
+```
+
+Custom STRIPS problem:
+
+```python
+from ai9414.strips import StripsDemo, StripsProblem
+
+problem = StripsProblem(
+    rooms=["corridor", "mail_room", "office_a", "office_b", "lab"],
+    robot_start="corridor",
+    parcel_start="mail_room",
+    keycard_start="office_a",
+    locked_edge=("corridor", "lab"),
+    door_locked=True,
+    goal=[("at", "parcel", "lab")],
+)
+
+app = StripsDemo(problem=problem)
+app.solve()
+app.show()
+```
+
+Suggested STRIPS exercises:
+
+- Move the keycard from office A to office B and predict how the plan changes.
+- Start the robot in the mail room and explain why collecting the parcel too early is a bad idea.
+- Unlock the lab door at the start and identify which action disappears from the plan.
+- Move the locked door to the office B connection and compare the new plan structure.
 
 Custom CNF with DPLL:
 

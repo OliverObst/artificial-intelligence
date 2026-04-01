@@ -8,6 +8,8 @@ const state = {
     playbackSpeed: 1,
     showExploredEdges: true,
     showPrunedBranches: true,
+    showPlannerTrace: false,
+    planningSelectedAction: "",
   },
   player: {
     stepIndex: 0,
@@ -1575,6 +1577,142 @@ Your solver returns:
 - assignment
 `;
 
+const STRIPS_PYTHON_STUB = `from __future__ import annotations
+
+from collections import deque
+from typing import Any
+
+from ai9414.strips import (
+    apply_action_signature,
+    get_applicable_actions,
+    get_initial_facts,
+    run_strips_solver,
+)
+
+
+def canonical_state_id(facts: list[tuple[str, ...]]) -> tuple[tuple[str, ...], ...]:
+    """
+    Turn a fact list into a hashable canonical state identifier.
+    """
+    return tuple(sorted(tuple(fact) for fact in facts))
+
+
+def goal_satisfied(facts: list[tuple[str, ...]], goal: list[list[str]]) -> bool:
+    """
+    Return True when every goal fact already appears in the current state.
+    """
+    state = {tuple(fact) for fact in facts}
+    return all(tuple(goal_fact) in state for goal_fact in goal)
+
+
+def solve_planner(problem: dict[str, Any]) -> dict[str, Any]:
+    """
+    Implement a small forward planner here.
+
+    Inputs:
+        problem: the current STRIPS office-delivery task.
+
+    Required return shape:
+        {
+            "algorithm": "strips_bfs",
+            "status": "found" / "not_found",
+            "plan": [
+                "move(robot, corridor, office_a)",
+                "pickup_keycard(robot, keycard, office_a)",
+            ],
+            "stats": {
+                "expanded_states": 0,
+                "generated_states": 1,
+                "frontier_peak": 1,
+            },
+        }
+    """
+    start_facts = get_initial_facts(problem)
+    start_state = canonical_state_id(start_facts)
+    queue: deque[tuple[list[tuple[str, ...]], list[str]]] = deque([(start_facts, [])])
+    visited = {start_state}
+    stats = {
+        "expanded_states": 0,
+        "generated_states": 1,
+        "frontier_peak": 1,
+    }
+
+    while queue:
+        stats["frontier_peak"] = max(stats["frontier_peak"], len(queue))
+        facts, plan = queue.popleft()
+        stats["expanded_states"] += 1
+
+        if goal_satisfied(facts, problem["goal"]):
+            return {
+                "algorithm": "strips_bfs",
+                "status": "found",
+                "plan": plan,
+                "stats": stats,
+            }
+
+        for action in get_applicable_actions(problem, facts):
+            next_facts = apply_action_signature(problem, facts, action)
+            state_id = canonical_state_id(next_facts)
+            if state_id in visited:
+                continue
+            visited.add(state_id)
+            queue.append((next_facts, [*plan, action]))
+            stats["generated_states"] += 1
+
+    return {
+        "algorithm": "strips_bfs",
+        "status": "not_found",
+        "plan": [],
+        "stats": stats,
+    }
+
+
+if __name__ == "__main__":
+    run_strips_solver(solve_planner)
+`;
+
+const STRIPS_PYTHON_REQUIREMENTS = `ai9414
+`;
+
+const STRIPS_PYTHON_README = `# visual STRIPS planner
+
+This folder runs a tiny local Python planner for the STRIPS planning demo.
+The browser connection and replay formatting are handled by ai9414.
+Your job is to return a grounded action plan for the current symbolic problem.
+
+## install
+
+Install the dependency with:
+
+    pip install -r requirements.txt
+
+## run
+
+Start the local planner with:
+
+    python solve_strips.py
+
+## what to implement
+
+Open solve_strips.py and look at:
+
+- solve_planner(...)
+- get_initial_facts(...)
+- get_applicable_actions(...)
+- apply_action_signature(...)
+
+The browser sends:
+
+- problem: the current STRIPS office-delivery task
+
+Your solver returns:
+
+- algorithm
+- status
+- plan
+- optional stats
+`;
+
 const $svgNode = (name, attributes = {}, text = "") => {
   const node = document.createElementNS("http://www.w3.org/2000/svg", name);
   Object.entries(attributes).forEach(([key, value]) => {
@@ -1589,6 +1727,7 @@ const $svgNode = (name, attributes = {}, text = "") => {
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const appType = () => state.manifest?.app_type;
+const isStrips = () => appType() === "strips";
 const isLogic = () => appType() === "logic";
 const isLabyrinth = () => appType() === "labyrinth";
 const isGraphBfs = () => appType() === "graph_bfs";
@@ -1838,6 +1977,7 @@ function syncControls() {
   $("speed-select").value = String(state.view.playbackSpeed);
   $("show-explored").checked = state.view.showExploredEdges;
   $("show-pruned").checked = state.view.showPrunedBranches;
+  $("show-planner-trace").checked = state.view.showPlannerTrace;
   $("mode-select").value = state.player.mode;
   $("size-select").value = state.player.size;
   $("seed-input").value = state.player.seed || "";
@@ -1978,6 +2118,46 @@ function blankLogicTrace(problem) {
       },
       stats: { decisions: 0, forced_assignments: 0, contradictions: 0, backtracks: 0 },
     },
+    steps: [],
+    summary: { step_count: 0, result: "ready" },
+  };
+}
+
+function blankStripsTrace(problem, snapshot) {
+  return {
+    app_type: "strips",
+    initial_state: clone(snapshot || {
+      example_title: problem?.title || "Visual STRIPS planning",
+      example_subtitle: problem?.subtitle || "Load an office-delivery example and inspect the symbolic state.",
+      algorithm_label: "Forward STRIPS planning (BFS)",
+      algorithm_note:
+        "This view is ready for STRIPS planning. Solve the current office-delivery task in live Python mode to populate the plan replay.",
+      goal_label: "Deliver the parcel to the lab",
+      strips_problem: clone(problem || {}),
+      planning: {
+        facts: [],
+        goal_facts: [],
+        applicable_actions: [],
+        selected_action: null,
+        plan: [],
+        plan_index: 0,
+        goal_satisfied: false,
+        world: {},
+        search_trace: [],
+      },
+      search: {
+        status: "ready",
+        expanded_states: 0,
+        generated_states: 1,
+        frontier_peak: 1,
+        current_depth: 0,
+      },
+      stats: {
+        expanded_states: 0,
+        generated_states: 1,
+        frontier_peak: 1,
+      },
+    }),
     steps: [],
     summary: { step_count: 0, result: "ready" },
   };
@@ -4242,7 +4422,9 @@ function buildLogicTraceFromBackend(problem, result) {
 }
 
 function activeTraceContext() {
-  const blankTrace = isLogic()
+  const blankTrace = isStrips()
+    ? blankStripsTrace(state.session.data.strips_problem, state.session.data)
+    : isLogic()
     ? blankLogicTrace(state.session.data.logic_problem || state.session.data.problem || {
         mode: state.session.data.problem_mode || "sat",
         variables: state.session.data.logic?.variables || [],
@@ -4313,6 +4495,9 @@ function maxStepCount() {
 }
 
 function statusLabel(data, step) {
+  if (isStrips()) {
+    return data.search?.status || "ready";
+  }
   if (isLogic()) {
     return data.search?.status || data.search?.result || "ready";
   }
@@ -4328,7 +4513,14 @@ function statusLabel(data, step) {
 }
 
 function renderPanelCopy(data) {
-  if (isLogic()) {
+  if (isStrips()) {
+    $("left-panel-title").textContent = "Planning State";
+    $("left-panel-subtitle").textContent =
+      "Predicates, applicable actions, and the grounded plan stay aligned with the rendered office world.";
+    $("right-panel-title").textContent = "Office World";
+    $("right-panel-subtitle").textContent =
+      "The robot, parcel, keycard, and lab door are drawn directly from the symbolic state rather than controlled separately.";
+  } else if (isLogic()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Each node is a partial assignment, so the tree shows where DPLL branched and where literals were forced.";
     $("right-panel-title").textContent = data.problem_mode === "entailment" ? "Knowledge Base and CNF" : "Clause State";
@@ -4375,6 +4567,18 @@ function renderPanelCopy(data) {
 }
 
 function renderMetrics(data) {
+  if (isStrips()) {
+    const planLength = data.planning?.plan?.length || 0;
+    $("metric-1-label").textContent = "Plan step";
+    $("metric-1-value").textContent = `${data.planning?.plan_index || 0} / ${planLength}`;
+    $("metric-2-label").textContent = "Applicable actions";
+    $("metric-2-value").textContent = String(data.planning?.applicable_actions?.length || 0);
+    $("metric-3-label").textContent = "Expanded states";
+    $("metric-3-value").textContent = String(data.stats?.expanded_states || 0);
+    $("metric-4-label").textContent = "Frontier peak";
+    $("metric-4-value").textContent = String(data.stats?.frontier_peak || 0);
+    return;
+  }
   if (isLogic()) {
     $("metric-1-label").textContent = "Assigned variables";
     $("metric-1-value").textContent = `${data.logic?.summary?.assigned_variables || 0} / ${data.logic?.summary?.total_variables || 0}`;
@@ -4912,21 +5116,435 @@ function renderLogicProblem(data) {
   panel.appendChild(shell);
 }
 
+function planningActionBySignature(data, signature) {
+  if (!signature) return null;
+  const allActions = [
+    ...(data.planning?.applicable_actions || []),
+    ...(data.planning?.plan || []),
+  ];
+  return allActions.find((action) => action.signature === signature) || null;
+}
+
+function selectedPlanningAction(data) {
+  const selectedFromView = planningActionBySignature(data, state.view.planningSelectedAction);
+  if (selectedFromView) return selectedFromView;
+  if (data.planning?.selected_action) return data.planning.selected_action;
+  if (data.planning?.applicable_actions?.length) return data.planning.applicable_actions[0];
+  if (data.planning?.plan?.length) return data.planning.plan[Math.min(data.planning.plan_index || 0, data.planning.plan.length - 1)];
+  return null;
+}
+
+function planRowState(planIndex, actionIndex) {
+  if (planIndex === 0) {
+    return actionIndex === 0 ? "current" : "future";
+  }
+  if (actionIndex < planIndex - 1) return "completed";
+  if (actionIndex === planIndex - 1) return "current";
+  return "future";
+}
+
+function renderPlanningInternal(data) {
+  const panel = $("planning-panel");
+  panel.innerHTML = "";
+  const planning = data.planning;
+  if (!planning) return;
+
+  const shell = document.createElement("div");
+  shell.className = "planning-shell";
+
+  const factsSection = document.createElement("section");
+  factsSection.className = "planning-section";
+  const factsHeading = document.createElement("h3");
+  factsHeading.className = "planning-section-title";
+  factsHeading.textContent = "Current state";
+  factsSection.appendChild(factsHeading);
+  const factGroups = new Map();
+  (planning.facts || []).forEach((fact) => {
+    if (!factGroups.has(fact.predicate)) factGroups.set(fact.predicate, []);
+    factGroups.get(fact.predicate).push(fact);
+  });
+  const factGrid = document.createElement("div");
+  factGrid.className = "planning-group-grid";
+  Array.from(factGroups.entries()).forEach(([predicate, facts]) => {
+    const group = document.createElement("div");
+    group.className = "planning-group-card";
+    const label = document.createElement("span");
+    label.className = "planning-group-label";
+    label.textContent = predicate;
+    const chips = document.createElement("div");
+    chips.className = "planning-chip-list";
+    facts.forEach((fact) => {
+      const chip = document.createElement("span");
+      chip.className = "planning-chip";
+      chip.textContent = fact.text;
+      chips.appendChild(chip);
+    });
+    group.append(label, chips);
+    factGrid.appendChild(group);
+  });
+  if (!factGroups.size) {
+    const empty = document.createElement("div");
+    empty.className = "planning-empty";
+    empty.textContent = "No facts are available for this state.";
+    factGrid.appendChild(empty);
+  }
+  factsSection.appendChild(factGrid);
+  shell.appendChild(factsSection);
+  const chosenAction = selectedPlanningAction(data);
+
+  const inspectorSection = document.createElement("section");
+  inspectorSection.className = "planning-section";
+  const inspectorHeading = document.createElement("h3");
+  inspectorHeading.className = "planning-section-title";
+  inspectorHeading.textContent = "Action schema inspector";
+  inspectorSection.appendChild(inspectorHeading);
+  const inspector = document.createElement("div");
+  inspector.className = "planning-inspector-shell";
+  if (chosenAction) {
+    const heading = document.createElement("div");
+    heading.className = "planning-inspector-heading";
+    const signature = document.createElement("span");
+    signature.className = "planning-inspector-signature";
+    signature.textContent = chosenAction.signature;
+    const args = document.createElement("span");
+    args.className = "planning-inspector-args";
+    args.textContent = chosenAction.args.join(", ");
+    heading.append(signature, args);
+    inspector.appendChild(heading);
+
+    const effectGrid = document.createElement("div");
+    effectGrid.className = "planning-effect-grid";
+    [
+      ["Preconditions", chosenAction.preconditions || []],
+      ["Add effects", chosenAction.add_effects || []],
+      ["Delete effects", chosenAction.delete_effects || []],
+    ].forEach(([labelText, facts]) => {
+      const card = document.createElement("div");
+      card.className = "planning-effect-card";
+      const label = document.createElement("span");
+      label.className = "planning-effect-label";
+      label.textContent = labelText;
+      const chips = document.createElement("div");
+      chips.className = "planning-chip-list";
+      if (!facts.length) {
+        const empty = document.createElement("span");
+        empty.className = "planning-empty";
+        empty.textContent = "none";
+        chips.appendChild(empty);
+      } else {
+        facts.forEach((fact) => {
+          const chip = document.createElement("span");
+          chip.className = "planning-chip";
+          chip.textContent = fact.text;
+          chips.appendChild(chip);
+        });
+      }
+      card.append(label, chips);
+      effectGrid.appendChild(card);
+    });
+    inspector.appendChild(effectGrid);
+  } else {
+    const empty = document.createElement("div");
+    empty.className = "planning-empty";
+    empty.textContent = "Select an action to inspect its preconditions and effects.";
+    inspector.appendChild(empty);
+  }
+  inspectorSection.appendChild(inspector);
+  shell.appendChild(inspectorSection);
+
+  const planSection = document.createElement("section");
+  planSection.className = "planning-section";
+  const planHeading = document.createElement("h3");
+  planHeading.className = "planning-section-title";
+  planHeading.textContent = "Plan trace";
+  planSection.appendChild(planHeading);
+  const planList = document.createElement("div");
+  planList.className = "planning-plan-list";
+  (planning.plan || []).forEach((action, index) => {
+    const rowState = planRowState(planning.plan_index || 0, index);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `planning-plan-button ${rowState}`;
+    button.dataset.stepIndex = String(index + 2);
+    button.dataset.actionSignature = action.signature;
+    const signature = document.createElement("span");
+    signature.className = "planning-plan-signature";
+    signature.textContent = action.signature;
+    const meta = document.createElement("span");
+    meta.className = "planning-plan-step";
+    meta.textContent = `Step ${index + 1}`;
+    button.append(signature, meta);
+    planList.appendChild(button);
+  });
+  if (!(planning.plan || []).length) {
+    const empty = document.createElement("div");
+    empty.className = "planning-empty";
+    empty.textContent = "The plan will appear here once the planner has solved the problem.";
+    planList.appendChild(empty);
+  }
+  planSection.appendChild(planList);
+  shell.appendChild(planSection);
+
+  if (state.view.showPlannerTrace && (planning.search_trace || []).length) {
+    const searchSection = document.createElement("section");
+    searchSection.className = "planning-section";
+    const searchHeading = document.createElement("h3");
+    searchHeading.className = "planning-section-title";
+    searchHeading.textContent = "Planner trace";
+    searchSection.appendChild(searchHeading);
+    const searchList = document.createElement("div");
+    searchList.className = "planning-search-trace";
+    (planning.search_trace || []).forEach((entry) => {
+      const row = document.createElement("div");
+      row.className = `planning-search-row${entry.goal_reached ? " goal" : ""}`;
+      const meta = document.createElement("div");
+      meta.className = "planning-search-meta";
+      meta.textContent = `Expand S${entry.index} | depth ${entry.depth} | frontier ${entry.frontier_size}`;
+      const plan = document.createElement("div");
+      plan.className = "planning-search-plan";
+      plan.textContent = entry.plan_prefix.length ? entry.plan_prefix.join(" -> ") : "initial state";
+      const facts = document.createElement("div");
+      facts.className = "planning-search-facts";
+      facts.textContent = entry.state_facts.slice(0, 3).join(" • ");
+      row.append(meta, plan, facts);
+      searchList.appendChild(row);
+    });
+    searchSection.appendChild(searchList);
+    shell.appendChild(searchSection);
+  }
+
+  panel.appendChild(shell);
+}
+
+function renderPlanningWorldPanel(data) {
+  const panel = $("planning-world-panel");
+  panel.innerHTML = "";
+  const planning = data.planning;
+  if (!planning) return;
+
+  const shell = document.createElement("div");
+  shell.className = "planning-world-shell";
+
+  const summarySection = document.createElement("section");
+  summarySection.className = "planning-section";
+  const summaryHeading = document.createElement("h3");
+  summaryHeading.className = "planning-section-title";
+  summaryHeading.textContent = "Situation";
+  summarySection.appendChild(summaryHeading);
+
+  const world = planning.world || {};
+  const summaryCopy = document.createElement("p");
+  summaryCopy.className = "planning-world-copy";
+  summaryCopy.textContent = [
+    `Robot: ${world.robot_room || "unknown"}.`,
+    world.parcel_carried
+      ? "Parcel: carried by the robot."
+      : `Parcel: ${world.parcel_room || "unknown"}.`,
+    world.robot_has_keycard
+      ? "Keycard: held by the robot."
+      : `Keycard: ${world.keycard_room || "unknown"}.`,
+    `Door: ${world.door_locked ? "locked" : "unlocked"}.`,
+    "Goal: make at(parcel, lab) true.",
+  ].join(" ");
+  summarySection.appendChild(summaryCopy);
+
+  const summaryGrid = document.createElement("div");
+  summaryGrid.className = "planning-world-summary";
+  [
+    ["Robot", world.robot_room || "unknown"],
+    ["Parcel", world.parcel_carried ? "carried" : world.parcel_room || "unknown"],
+    ["Keycard", world.robot_has_keycard ? "held" : world.keycard_room || "unknown"],
+    ["Door", world.door_locked ? "locked" : "unlocked"],
+  ].forEach(([labelText, valueText]) => {
+    const card = document.createElement("div");
+    card.className = "planning-group-card";
+    const label = document.createElement("span");
+    label.className = "planning-group-label";
+    label.textContent = labelText;
+    const value = document.createElement("div");
+    value.textContent = valueText;
+    card.append(label, value);
+    summaryGrid.appendChild(card);
+  });
+  summarySection.appendChild(summaryGrid);
+  shell.appendChild(summarySection);
+
+  const actionsSection = document.createElement("section");
+  actionsSection.className = "planning-section";
+  const actionsHeading = document.createElement("h3");
+  actionsHeading.className = "planning-section-title";
+  actionsHeading.textContent = "Available actions";
+  actionsSection.appendChild(actionsHeading);
+  const actionList = document.createElement("div");
+  actionList.className = "planning-action-list";
+  const chosenAction = selectedPlanningAction(data);
+  (planning.applicable_actions || []).forEach((action) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `planning-action-button${chosenAction?.signature === action.signature ? " selected" : ""}`;
+    button.dataset.actionSignature = action.signature;
+    const signature = document.createElement("span");
+    signature.className = "planning-action-signature";
+    signature.textContent = action.signature;
+    const category = document.createElement("span");
+    category.className = "planning-action-category";
+    category.textContent = action.category;
+    button.append(signature, category);
+    actionList.appendChild(button);
+  });
+  if (!(planning.applicable_actions || []).length) {
+    const empty = document.createElement("div");
+    empty.className = "planning-empty";
+    empty.textContent = "No grounded actions are currently applicable.";
+    actionList.appendChild(empty);
+  }
+  actionsSection.appendChild(actionList);
+  shell.appendChild(actionsSection);
+
+  panel.appendChild(shell);
+}
+
+function renderStripsWorld(data) {
+  const svg = $("problem-svg");
+  svg.innerHTML = "";
+  const world = data.planning?.world;
+  if (!world?.rooms?.length) return;
+
+  const roomBoxes = {
+    mail_room: { x: 90, y: 90, width: 220, height: 110 },
+    office_a: { x: 690, y: 90, width: 220, height: 110 },
+    corridor: { x: 390, y: 280, width: 220, height: 110 },
+    office_b: { x: 90, y: 500, width: 220, height: 110 },
+    lab: { x: 690, y: 500, width: 220, height: 110 },
+  };
+  const roomCenters = Object.fromEntries(
+    Object.entries(roomBoxes).map(([room, box]) => [
+      room,
+      { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+    ])
+  );
+
+  const connectors = $svgNode("g");
+  const rooms = $svgNode("g");
+  const entities = $svgNode("g");
+
+  [
+    ["corridor", "mail_room"],
+    ["corridor", "office_a"],
+    ["corridor", "office_b"],
+    world.door_edge,
+  ].forEach(([left, right]) => {
+    const from = roomCenters[left];
+    const to = roomCenters[right];
+    connectors.appendChild(
+      $svgNode("line", {
+        class: `planning-connector${left === world.door_edge[0] && right === world.door_edge[1] && world.door_locked ? " locked" : ""}`,
+        x1: from.x,
+        y1: from.y,
+        x2: to.x,
+        y2: to.y,
+      })
+    );
+  });
+
+  const [doorLeft, doorRight] = world.door_edge;
+  const doorFrom = roomCenters[doorLeft];
+  const doorTo = roomCenters[doorRight];
+  const doorX = (doorFrom.x + doorTo.x) / 2;
+  const doorY = (doorFrom.y + doorTo.y) / 2;
+  connectors.appendChild(
+    $svgNode("rect", {
+      class: `planning-door-body${world.door_locked ? " locked" : ""}`,
+      x: doorX - 34,
+      y: doorY - 18,
+      width: 68,
+      height: 36,
+      rx: 12,
+    })
+  );
+  connectors.appendChild(
+    $svgNode(
+      "text",
+      {
+        class: "planning-door-label",
+        x: doorX,
+        y: doorY + 4,
+      },
+      world.door_locked ? "locked" : "open"
+    )
+  );
+
+  world.rooms.forEach((room) => {
+    const box = roomBoxes[room];
+    rooms.appendChild(
+      $svgNode("rect", {
+        class: `planning-room${world.robot_room === room ? " active" : ""}`,
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        rx: 22,
+      })
+    );
+    rooms.appendChild(
+      $svgNode(
+        "text",
+        {
+          class: "planning-room-label",
+          x: box.x + box.width / 2,
+          y: box.y + 64,
+        },
+        room.replace("_", " ")
+      )
+    );
+  });
+
+  function appendEntity(room, label, cssClass, dx, dy) {
+    const centre = roomCenters[room];
+    const group = $svgNode("g", {
+      transform: `translate(${centre.x + dx}, ${centre.y + dy})`,
+    });
+    group.appendChild($svgNode("circle", { class: cssClass, r: 24 }));
+    group.appendChild($svgNode("text", { class: "planning-entity-label" }, label));
+    entities.appendChild(group);
+  }
+
+  if (world.parcel_room) appendEntity(world.parcel_room, "P", "planning-entity-parcel", -58, 26);
+  if (world.keycard_room) appendEntity(world.keycard_room, "K", "planning-entity-keycard", 58, 26);
+  if (world.robot_room) {
+    appendEntity(world.robot_room, "R", "planning-entity-robot", 0, -12);
+    const centre = roomCenters[world.robot_room];
+    if (world.parcel_carried) {
+      entities.appendChild($svgNode("circle", { class: "planning-badge", cx: centre.x + 28, cy: centre.y - 34, r: 12 }));
+      entities.appendChild($svgNode("text", { class: "planning-badge-text", x: centre.x + 28, y: centre.y - 30 }, "P"));
+    }
+    if (world.robot_has_keycard) {
+      entities.appendChild($svgNode("circle", { class: "planning-badge", cx: centre.x - 28, cy: centre.y - 34, r: 12 }));
+      entities.appendChild($svgNode("text", { class: "planning-badge-text", x: centre.x - 28, y: centre.y - 30 }, "K"));
+    }
+  }
+
+  svg.appendChild(connectors);
+  svg.appendChild(rooms);
+  svg.appendChild(entities);
+}
+
 function renderControls() {
   const livePythonApp = isLivePythonApp();
-  const generatedProblemApp = livePythonApp && !isLogic();
-  $("example-control-label").textContent = livePythonApp && !isLogic() ? "Configuration" : "Example";
+  const generatedProblemApp = livePythonApp && !isLogic() && !isStrips();
+  $("example-control-label").textContent = generatedProblemApp ? "Configuration" : "Example";
   $("size-control-label").textContent = isLabyrinth() ? "Labyrinth size" : "Graph size";
   $("generate-button").textContent = isLabyrinth() ? "Generate new labyrinth" : "Generate new graph";
   $("mode-control").classList.toggle("hidden", !livePythonApp);
   $("logic-mode-control").classList.toggle("hidden", !isLogic());
   $("logic-order-control").classList.toggle("hidden", !isLogic());
+  $("planning-toggle-grid").classList.toggle("hidden", !isStrips());
   $("size-control").classList.toggle("hidden", !generatedProblemApp);
   $("seed-control").classList.toggle("hidden", !generatedProblemApp);
   $("generate-button").classList.toggle("hidden", !generatedProblemApp);
   $("solve-python-button").classList.toggle("hidden", !livePythonApp);
   $("download-stub-button").classList.toggle("hidden", !livePythonApp);
-  $("reload-button").classList.toggle("hidden", livePythonApp);
+  $("reload-button").classList.toggle("hidden", livePythonApp && !isStrips());
   $("search-toggle-grid").classList.toggle("hidden", !isWeightedGraphSearch());
   $("logic-toggle-grid").classList.toggle("hidden", !isLogic());
   $("search-legend").classList.toggle("hidden", !isWeightedGraphSearch());
@@ -4972,11 +5590,21 @@ function render() {
     banner.classList.add("hidden");
   }
 
-  renderTree(data);
+  $("search-tree-svg").classList.toggle("hidden", isStrips());
+  $("planning-panel").classList.toggle("hidden", !isStrips());
+  $("planning-world-panel").classList.toggle("hidden", !isStrips());
+  if (isStrips()) {
+    renderPlanningInternal(data);
+    renderPlanningWorldPanel(data);
+  } else {
+    renderTree(data);
+  }
   $("problem-svg").classList.toggle("hidden", isLogic());
   $("logic-problem-panel").classList.toggle("hidden", !isLogic());
   if (isLogic()) {
     renderLogicProblem(data);
+  } else if (isStrips()) {
+    renderStripsWorld(data);
   } else if (isLabyrinth()) {
     renderLabyrinth(data);
   } else if (isGraphReachability()) {
@@ -5007,6 +5635,7 @@ async function refreshFromServer(response) {
   state.player.stepIndex = 0;
   state.player.liveTrace = null;
   state.player.liveSnapshots = [];
+  state.view.planningSelectedAction = "";
   if (state.session.data.live_python) {
     state.player.size = state.session.data.live_python.size;
     state.player.seed = state.session.data.live_python.seed;
@@ -5020,6 +5649,7 @@ async function refreshFromServer(response) {
 async function loadExample(name) {
   stopPlay();
   setMessage("");
+  state.view.planningSelectedAction = "";
   const response = await postAction("load_example", { name });
   const trace = await requestJson("/api/trace");
   response.trace = trace;
@@ -5101,6 +5731,11 @@ async function solveWithPython() {
         problem: logicProblem,
         options: clone(state.session.data.options || {}),
       }
+    : isStrips()
+    ? {
+        algorithm: "strips_bfs",
+        problem: clone(state.session.data.strips_problem),
+      }
     : isLabyrinth()
     ? { algorithm: "dfs", labyrinth: state.session.data.labyrinth }
     : {
@@ -5119,6 +5754,8 @@ async function solveWithPython() {
       };
   const problemData = isLogic()
     ? logicProblem
+    : isStrips()
+      ? state.session.data.strips_problem
     : isLabyrinth()
       ? state.session.data.labyrinth
       : state.session.data.graph;
@@ -5136,6 +5773,8 @@ async function solveWithPython() {
     }
     state.player.liveTrace = isLogic()
       ? buildLogicTraceFromBackend(problemData, payload)
+      : isStrips()
+      ? payload.trace_bundle
       : isLabyrinth()
       ? buildLabyrinthTraceFromBackend(problemData, payload)
       : isWeightedSearch()
@@ -5152,6 +5791,7 @@ async function solveWithPython() {
     state.player.liveSnapshots = buildSnapshots(state.player.liveTrace);
     state.player.stepIndex = 0;
     state.player.mode = "live";
+    state.view.planningSelectedAction = "";
     syncControls();
     render();
   } catch (error) {
@@ -5175,6 +5815,12 @@ function downloadPythonStub() {
           { name: "ai9414/solve_dpll.py", content: DPLL_PYTHON_STUB },
           { name: "ai9414/requirements.txt", content: DPLL_PYTHON_REQUIREMENTS },
           { name: "ai9414/README.md", content: DPLL_PYTHON_README },
+        ]
+      : isStrips()
+      ? [
+          { name: "ai9414/solve_strips.py", content: STRIPS_PYTHON_STUB },
+          { name: "ai9414/requirements.txt", content: STRIPS_PYTHON_REQUIREMENTS },
+          { name: "ai9414/README.md", content: STRIPS_PYTHON_README },
         ]
       : isWeightedSearch()
       ? [
@@ -5223,6 +5869,8 @@ function downloadPythonStub() {
   anchor.href = url;
   anchor.download = isLogic()
     ? "logic-dpll-python-stub.zip"
+    : isStrips()
+    ? "strips-planning-python-stub.zip"
     : isWeightedSearch()
     ? "weighted-graph-python-stub.zip"
     : isGraphAStar()
@@ -5243,6 +5891,8 @@ function downloadPythonStub() {
   setMessage(
     isLogic()
       ? "Downloaded logic-dpll-python-stub.zip."
+      : isStrips()
+      ? "Downloaded strips-planning-python-stub.zip."
       : isWeightedSearch()
       ? "Downloaded weighted-graph-python-stub.zip."
       : isGraphAStar()
@@ -5273,11 +5923,13 @@ function bindEvents() {
   $("previous-button").addEventListener("click", () => {
     stopPlay();
     state.player.stepIndex = Math.max(state.player.stepIndex - 1, 0);
+    state.view.planningSelectedAction = "";
     render();
   });
   $("next-button").addEventListener("click", () => {
     stopPlay();
     state.player.stepIndex = Math.min(state.player.stepIndex + 1, maxStepCount());
+    state.view.planningSelectedAction = "";
     render();
   });
   $("play-button").addEventListener("click", () => startPlay());
@@ -5288,6 +5940,7 @@ function bindEvents() {
   $("reset-button").addEventListener("click", () => {
     stopPlay();
     state.player.stepIndex = 0;
+    state.view.planningSelectedAction = "";
     render();
   });
   $("reload-button").addEventListener("click", async () => {
@@ -5295,7 +5948,7 @@ function bindEvents() {
     await loadExample(state.session.example_name);
   });
   $("example-select").addEventListener("change", async (event) => {
-    if (isLivePythonApp() && !isLogic()) {
+    if (isLivePythonApp() && !isLogic() && !isStrips()) {
       stopPlay();
       state.player.size = event.target.value;
       state.player.seed = "";
@@ -5314,12 +5967,15 @@ function bindEvents() {
     stopPlay();
     state.player.mode = event.target.value;
     state.player.stepIndex = 0;
+    state.view.planningSelectedAction = "";
     if (state.player.mode === "playback") {
       setMessage("");
     } else if (!state.player.liveTrace) {
       setMessage(
         isLogic()
           ? "Live Python mode is ready. Run your local DPLL solver and replay the returned trace."
+          : isStrips()
+          ? "Live Python mode is ready. Run your local STRIPS planner and replay the returned plan."
           : !isLabyrinth()
           ? "Live Python mode is ready. Generate a graph or solve the current one with your backend."
           : "Live Python mode is ready. Generate a labyrinth or solve the current one with your backend."
@@ -5356,9 +6012,14 @@ function bindEvents() {
     state.view.showPrunedBranches = event.target.checked;
     render();
   });
+  $("show-planner-trace").addEventListener("change", (event) => {
+    state.view.showPlannerTrace = event.target.checked;
+    render();
+  });
   $("step-range").addEventListener("input", (event) => {
     stopPlay();
     state.player.stepIndex = Math.max(0, Math.min(Number(event.target.value), maxStepCount()));
+    state.view.planningSelectedAction = "";
     render();
   });
   $("generate-button").addEventListener("click", async () => {
@@ -5370,6 +6031,28 @@ function bindEvents() {
   });
   $("solve-python-button").addEventListener("click", solveWithPython);
   $("download-stub-button").addEventListener("click", downloadPythonStub);
+  $("planning-panel").addEventListener("click", (event) => {
+    const target = event.target.closest("button");
+    if (!target) return;
+    const { actionSignature, stepIndex } = target.dataset;
+    if (actionSignature) {
+      state.view.planningSelectedAction = actionSignature;
+    }
+    if (stepIndex) {
+      stopPlay();
+      state.player.stepIndex = Math.max(0, Math.min(Number(stepIndex), maxStepCount()));
+    }
+    render();
+  });
+  $("planning-world-panel").addEventListener("click", (event) => {
+    const target = event.target.closest("button");
+    if (!target) return;
+    const { actionSignature } = target.dataset;
+    if (actionSignature) {
+      state.view.planningSelectedAction = actionSignature;
+    }
+    render();
+  });
 }
 
 window.addEventListener("DOMContentLoaded", async () => {

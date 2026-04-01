@@ -818,6 +818,326 @@ input[type="number"] {
   font-size: 0.88rem;
 }
 
+.planning-panel {
+  min-height: 360px;
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(239, 231, 216, 0.42)),
+    linear-gradient(140deg, rgba(13, 110, 110, 0.05), rgba(159, 85, 39, 0.08));
+  border: 1px solid rgba(111, 123, 131, 0.14);
+  overflow: auto;
+}
+
+.planning-world-panel {
+  min-height: 220px;
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(239, 231, 216, 0.42)),
+    linear-gradient(140deg, rgba(13, 110, 110, 0.05), rgba(159, 85, 39, 0.08));
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.planning-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.planning-world-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.planning-section {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.planning-section-title {
+  margin: 0 0 12px;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 1.05rem;
+}
+
+.planning-group-grid,
+.planning-plan-list,
+.planning-search-trace {
+  display: grid;
+  gap: 10px;
+}
+
+.planning-world-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.planning-group-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(243, 239, 230, 0.9);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.planning-world-copy {
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.planning-group-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.planning-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.planning-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(13, 110, 110, 0.1);
+  border: 1px solid rgba(13, 110, 110, 0.18);
+  color: var(--ink);
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.84rem;
+}
+
+.planning-chip.goal {
+  background: rgba(180, 83, 9, 0.12);
+  border-color: rgba(180, 83, 9, 0.2);
+}
+
+.planning-action-list {
+  display: grid;
+  gap: 8px;
+}
+
+.planning-action-button,
+.planning-plan-button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  background: rgba(243, 239, 230, 0.92);
+  color: var(--ink);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.planning-action-button:hover,
+.planning-plan-button:hover {
+  background: rgba(232, 241, 239, 0.96);
+}
+
+.planning-action-button.selected,
+.planning-plan-button.current {
+  background: rgba(13, 110, 110, 0.14);
+  border-color: rgba(13, 110, 110, 0.24);
+}
+
+.planning-plan-button.completed {
+  background: rgba(124, 63, 0, 0.12);
+  border-color: rgba(124, 63, 0, 0.18);
+}
+
+.planning-plan-button.future {
+  opacity: 0.86;
+}
+
+.planning-action-signature,
+.planning-plan-signature {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.88rem;
+}
+
+.planning-action-category,
+.planning-plan-step {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.planning-empty {
+  color: var(--muted);
+}
+
+.planning-inspector-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.planning-inspector-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.planning-inspector-signature {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-weight: 700;
+}
+
+.planning-inspector-args {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.planning-effect-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.planning-effect-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(243, 239, 230, 0.9);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.planning-effect-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.planning-search-row {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(243, 239, 230, 0.9);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.planning-search-row.goal {
+  background: rgba(124, 63, 0, 0.12);
+  border-color: rgba(124, 63, 0, 0.18);
+}
+
+.planning-search-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.planning-search-plan {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+
+.planning-search-facts {
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.planning-room {
+  fill: rgba(255, 252, 246, 0.92);
+  stroke: rgba(95, 107, 115, 0.34);
+  stroke-width: 3;
+}
+
+.planning-room.active {
+  fill: rgba(13, 110, 110, 0.12);
+  stroke: var(--accent);
+  stroke-width: 4;
+}
+
+.planning-room-label {
+  fill: var(--ink);
+  font-size: 22px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.planning-connector {
+  stroke: rgba(95, 107, 115, 0.42);
+  stroke-width: 8;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.planning-connector.locked {
+  stroke-dasharray: 18 12;
+}
+
+.planning-door-body {
+  fill: rgba(255, 255, 255, 0.96);
+  stroke: rgba(95, 107, 115, 0.34);
+  stroke-width: 2;
+}
+
+.planning-door-body.locked {
+  fill: rgba(180, 83, 9, 0.16);
+  stroke: rgba(180, 83, 9, 0.72);
+}
+
+.planning-door-label {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+  text-transform: uppercase;
+}
+
+.planning-entity-robot {
+  fill: rgba(13, 110, 110, 0.92);
+}
+
+.planning-entity-parcel {
+  fill: rgba(124, 63, 0, 0.92);
+}
+
+.planning-entity-keycard {
+  fill: rgba(180, 83, 9, 0.92);
+}
+
+.planning-entity-label {
+  fill: white;
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.planning-badge {
+  fill: rgba(31, 40, 48, 0.9);
+}
+
+.planning-badge-text {
+  fill: white;
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
 @media (max-width: 900px) {
   .header,
   .layout {
@@ -831,7 +1151,8 @@ input[type="number"] {
   .metric-grid,
   .toggle-grid,
   .legend-grid,
-  .logic-summary-grid {
+  .logic-summary-grid,
+  .planning-world-summary {
     grid-template-columns: 1fr;
   }
 }

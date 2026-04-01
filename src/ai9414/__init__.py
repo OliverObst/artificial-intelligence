@@ -10,6 +10,7 @@ from ai9414.graph_ucs import GraphUcsDemo
 from ai9414.labyrinth import LabyrinthDemo
 from ai9414.logic import DpllDemo
 from ai9414.search import SearchDemo
+from ai9414.strips import StripsDemo
 
 __all__ = [
     "BaseEducationalApp",
@@ -22,5 +23,6 @@ __all__ = [
     "LabyrinthDemo",
     "PlaceholderDemo",
     "SearchDemo",
+    "StripsDemo",
     "launch_app",
 ]

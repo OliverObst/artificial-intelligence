@@ -29,6 +29,7 @@
             </div>
           </div>
           <svg id="search-tree-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Search tree"></svg>
+          <div id="planning-panel" class="planning-panel hidden" role="img" aria-label="Planning state"></div>
         </section>
 
         <section class="panel visual-panel">
@@ -39,6 +40,7 @@
             </div>
           </div>
           <svg id="problem-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Problem view"></svg>
+          <div id="planning-world-panel" class="planning-world-panel hidden" role="img" aria-label="Planning world details"></div>
           <div id="logic-problem-panel" class="logic-panel hidden" role="img" aria-label="Clause view"></div>
         </section>
 
@@ -103,6 +105,12 @@
             <label class="toggle-row" for="show-pruned">
               <input id="show-pruned" type="checkbox" checked />
               <span>Show pruned branches</span>
+            </label>
+          </div>
+          <div id="planning-toggle-grid" class="toggle-grid hidden">
+            <label class="toggle-row" for="show-planner-trace">
+              <input id="show-planner-trace" type="checkbox" />
+              <span>Show planner trace</span>
             </label>
           </div>
           <div class="control-block">

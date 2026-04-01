@@ -7,12 +7,15 @@ const state = {
     playbackSpeed: 1,
     showExploredEdges: true,
     showPrunedBranches: true,
+    showPlannerTrace: false,
+    planningSelectedAction: "",
   },
 };
 
 const $ = (id) => document.getElementById(id);
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const appType = () => state.trace?.app_type;
+const isStrips = () => appType() === "strips";
 const isLogic = () => appType() === "logic";
 const isLabyrinth = () => appType() === "labyrinth";
 const isGraphBfs = () => appType() === "graph_bfs";
@@ -113,7 +116,20 @@ function currentStep() {
 }
 
 function renderPanelCopy() {
-  if (isLogic()) {
+  if (isStrips()) {
+    $("left-panel-title").textContent = "Planning State";
+    $("left-panel-subtitle").textContent =
+      "Static replay of the symbolic state, applicable actions, and grounded plan.";
+    $("right-panel-title").textContent = "Office World";
+    $("right-panel-subtitle").textContent =
+      "Static replay of the rendered office map that is derived from the symbolic facts.";
+    $("search-toggle-grid").classList.add("hidden");
+    $("planning-toggle-grid").classList.remove("hidden");
+    $("search-legend").classList.add("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+  } else if (isLogic()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the DPLL assignment tree.";
     $("right-panel-title").textContent = currentData().problem_mode === "entailment" ? "Knowledge Base and CNF" : "Clause State";
@@ -194,6 +210,18 @@ function renderPanelCopy() {
 }
 
 function renderMetrics(data) {
+  if (isStrips()) {
+    const planLength = data.planning?.plan?.length || 0;
+    $("metric-1-label").textContent = "Plan step";
+    $("metric-1-value").textContent = `${data.planning?.plan_index || 0} / ${planLength}`;
+    $("metric-2-label").textContent = "Applicable actions";
+    $("metric-2-value").textContent = String(data.planning?.applicable_actions?.length || 0);
+    $("metric-3-label").textContent = "Expanded states";
+    $("metric-3-value").textContent = String(data.stats?.expanded_states || 0);
+    $("metric-4-label").textContent = "Frontier peak";
+    $("metric-4-value").textContent = String(data.stats?.frontier_peak || 0);
+    return;
+  }
   if (isLogic()) {
     $("metric-1-label").textContent = "Assigned variables";
     $("metric-1-value").textContent = `${data.logic?.summary?.assigned_variables || 0} / ${data.logic?.summary?.total_variables || 0}`;
@@ -710,6 +738,389 @@ function renderLogicProblem(data) {
   panel.appendChild(shell);
 }
 
+function planningActionBySignature(data, signature) {
+  if (!signature) return null;
+  const allActions = [
+    ...(data.planning?.applicable_actions || []),
+    ...(data.planning?.plan || []),
+  ];
+  return allActions.find((action) => action.signature === signature) || null;
+}
+
+function selectedPlanningAction(data) {
+  const selectedFromView = planningActionBySignature(data, state.view.planningSelectedAction);
+  if (selectedFromView) return selectedFromView;
+  if (data.planning?.selected_action) return data.planning.selected_action;
+  if (data.planning?.applicable_actions?.length) return data.planning.applicable_actions[0];
+  if (data.planning?.plan?.length) return data.planning.plan[Math.min(data.planning.plan_index || 0, data.planning.plan.length - 1)];
+  return null;
+}
+
+function planRowState(planIndex, actionIndex) {
+  if (planIndex === 0) {
+    return actionIndex === 0 ? "current" : "future";
+  }
+  if (actionIndex < planIndex - 1) return "completed";
+  if (actionIndex === planIndex - 1) return "current";
+  return "future";
+}
+
+function renderPlanningInternal(data) {
+  const panel = $("planning-panel");
+  panel.innerHTML = "";
+  const planning = data.planning;
+  if (!planning) return;
+
+  const shell = document.createElement("div");
+  shell.className = "planning-shell";
+
+  const factsSection = document.createElement("section");
+  factsSection.className = "planning-section";
+  const factsHeading = document.createElement("h3");
+  factsHeading.className = "planning-section-title";
+  factsHeading.textContent = "Current state";
+  factsSection.appendChild(factsHeading);
+  const factGroups = new Map();
+  (planning.facts || []).forEach((fact) => {
+    if (!factGroups.has(fact.predicate)) factGroups.set(fact.predicate, []);
+    factGroups.get(fact.predicate).push(fact);
+  });
+  const factGrid = document.createElement("div");
+  factGrid.className = "planning-group-grid";
+  Array.from(factGroups.entries()).forEach(([predicate, facts]) => {
+    const group = document.createElement("div");
+    group.className = "planning-group-card";
+    const label = document.createElement("span");
+    label.className = "planning-group-label";
+    label.textContent = predicate;
+    const chips = document.createElement("div");
+    chips.className = "planning-chip-list";
+    facts.forEach((fact) => {
+      const chip = document.createElement("span");
+      chip.className = "planning-chip";
+      chip.textContent = fact.text;
+      chips.appendChild(chip);
+    });
+    group.append(label, chips);
+    factGrid.appendChild(group);
+  });
+  factsSection.appendChild(factGrid);
+  shell.appendChild(factsSection);
+  const chosenAction = selectedPlanningAction(data);
+
+  const inspectorSection = document.createElement("section");
+  inspectorSection.className = "planning-section";
+  const inspectorHeading = document.createElement("h3");
+  inspectorHeading.className = "planning-section-title";
+  inspectorHeading.textContent = "Action schema inspector";
+  inspectorSection.appendChild(inspectorHeading);
+  const inspector = document.createElement("div");
+  inspector.className = "planning-inspector-shell";
+  if (chosenAction) {
+    const heading = document.createElement("div");
+    heading.className = "planning-inspector-heading";
+    const signature = document.createElement("span");
+    signature.className = "planning-inspector-signature";
+    signature.textContent = chosenAction.signature;
+    const args = document.createElement("span");
+    args.className = "planning-inspector-args";
+    args.textContent = chosenAction.args.join(", ");
+    heading.append(signature, args);
+    inspector.appendChild(heading);
+
+    const effectGrid = document.createElement("div");
+    effectGrid.className = "planning-effect-grid";
+    [
+      ["Preconditions", chosenAction.preconditions || []],
+      ["Add effects", chosenAction.add_effects || []],
+      ["Delete effects", chosenAction.delete_effects || []],
+    ].forEach(([labelText, facts]) => {
+      const card = document.createElement("div");
+      card.className = "planning-effect-card";
+      const label = document.createElement("span");
+      label.className = "planning-effect-label";
+      label.textContent = labelText;
+      const chips = document.createElement("div");
+      chips.className = "planning-chip-list";
+      facts.forEach((fact) => {
+        const chip = document.createElement("span");
+        chip.className = "planning-chip";
+        chip.textContent = fact.text;
+        chips.appendChild(chip);
+      });
+      card.append(label, chips);
+      effectGrid.appendChild(card);
+    });
+    inspector.appendChild(effectGrid);
+  }
+  inspectorSection.appendChild(inspector);
+  shell.appendChild(inspectorSection);
+
+  const planSection = document.createElement("section");
+  planSection.className = "planning-section";
+  const planHeading = document.createElement("h3");
+  planHeading.className = "planning-section-title";
+  planHeading.textContent = "Plan trace";
+  planSection.appendChild(planHeading);
+  const planList = document.createElement("div");
+  planList.className = "planning-plan-list";
+  (planning.plan || []).forEach((action, index) => {
+    const rowState = planRowState(planning.plan_index || 0, index);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `planning-plan-button ${rowState}`;
+    button.dataset.stepIndex = String(index + 2);
+    button.dataset.actionSignature = action.signature;
+    const signature = document.createElement("span");
+    signature.className = "planning-plan-signature";
+    signature.textContent = action.signature;
+    const meta = document.createElement("span");
+    meta.className = "planning-plan-step";
+    meta.textContent = `Step ${index + 1}`;
+    button.append(signature, meta);
+    planList.appendChild(button);
+  });
+  planSection.appendChild(planList);
+  shell.appendChild(planSection);
+
+  if (state.view.showPlannerTrace && (planning.search_trace || []).length) {
+    const searchSection = document.createElement("section");
+    searchSection.className = "planning-section";
+    const searchHeading = document.createElement("h3");
+    searchHeading.className = "planning-section-title";
+    searchHeading.textContent = "Planner trace";
+    searchSection.appendChild(searchHeading);
+    const searchList = document.createElement("div");
+    searchList.className = "planning-search-trace";
+    (planning.search_trace || []).forEach((entry) => {
+      const row = document.createElement("div");
+      row.className = `planning-search-row${entry.goal_reached ? " goal" : ""}`;
+      const meta = document.createElement("div");
+      meta.className = "planning-search-meta";
+      meta.textContent = `Expand S${entry.index} | depth ${entry.depth} | frontier ${entry.frontier_size}`;
+      const plan = document.createElement("div");
+      plan.className = "planning-search-plan";
+      plan.textContent = entry.plan_prefix.length ? entry.plan_prefix.join(" -> ") : "initial state";
+      const facts = document.createElement("div");
+      facts.className = "planning-search-facts";
+      facts.textContent = entry.state_facts.slice(0, 3).join(" • ");
+      row.append(meta, plan, facts);
+      searchList.appendChild(row);
+    });
+    searchSection.appendChild(searchList);
+    shell.appendChild(searchSection);
+  }
+
+  panel.appendChild(shell);
+}
+
+function renderPlanningWorldPanel(data) {
+  const panel = $("planning-world-panel");
+  panel.innerHTML = "";
+  const planning = data.planning;
+  if (!planning) return;
+
+  const shell = document.createElement("div");
+  shell.className = "planning-world-shell";
+
+  const summarySection = document.createElement("section");
+  summarySection.className = "planning-section";
+  const summaryHeading = document.createElement("h3");
+  summaryHeading.className = "planning-section-title";
+  summaryHeading.textContent = "Situation";
+  summarySection.appendChild(summaryHeading);
+
+  const world = planning.world || {};
+  const summaryCopy = document.createElement("p");
+  summaryCopy.className = "planning-world-copy";
+  summaryCopy.textContent = [
+    `Robot: ${world.robot_room || "unknown"}.`,
+    world.parcel_carried
+      ? "Parcel: carried by the robot."
+      : `Parcel: ${world.parcel_room || "unknown"}.`,
+    world.robot_has_keycard
+      ? "Keycard: held by the robot."
+      : `Keycard: ${world.keycard_room || "unknown"}.`,
+    `Door: ${world.door_locked ? "locked" : "unlocked"}.`,
+    "Goal: make at(parcel, lab) true.",
+  ].join(" ");
+  summarySection.appendChild(summaryCopy);
+
+  const summaryGrid = document.createElement("div");
+  summaryGrid.className = "planning-world-summary";
+  [
+    ["Robot", world.robot_room || "unknown"],
+    ["Parcel", world.parcel_carried ? "carried" : world.parcel_room || "unknown"],
+    ["Keycard", world.robot_has_keycard ? "held" : world.keycard_room || "unknown"],
+    ["Door", world.door_locked ? "locked" : "unlocked"],
+  ].forEach(([labelText, valueText]) => {
+    const card = document.createElement("div");
+    card.className = "planning-group-card";
+    const label = document.createElement("span");
+    label.className = "planning-group-label";
+    label.textContent = labelText;
+    const value = document.createElement("div");
+    value.textContent = valueText;
+    card.append(label, value);
+    summaryGrid.appendChild(card);
+  });
+  summarySection.appendChild(summaryGrid);
+  shell.appendChild(summarySection);
+
+  const actionsSection = document.createElement("section");
+  actionsSection.className = "planning-section";
+  const actionsHeading = document.createElement("h3");
+  actionsHeading.className = "planning-section-title";
+  actionsHeading.textContent = "Available actions";
+  actionsSection.appendChild(actionsHeading);
+  const actionList = document.createElement("div");
+  actionList.className = "planning-action-list";
+  const chosenAction = selectedPlanningAction(data);
+  (planning.applicable_actions || []).forEach((action) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `planning-action-button${chosenAction?.signature === action.signature ? " selected" : ""}`;
+    button.dataset.actionSignature = action.signature;
+    const signature = document.createElement("span");
+    signature.className = "planning-action-signature";
+    signature.textContent = action.signature;
+    const category = document.createElement("span");
+    category.className = "planning-action-category";
+    category.textContent = action.category;
+    button.append(signature, category);
+    actionList.appendChild(button);
+  });
+  actionsSection.appendChild(actionList);
+  shell.appendChild(actionsSection);
+
+  panel.appendChild(shell);
+}
+
+function renderStripsWorld(data) {
+  const svg = $("problem-svg");
+  svg.innerHTML = "";
+  const world = data.planning?.world;
+  if (!world?.rooms?.length) return;
+
+  const roomBoxes = {
+    mail_room: { x: 90, y: 90, width: 220, height: 110 },
+    office_a: { x: 690, y: 90, width: 220, height: 110 },
+    corridor: { x: 390, y: 280, width: 220, height: 110 },
+    office_b: { x: 90, y: 500, width: 220, height: 110 },
+    lab: { x: 690, y: 500, width: 220, height: 110 },
+  };
+  const roomCenters = Object.fromEntries(
+    Object.entries(roomBoxes).map(([room, box]) => [
+      room,
+      { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+    ])
+  );
+
+  const connectors = svgNode("g");
+  const rooms = svgNode("g");
+  const entities = svgNode("g");
+
+  [
+    ["corridor", "mail_room"],
+    ["corridor", "office_a"],
+    ["corridor", "office_b"],
+    world.door_edge,
+  ].forEach(([left, right]) => {
+    const from = roomCenters[left];
+    const to = roomCenters[right];
+    connectors.appendChild(
+      svgNode("line", {
+        class: `planning-connector${left === world.door_edge[0] && right === world.door_edge[1] && world.door_locked ? " locked" : ""}`,
+        x1: from.x,
+        y1: from.y,
+        x2: to.x,
+        y2: to.y,
+      })
+    );
+  });
+
+  const [doorLeft, doorRight] = world.door_edge;
+  const doorFrom = roomCenters[doorLeft];
+  const doorTo = roomCenters[doorRight];
+  const doorX = (doorFrom.x + doorTo.x) / 2;
+  const doorY = (doorFrom.y + doorTo.y) / 2;
+  connectors.appendChild(
+    svgNode("rect", {
+      class: `planning-door-body${world.door_locked ? " locked" : ""}`,
+      x: doorX - 34,
+      y: doorY - 18,
+      width: 68,
+      height: 36,
+      rx: 12,
+    })
+  );
+  connectors.appendChild(
+    svgNode(
+      "text",
+      {
+        class: "planning-door-label",
+        x: doorX,
+        y: doorY + 4,
+      },
+      world.door_locked ? "locked" : "open"
+    )
+  );
+
+  world.rooms.forEach((room) => {
+    const box = roomBoxes[room];
+    rooms.appendChild(
+      svgNode("rect", {
+        class: `planning-room${world.robot_room === room ? " active" : ""}`,
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        rx: 22,
+      })
+    );
+    rooms.appendChild(
+      svgNode(
+        "text",
+        {
+          class: "planning-room-label",
+          x: box.x + box.width / 2,
+          y: box.y + 64,
+        },
+        room.replace("_", " ")
+      )
+    );
+  });
+
+  function appendEntity(room, label, cssClass, dx, dy) {
+    const centre = roomCenters[room];
+    const group = svgNode("g", {
+      transform: `translate(${centre.x + dx}, ${centre.y + dy})`,
+    });
+    group.appendChild(svgNode("circle", { class: cssClass, r: 24 }));
+    group.appendChild(svgNode("text", { class: "planning-entity-label" }, label));
+    entities.appendChild(group);
+  }
+
+  if (world.parcel_room) appendEntity(world.parcel_room, "P", "planning-entity-parcel", -58, 26);
+  if (world.keycard_room) appendEntity(world.keycard_room, "K", "planning-entity-keycard", 58, 26);
+  if (world.robot_room) {
+    appendEntity(world.robot_room, "R", "planning-entity-robot", 0, -12);
+    const centre = roomCenters[world.robot_room];
+    if (world.parcel_carried) {
+      entities.appendChild(svgNode("circle", { class: "planning-badge", cx: centre.x + 28, cy: centre.y - 34, r: 12 }));
+      entities.appendChild(svgNode("text", { class: "planning-badge-text", x: centre.x + 28, y: centre.y - 30 }, "P"));
+    }
+    if (world.robot_has_keycard) {
+      entities.appendChild(svgNode("circle", { class: "planning-badge", cx: centre.x - 28, cy: centre.y - 34, r: 12 }));
+      entities.appendChild(svgNode("text", { class: "planning-badge-text", x: centre.x - 28, y: centre.y - 30 }, "K"));
+    }
+  }
+
+  svg.appendChild(connectors);
+  svg.appendChild(rooms);
+  svg.appendChild(entities);
+}
+
 function render() {
   const data = currentData();
   const step = currentStep();
@@ -724,11 +1135,21 @@ function render() {
   $("step-range").max = String(max);
   $("step-range").value = String(state.stepIndex);
   $("message-banner").classList.add("hidden");
-  renderTree(data);
+  $("search-tree-svg").classList.toggle("hidden", isStrips());
+  $("planning-panel").classList.toggle("hidden", !isStrips());
+  $("planning-world-panel").classList.toggle("hidden", !isStrips());
+  if (isStrips()) {
+    renderPlanningInternal(data);
+    renderPlanningWorldPanel(data);
+  } else {
+    renderTree(data);
+  }
   $("problem-svg").classList.toggle("hidden", isLogic());
   $("logic-problem-panel").classList.toggle("hidden", !isLogic());
   if (isLogic()) {
     renderLogicProblem(data);
+  } else if (isStrips()) {
+    renderStripsWorld(data);
   } else if (isLabyrinth()) {
     renderLabyrinth(data);
   } else if (isGraphReachability()) {
@@ -798,9 +1219,37 @@ window.addEventListener("DOMContentLoaded", async () => {
     render();
   });
 
+  $("show-planner-trace").addEventListener("change", (event) => {
+    state.view.showPlannerTrace = event.target.checked;
+    render();
+  });
+
   $("step-range").addEventListener("input", (event) => {
     stopPlay();
     state.stepIndex = Math.max(0, Math.min(Number(event.target.value), state.trace.steps.length));
+    render();
+  });
+
+  $("planning-panel").addEventListener("click", (event) => {
+    const target = event.target.closest("button");
+    if (!target) return;
+    const { actionSignature, stepIndex } = target.dataset;
+    if (actionSignature) {
+      state.view.planningSelectedAction = actionSignature;
+    }
+    if (stepIndex) {
+      stopPlay();
+      state.stepIndex = Math.max(0, Math.min(Number(stepIndex), state.trace.steps.length));
+    }
+    render();
+  });
+  $("planning-world-panel").addEventListener("click", (event) => {
+    const target = event.target.closest("button");
+    if (!target) return;
+    const { actionSignature } = target.dataset;
+    if (actionSignature) {
+      state.view.planningSelectedAction = actionSignature;
+    }
     render();
   });
 });
