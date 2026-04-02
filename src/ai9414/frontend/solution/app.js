@@ -20,6 +20,8 @@ const appType = () => state.trace?.app_type;
 const isStrips = () => appType() === "strips";
 const isLogic = () => appType() === "logic";
 const isCsp = () => appType() === "csp";
+const isDeliveryCsp = () => appType() === "delivery_csp";
+const isCspFamily = () => isCsp() || isDeliveryCsp();
 const isLabyrinth = () => appType() === "labyrinth";
 const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
@@ -124,6 +126,20 @@ function renderPanelCopy() {
     $("left-panel-subtitle").textContent = "Static replay of the variables, domains, and decision trace.";
     $("right-panel-title").textContent = "Map View";
     $("right-panel-subtitle").textContent = "Static replay of the map colouring and live domain changes on each region.";
+    $("search-toggle-grid").classList.add("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.remove("hidden");
+    $("csp-toggle-grid").classList.remove("hidden");
+    $("search-legend").classList.add("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.remove("hidden");
+  } else if (isDeliveryCsp()) {
+    $("left-panel-title").textContent = "CSP State";
+    $("left-panel-subtitle").textContent = "Static replay of the deliveries, domains, and decision trace.";
+    $("right-panel-title").textContent = "Schedule Board";
+    $("right-panel-subtitle").textContent = "Static replay of the delivery schedule board, assigned cells, and live candidate badges.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("csp-view-control").classList.remove("hidden");
@@ -272,6 +288,19 @@ function renderMetrics(data) {
     const assigned = Object.keys(data.csp?.assignments || {}).length;
     const total = data.csp?.variables?.length || 0;
     $("metric-1-label").textContent = "Assigned variables";
+    $("metric-1-value").textContent = `${assigned} / ${total}`;
+    $("metric-2-label").textContent = "Pruned values";
+    $("metric-2-value").textContent = String(data.stats?.prunes || 0);
+    $("metric-3-label").textContent = "Backtracks";
+    $("metric-3-value").textContent = String(data.stats?.backtracks || 0);
+    $("metric-4-label").textContent = "Wipe-outs";
+    $("metric-4-value").textContent = String(data.stats?.wipeouts || 0);
+    return;
+  }
+  if (isDeliveryCsp()) {
+    const assigned = Object.keys(data.delivery_csp?.assignments || {}).length;
+    const total = data.delivery_csp?.variables?.length || 0;
+    $("metric-1-label").textContent = "Assigned deliveries";
     $("metric-1-value").textContent = `${assigned} / ${total}`;
     $("metric-2-label").textContent = "Pruned values";
     $("metric-2-value").textContent = String(data.stats?.prunes || 0);
@@ -534,6 +563,121 @@ function renderCspPanel(data) {
   panel.appendChild(shell);
 }
 
+function renderDeliveryCspPanel(data) {
+  const panel = $("csp-panel");
+  panel.innerHTML = "";
+  const csp = data.delivery_csp;
+  const problem = data.delivery_problem;
+  if (!csp || !problem) return;
+
+  const valueLookup = new Map((problem.values || []).map((value) => [value.id, value]));
+  const shell = document.createElement("div");
+  shell.className = "csp-shell";
+
+  const stateSection = document.createElement("section");
+  stateSection.className = "csp-section";
+  const stateHeading = document.createElement("h3");
+  stateHeading.className = "csp-section-title";
+  stateHeading.textContent = "Current CSP state";
+  const stateCopy = document.createElement("p");
+  stateCopy.className = "csp-copy";
+  stateCopy.textContent = `Static replay of the delivery table and the current focus delivery. Focus: ${csp.focus_variable || "none"}.`;
+  stateSection.append(stateHeading, stateCopy);
+
+  const table = document.createElement("table");
+  table.className = "csp-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Delivery</th>
+        <th>Current domain</th>
+        <th>Assigned</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+  `;
+  const body = document.createElement("tbody");
+  (csp.variables || []).forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.className = row.status || "unchanged";
+
+    const variable = document.createElement("td");
+    const label = document.createElement("div");
+    label.className = "delivery-variable-label";
+    label.textContent = row.label || row.variable;
+    const meta = document.createElement("div");
+    meta.className = "delivery-variable-meta";
+    meta.textContent = `${row.short_label || row.variable.toUpperCase()} · ${row.variable}`;
+    variable.append(label, meta);
+
+    const domain = document.createElement("td");
+    const domainList = document.createElement("div");
+    domainList.className = "csp-domain-list";
+    if ((row.domain || []).length) {
+      row.domain.forEach((valueId) => {
+        const value = valueLookup.get(valueId);
+        const chip = document.createElement("span");
+        chip.className = "csp-domain-chip delivery-domain-chip";
+        chip.textContent = value?.label || valueId;
+        domainList.appendChild(chip);
+      });
+    } else {
+      const chip = document.createElement("span");
+      chip.className = "csp-domain-chip empty";
+      chip.textContent = "empty";
+      domainList.appendChild(chip);
+    }
+    domain.appendChild(domainList);
+
+    const assigned = document.createElement("td");
+    assigned.textContent = row.assigned_label || "—";
+
+    const status = document.createElement("td");
+    const pill = document.createElement("span");
+    pill.className = `csp-status-pill ${row.status || "unchanged"}`;
+    pill.textContent = row.status || "unchanged";
+    status.appendChild(pill);
+
+    tr.append(variable, domain, assigned, status);
+    body.appendChild(tr);
+  });
+  table.appendChild(body);
+  stateSection.appendChild(table);
+  shell.appendChild(stateSection);
+
+  const lowerSection = document.createElement("section");
+  lowerSection.className = "csp-section";
+  const lowerHeading = document.createElement("h3");
+  lowerHeading.className = "csp-section-title";
+  lowerHeading.textContent = state.view.cspViewMode === "tree" ? "Search tree" : "Decision trace";
+  lowerSection.appendChild(lowerHeading);
+
+  if (state.view.cspViewMode === "tree") {
+    renderCspTree(lowerSection, data);
+  } else {
+    const traceList = document.createElement("div");
+    traceList.className = "csp-trace-list";
+    (csp.trace_entries || []).forEach((entry, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `csp-trace-row${index === csp.current_entry_index ? " current" : ""}`;
+      button.dataset.stepIndex = String(index + 1);
+      const meta = document.createElement("span");
+      meta.className = "csp-trace-meta";
+      meta.textContent = entry.action.replaceAll("_", " ");
+      const text = document.createElement("span");
+      text.className = "csp-trace-text";
+      text.textContent = entry.text;
+      button.append(meta, text);
+      traceList.appendChild(button);
+    });
+    lowerSection.appendChild(traceList);
+  }
+
+  shell.appendChild(lowerSection);
+  panel.appendChild(shell);
+}
+
 function renderCspMap(data) {
   const svg = $("problem-svg");
   svg.innerHTML = "";
@@ -590,6 +734,135 @@ function renderCspMap(data) {
   });
 
   svg.append(polygons, labels, markers);
+}
+
+function renderDeliverySchedule(data) {
+  const svg = $("problem-svg");
+  svg.innerHTML = "";
+  svg.setAttribute("viewBox", "0 0 1000 860");
+  const problem = data.delivery_problem;
+  const csp = data.delivery_csp;
+  if (!problem || !csp) return;
+
+  const deliveryMap = new Map((problem.deliveries || []).map((delivery) => [delivery.id, delivery]));
+  const changed = new Set((csp.last_changes || []).map((change) => change.variable));
+  const focus = csp.focus_variable;
+  const failed = csp.failed_variable;
+  const placementsByValue = new Map((csp.placements || []).map((placement) => [placement.value, placement]));
+  const candidateMap = csp.candidate_map || {};
+
+  const left = 118;
+  const top = 92;
+  const width = 808;
+  const height = 538;
+  const footerTop = top + height + 54;
+  const rooms = problem.rooms || [];
+  const slots = problem.slots || [];
+  const cellWidth = width / Math.max(slots.length, 1);
+  const cellHeight = height / Math.max(rooms.length, 1);
+
+  const backdrop = svgNode("g");
+  const labels = svgNode("g");
+  const cells = svgNode("g");
+  const overlays = svgNode("g");
+  const footer = svgNode("g");
+
+  backdrop.appendChild(
+    svgNode("rect", {
+      class: "delivery-board",
+      x: left - 28,
+      y: top - 42,
+      width: width + 56,
+      height: height + 84,
+      rx: 32,
+    })
+  );
+
+  slots.forEach((slot, slotIndex) => {
+    const x = left + slotIndex * cellWidth;
+    labels.appendChild(svgNode("text", { class: "delivery-slot-label", x: x + cellWidth / 2, y: top - 18 }, slot.label));
+  });
+
+  rooms.forEach((room, roomIndex) => {
+    const y = top + roomIndex * cellHeight;
+    labels.appendChild(svgNode("text", { class: "delivery-room-label", x: left - 24, y: y + cellHeight / 2 }, room.label));
+  });
+
+  rooms.forEach((room, roomIndex) => {
+    slots.forEach((slot, slotIndex) => {
+      const x = left + slotIndex * cellWidth;
+      const y = top + roomIndex * cellHeight;
+      const value = (problem.values || []).find((candidate) => candidate.slot === slot.id && candidate.room === room.id);
+      if (!value) return;
+      const placement = placementsByValue.get(value.id);
+      const candidateDeliveries = (candidateMap[value.id] || []).map((deliveryId) => deliveryMap.get(deliveryId)).filter(Boolean);
+      const cellFocus = placement?.delivery === focus || candidateDeliveries.some((delivery) => delivery.id === focus);
+      const cellChanged = candidateDeliveries.some((delivery) => changed.has(delivery.id));
+      const classes = ["delivery-slot-cell"];
+      if (cellFocus) classes.push("focus");
+      if (cellChanged) classes.push("reduced");
+      cells.appendChild(
+        svgNode("rect", {
+          class: classes.join(" "),
+          x,
+          y,
+          width: cellWidth - 14,
+          height: cellHeight - 14,
+          rx: 24,
+        })
+      );
+      labels.appendChild(svgNode("text", { class: "delivery-cell-label", x: x + 26, y: y + 32 }, `${slot.label} · ${room.label}`));
+
+      if (placement) {
+        const fillColour = placement.colour || deliveryMap.get(placement.delivery)?.colour || "#d8c9b6";
+        overlays.appendChild(
+          svgNode("rect", {
+            class: `delivery-placement-card${placement.delivery === focus ? " focus" : ""}`,
+            x: x + 22,
+            y: y + 52,
+            width: cellWidth - 58,
+            height: cellHeight - 84,
+            rx: 22,
+            style: `fill: ${fillColour};`,
+          })
+        );
+        overlays.appendChild(svgNode("text", { class: "delivery-placement-short", x: x + cellWidth / 2 - 7, y: y + cellHeight / 2 + 2 }, placement.short_label));
+        overlays.appendChild(svgNode("text", { class: "delivery-placement-name", x: x + cellWidth / 2 - 7, y: y + cellHeight / 2 + 34 }, placement.label));
+      } else if (state.view.showCspDomains) {
+        candidateDeliveries.slice(0, 4).forEach((delivery, index) => {
+          overlays.appendChild(
+            svgNode("rect", {
+              class: `delivery-candidate-badge${delivery.id === focus ? " focus" : ""}${changed.has(delivery.id) ? " reduced" : ""}`,
+              x: x + 22,
+              y: y + 54 + index * 34,
+              width: Math.min(cellWidth - 58, 176),
+              height: 26,
+              rx: 13,
+              style: `fill: ${delivery.colour}22; stroke: ${delivery.colour};`,
+            })
+          );
+          overlays.appendChild(svgNode("text", { class: "delivery-candidate-text", x: x + 36, y: y + 71 + index * 34 }, `${delivery.short_label}  ${delivery.label}`));
+        });
+        if (!candidateDeliveries.length) {
+          overlays.appendChild(svgNode("text", { class: "delivery-empty-text", x: x + cellWidth / 2 - 7, y: y + cellHeight / 2 + 10 }, "No candidate"));
+        }
+      }
+    });
+  });
+
+  footer.appendChild(svgNode("text", { class: "delivery-footer-heading", x: left - 28, y: footerTop }, "Active constraints"));
+  (problem.constraints || []).slice(0, 4).forEach((constraint, index) => {
+    footer.appendChild(svgNode("rect", { class: "delivery-constraint-pill", x: left - 28 + index * 188, y: footerTop + 18, width: 180, height: 38, rx: 19 }));
+    footer.appendChild(svgNode("text", { class: "delivery-constraint-text", x: left - 10 + index * 188, y: footerTop + 42 }, constraint.label));
+  });
+
+  if (failed) {
+    const failedLabel = deliveryMap.get(failed)?.label || failed;
+    footer.appendChild(svgNode("rect", { class: "delivery-failure-banner", x: left - 28, y: footerTop + 68, width: 480, height: 44, rx: 22 }));
+    footer.appendChild(svgNode("text", { class: "delivery-failure-text", x: left - 2, y: footerTop + 96 }, `${failedLabel} has no legal slot-room values left.`));
+  }
+
+  svg.append(backdrop, labels, cells, overlays, footer);
 }
 
 function renderTree(data) {
@@ -1429,12 +1702,14 @@ function render() {
   $("step-range").max = String(max);
   $("step-range").value = String(state.stepIndex);
   $("message-banner").classList.add("hidden");
-  $("search-tree-svg").classList.toggle("hidden", isStrips() || isCsp());
-  $("csp-panel").classList.toggle("hidden", !isCsp());
+  $("search-tree-svg").classList.toggle("hidden", isStrips() || isCspFamily());
+  $("csp-panel").classList.toggle("hidden", !isCspFamily());
   $("planning-panel").classList.toggle("hidden", !isStrips());
   $("planning-world-panel").classList.toggle("hidden", !isStrips());
   if (isCsp()) {
     renderCspPanel(data);
+  } else if (isDeliveryCsp()) {
+    renderDeliveryCspPanel(data);
   } else if (isStrips()) {
     renderPlanningInternal(data);
     renderPlanningWorldPanel(data);
@@ -1442,11 +1717,17 @@ function render() {
     renderTree(data);
   }
   $("problem-svg").classList.toggle("hidden", isLogic());
+  $("problem-svg").classList.toggle("delivery-world-canvas", isDeliveryCsp());
+  if (!isDeliveryCsp()) {
+    $("problem-svg").setAttribute("viewBox", "0 0 1000 700");
+  }
   $("logic-problem-panel").classList.toggle("hidden", !isLogic());
   if (isLogic()) {
     renderLogicProblem(data);
   } else if (isCsp()) {
     renderCspMap(data);
+  } else if (isDeliveryCsp()) {
+    renderDeliverySchedule(data);
   } else if (isStrips()) {
     renderStripsWorld(data);
   } else if (isLabyrinth()) {

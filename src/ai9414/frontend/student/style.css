@@ -184,6 +184,10 @@ h3 {
   border: 1px solid rgba(111, 123, 131, 0.14);
 }
 
+.visual-canvas.delivery-world-canvas {
+  min-height: 520px;
+}
+
 .logic-panel {
   min-height: 360px;
   margin-top: 16px;
@@ -1427,6 +1431,144 @@ input[type="number"] {
   stroke: white;
   stroke-width: 2.5;
   stroke-linecap: round;
+}
+
+.delivery-variable-label {
+  font-weight: 700;
+}
+
+.delivery-variable-meta {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.delivery-domain-chip {
+  font-size: 0.78rem;
+}
+
+.delivery-board {
+  fill: rgba(248, 244, 236, 0.92);
+  stroke: rgba(111, 123, 131, 0.16);
+  stroke-width: 2;
+}
+
+.delivery-slot-label,
+.delivery-room-label {
+  fill: var(--ink);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.delivery-slot-label {
+  text-anchor: middle;
+}
+
+.delivery-room-label {
+  text-anchor: end;
+  dominant-baseline: middle;
+}
+
+.delivery-slot-cell {
+  fill: rgba(255, 255, 255, 0.86);
+  stroke: rgba(111, 123, 131, 0.16);
+  stroke-width: 2;
+}
+
+.delivery-slot-cell.focus {
+  stroke: var(--accent);
+  stroke-width: 4;
+}
+
+.delivery-slot-cell.reduced {
+  stroke: var(--best);
+  stroke-width: 3.5;
+}
+
+.delivery-cell-label {
+  fill: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.delivery-placement-card {
+  stroke: rgba(31, 40, 48, 0.18);
+  stroke-width: 2;
+}
+
+.delivery-placement-card.focus {
+  stroke: rgba(13, 110, 110, 0.92);
+  stroke-width: 4;
+}
+
+.delivery-placement-short {
+  fill: white;
+  font-size: 40px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+.delivery-placement-name {
+  fill: rgba(255, 255, 255, 0.92);
+  font-size: 17px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.delivery-candidate-badge {
+  fill: rgba(243, 239, 230, 0.92);
+  stroke-width: 1.8;
+}
+
+.delivery-candidate-badge.focus {
+  stroke-width: 3;
+}
+
+.delivery-candidate-badge.reduced {
+  filter: drop-shadow(0 0 8px rgba(180, 83, 9, 0.18));
+}
+
+.delivery-candidate-text {
+  fill: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.delivery-empty-text {
+  fill: rgba(140, 94, 75, 0.84);
+  font-size: 18px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.delivery-footer-heading {
+  fill: var(--ink);
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.delivery-constraint-pill {
+  fill: rgba(255, 255, 255, 0.86);
+  stroke: rgba(111, 123, 131, 0.16);
+  stroke-width: 1.5;
+}
+
+.delivery-constraint-text {
+  fill: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.delivery-failure-banner {
+  fill: rgba(140, 94, 75, 0.14);
+  stroke: rgba(140, 94, 75, 0.38);
+  stroke-width: 1.5;
+}
+
+.delivery-failure-text {
+  fill: #714633;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 @media (max-width: 900px) {

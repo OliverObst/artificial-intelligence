@@ -3,6 +3,7 @@
 from ai9414.core import BaseEducationalApp, launch_app
 from ai9414.csp import CSPDemo
 from ai9414.demo import PlaceholderDemo
+from ai9414.delivery_csp import DeliveryCSPDemo
 from ai9414.graph_astar import GraphAStarDemo
 from ai9414.graph_bfs import GraphBfsDemo
 from ai9414.graph_dfs import GraphDfsDemo
@@ -17,6 +18,7 @@ __all__ = [
     "BaseEducationalApp",
     "CSPDemo",
     "DpllDemo",
+    "DeliveryCSPDemo",
     "GraphAStarDemo",
     "GraphBfsDemo",
     "GraphDfsDemo",

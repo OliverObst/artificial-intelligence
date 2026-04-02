@@ -1,6 +1,6 @@
 # artificial-intelligence
 
-Phase 1 reference implementation of the `ai9414` educational AI platform, now with ten concrete demos:
+Phase 1 reference implementation of the `ai9414` educational AI platform, now with eleven concrete demos:
 
 - labyrinth DFS search
 - spatial graph DFS search
@@ -11,6 +11,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - spatial graph branch-and-bound search
 - propositional logic DPLL
 - CSP map colouring
+- CSP delivery time-slot assignment
 - STRIPS planning
 
 ## Available demos
@@ -33,6 +34,8 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
   Start with `python examples/logic_dpll_demo.py`
 - `CSP map colouring`
   Start with `python examples/csp_demo.py`
+- `CSP delivery time-slot assignment`
+  Start with `python examples/delivery_csp_demo.py`
 - `STRIPS planning`
   Start with `python examples/strips_demo.py`
 
@@ -49,6 +52,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - precomputed trace replay for a generated spatial graph branch-and-bound demo
 - precomputed trace replay for a visual DPLL propositional logic demo
 - precomputed trace replay for a visual CSP map-colouring demo
+- precomputed trace replay for a visual CSP delivery scheduling demo
 - precomputed trace replay for a visual STRIPS planning demo
 - static solution replay export with no backend dependency
 - deterministic labyrinth presets plus seeded graph generation
@@ -116,6 +120,12 @@ To start the CSP map-colouring example:
 
 ```bash
 python examples/csp_demo.py
+```
+
+To start the CSP delivery scheduling example:
+
+```bash
+python examples/delivery_csp_demo.py
 ```
 
 To start the STRIPS planning example:
@@ -249,6 +259,56 @@ app.load_map_problem(
         "d": ["b", "c"],
     },
     colours=["red", "green", "blue"],
+)
+app.set_variable_ordering("mrv")
+app.show()
+```
+
+Delivery scheduling CSP example:
+
+```python
+from ai9414.delivery_csp import DeliveryCSPDemo
+
+app = DeliveryCSPDemo(example="weekday_schedule")
+app.set_algorithm("backtracking_forward_checking")
+app.show()
+```
+
+Custom delivery scheduling CSP:
+
+```python
+from ai9414.delivery_csp import DeliveryCSPDemo
+
+app = DeliveryCSPDemo()
+app.load_delivery_problem(
+    deliveries=[
+        {"id": "a", "label": "Delivery A", "short_label": "A", "colour": "#c75b4a"},
+        {"id": "b", "label": "Delivery B", "short_label": "B", "colour": "#4d79ab"},
+    ],
+    slots=[
+        {"id": "slot_1", "label": "09:00", "order": 0},
+        {"id": "slot_2", "label": "11:00", "order": 1},
+    ],
+    rooms=[
+        {"id": "dock", "label": "Dock"},
+    ],
+    values=[
+        {"id": "slot_1_dock", "slot": "slot_1", "room": "dock", "label": "09:00 @ Dock"},
+        {"id": "slot_2_dock", "slot": "slot_2", "room": "dock", "label": "11:00 @ Dock"},
+    ],
+    domains={
+        "a": ["slot_1_dock", "slot_2_dock"],
+        "b": ["slot_2_dock"],
+    },
+    constraints=[
+        {
+            "kind": "precedence",
+            "left": "a",
+            "right": "b",
+            "label": "A before B",
+            "description": "Delivery A must happen before delivery B.",
+        }
+    ],
 )
 app.set_variable_ordering("mrv")
 app.show()
