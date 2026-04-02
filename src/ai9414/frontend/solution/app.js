@@ -8,6 +8,7 @@ const state = {
     showExploredEdges: true,
     showPrunedBranches: true,
     showPlannerTrace: false,
+    showTrueLocation: false,
     showCspDomains: true,
     cspViewMode: "trace",
     planningSelectedAction: "",
@@ -18,6 +19,7 @@ const $ = (id) => document.getElementById(id);
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const appType = () => state.trace?.app_type;
 const isStrips = () => appType() === "strips";
+const isUncertainty = () => appType() === "uncertainty";
 const isLogic = () => appType() === "logic";
 const isFoundationModels = () => appType() === "foundation_models";
 const isCsp = () => appType() === "csp";
@@ -166,6 +168,23 @@ function renderPanelCopy() {
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.add("hidden");
     $("csp-legend").classList.remove("hidden");
+    $("uncertainty-legend").classList.add("hidden");
+  } else if (isUncertainty()) {
+    $("left-panel-title").textContent = "Belief State";
+    $("left-panel-subtitle").textContent = "Static replay of the prior, prediction, likelihoods, and posterior for each Bayes-filter step.";
+    $("right-panel-title").textContent = "Office World";
+    $("right-panel-subtitle").textContent = "Static replay of the office map, belief overlay, and current sensor reading.";
+    $("search-toggle-grid").classList.add("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("uncertainty-toggle-grid").classList.remove("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
+    $("search-legend").classList.add("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.remove("hidden");
   } else if (isStrips()) {
     $("left-panel-title").textContent = "Planning State";
     $("left-panel-subtitle").textContent =
@@ -182,6 +201,7 @@ function renderPanelCopy() {
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.add("hidden");
     $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   } else if (isLogic()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the DPLL assignment tree.";
@@ -199,6 +219,7 @@ function renderPanelCopy() {
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.remove("hidden");
     $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   } else if (isLabyrinth()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the DFS tree built while exploring the labyrinth.";
@@ -213,6 +234,7 @@ function renderPanelCopy() {
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.add("hidden");
     $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   } else if (isGraphBfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the BFS tree built while exploring the graph.";
@@ -227,6 +249,7 @@ function renderPanelCopy() {
     $("graph-dfs-legend").classList.remove("hidden");
     $("logic-legend").classList.add("hidden");
     $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   } else if (isGraphDfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the DFS tree built while exploring the graph.";
@@ -241,6 +264,7 @@ function renderPanelCopy() {
     $("graph-dfs-legend").classList.remove("hidden");
     $("logic-legend").classList.add("hidden");
     $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   } else if (isGraphAStar()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the A* tree built while exploring the weighted graph.";
@@ -255,6 +279,7 @@ function renderPanelCopy() {
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.add("hidden");
     $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   } else if (isGraphGbfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the greedy best-first tree built while exploring the weighted graph.";
@@ -269,6 +294,7 @@ function renderPanelCopy() {
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.add("hidden");
     $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   } else if (isGraphUcs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the UCS tree built while exploring the weighted graph.";
@@ -283,6 +309,7 @@ function renderPanelCopy() {
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.add("hidden");
     $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   } else {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Static replay of the precomputed search tree.";
@@ -297,6 +324,7 @@ function renderPanelCopy() {
     $("graph-dfs-legend").classList.add("hidden");
     $("logic-legend").classList.add("hidden");
     $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   }
 }
 
@@ -337,6 +365,18 @@ function renderMetrics(data) {
     $("metric-3-value").textContent = String(data.stats?.backtracks || 0);
     $("metric-4-label").textContent = "Wipe-outs";
     $("metric-4-value").textContent = String(data.stats?.wipeouts || 0);
+    return;
+  }
+  if (isUncertainty()) {
+    const uncertainty = data.uncertainty || {};
+    $("metric-1-label").textContent = "Most likely room";
+    $("metric-1-value").textContent = uncertainty.most_likely_label || "none";
+    $("metric-2-label").textContent = "Confidence";
+    $("metric-2-value").textContent = `${Math.round((uncertainty.most_likely_probability || 0) * 100)}%`;
+    $("metric-3-label").textContent = "Entropy";
+    $("metric-3-value").textContent = formatNumber(data.stats?.entropy, 2);
+    $("metric-4-label").textContent = "Normaliser";
+    $("metric-4-value").textContent = formatNumber(data.stats?.normalisation_constant, 3);
     return;
   }
   if (isStrips()) {
@@ -1913,6 +1953,380 @@ function renderStripsWorld(data) {
   svg.appendChild(entities);
 }
 
+function uncertaintyRoomBoxes() {
+  return {
+    mail_room: { x: 90, y: 90, width: 220, height: 110 },
+    office_a: { x: 690, y: 90, width: 220, height: 110 },
+    corridor: { x: 390, y: 280, width: 220, height: 110 },
+    office_b: { x: 90, y: 500, width: 220, height: 110 },
+    lab: { x: 690, y: 500, width: 220, height: 110 },
+  };
+}
+
+function uncertaintyFeatureTokens(room) {
+  const tokens = [];
+  if (room.charger) tokens.push("charger");
+  if (room.window) tokens.push("window");
+  if (room.door_nearby) tokens.push("door");
+  if (room.marker && room.marker !== "none") tokens.push(`${room.marker} marker`);
+  return tokens.length ? tokens : ["no strong cue"];
+}
+
+function humaniseUncertaintyText(value) {
+  if (!value) return "none";
+  return String(value).replace(/^move_to_/, "move to ").replace(/_/g, " ");
+}
+
+function renderUncertaintyInternal(data) {
+  const panel = $("uncertainty-panel");
+  panel.innerHTML = "";
+  const uncertainty = data.uncertainty;
+  if (!uncertainty) return;
+
+  const shell = document.createElement("div");
+  shell.className = "uncertainty-shell";
+
+  const beliefSection = document.createElement("section");
+  beliefSection.className = "uncertainty-section";
+  const beliefHeading = document.createElement("h3");
+  beliefHeading.className = "uncertainty-section-title";
+  beliefHeading.textContent = "Current belief distribution";
+  beliefSection.appendChild(beliefHeading);
+  const beliefGrid = document.createElement("div");
+  beliefGrid.className = "uncertainty-belief-grid";
+  (uncertainty.belief_rows || []).forEach((row) => {
+    const card = document.createElement("div");
+    card.className = `uncertainty-belief-card${uncertainty.most_likely_location === row.location ? " active" : ""}`;
+    const heading = document.createElement("div");
+    heading.className = "uncertainty-belief-heading";
+    const label = document.createElement("strong");
+    label.textContent = row.label;
+    const probability = document.createElement("span");
+    probability.textContent = `${Math.round(row.posterior * 100)}%`;
+    heading.append(label, probability);
+    const bar = document.createElement("div");
+    bar.className = "uncertainty-belief-bar";
+    const fill = document.createElement("span");
+    fill.style.width = `${Math.max(6, row.posterior * 100)}%`;
+    bar.appendChild(fill);
+    const meta = document.createElement("div");
+    meta.className = "uncertainty-belief-meta";
+    meta.textContent = `prior ${row.prior.toFixed(2)}  posterior ${row.posterior.toFixed(2)}`;
+    card.append(heading, bar, meta);
+    beliefGrid.appendChild(card);
+  });
+  beliefSection.appendChild(beliefGrid);
+  shell.appendChild(beliefSection);
+
+  const updateSection = document.createElement("section");
+  updateSection.className = "uncertainty-section";
+  const updateHeading = document.createElement("h3");
+  updateHeading.className = "uncertainty-section-title";
+  updateHeading.textContent = "Bayes update trace";
+  updateSection.appendChild(updateHeading);
+  const table = document.createElement("div");
+  table.className = "uncertainty-update-table";
+  ["Room", "Prior", "Predicted", "Likelihood", "Posterior"].forEach((text) => {
+    const cell = document.createElement("span");
+    cell.className = "uncertainty-update-header";
+    cell.textContent = text;
+    table.appendChild(cell);
+  });
+  (uncertainty.belief_rows || []).forEach((row) => {
+    const label = document.createElement("span");
+    label.className = "uncertainty-update-label";
+    label.textContent = row.label;
+    table.appendChild(label);
+    [row.prior, row.predicted, row.likelihood, row.posterior].forEach((value) => {
+      const cell = document.createElement("span");
+      cell.className = "uncertainty-update-value";
+      cell.textContent = Number(value).toFixed(2);
+      table.appendChild(cell);
+    });
+  });
+  updateSection.appendChild(table);
+  const normaliser = document.createElement("p");
+  normaliser.className = "uncertainty-note";
+  normaliser.textContent = `Normalisation constant: ${Number(uncertainty.normalisation_constant || 0).toFixed(3)}`;
+  updateSection.appendChild(normaliser);
+  shell.appendChild(updateSection);
+
+  const transitionSection = document.createElement("section");
+  transitionSection.className = "uncertainty-section";
+  const transitionHeading = document.createElement("h3");
+  transitionHeading.className = "uncertainty-section-title";
+  transitionHeading.textContent = "Transition model";
+  transitionSection.appendChild(transitionHeading);
+  const transitionGrid = document.createElement("div");
+  transitionGrid.className = "uncertainty-transition-grid";
+  (uncertainty.transition_rows || []).forEach((row) => {
+    const card = document.createElement("div");
+    card.className = "uncertainty-transition-card";
+    const label = document.createElement("strong");
+    label.className = "uncertainty-transition-label";
+    label.textContent = row.label;
+    const entries = document.createElement("div");
+    entries.className = "uncertainty-transition-list";
+    row.entries.forEach((entry) => {
+      const line = document.createElement("span");
+      line.textContent = `${entry.label} ${Number(entry.probability).toFixed(2)}`;
+      entries.appendChild(line);
+    });
+    card.append(label, entries);
+    transitionGrid.appendChild(card);
+  });
+  transitionSection.appendChild(transitionGrid);
+  shell.appendChild(transitionSection);
+
+  const historySection = document.createElement("section");
+  historySection.className = "uncertainty-section";
+  const historyHeading = document.createElement("h3");
+  historyHeading.className = "uncertainty-section-title";
+  historyHeading.textContent = "Filtering history";
+  historySection.appendChild(historyHeading);
+  const historyList = document.createElement("div");
+  historyList.className = "uncertainty-history-list";
+  (uncertainty.history || []).forEach((entry) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `uncertainty-history-button${entry.step_index === uncertainty.step_index ? " current" : ""}`;
+    button.dataset.stepIndex = String(entry.step_index);
+    const label = document.createElement("strong");
+    label.textContent = `Step ${entry.step_index}`;
+    const meta = document.createElement("span");
+    meta.textContent =
+      `${humaniseUncertaintyText(entry.action)}  |  ${humaniseUncertaintyText(entry.observation)}  |  peak ${humaniseUncertaintyText(entry.most_likely_location)}`;
+    button.append(label, meta);
+    historyList.appendChild(button);
+  });
+  historySection.appendChild(historyList);
+  shell.appendChild(historySection);
+
+  panel.appendChild(shell);
+}
+
+function renderUncertaintyWorldPanel(data) {
+  const panel = $("uncertainty-world-panel");
+  panel.innerHTML = "";
+  const uncertainty = data.uncertainty;
+  if (!uncertainty) return;
+  const problem = state.trace?.initial_state?.uncertainty_problem || {};
+
+  const shell = document.createElement("div");
+  shell.className = "uncertainty-shell";
+
+  const currentSection = document.createElement("section");
+  currentSection.className = "uncertainty-section";
+  const currentHeading = document.createElement("h3");
+  currentHeading.className = "uncertainty-section-title";
+  currentHeading.textContent = "Current action and observation";
+  const summaryGrid = document.createElement("div");
+  summaryGrid.className = "uncertainty-world-summary";
+  [
+    {
+      label: "Action",
+      value: uncertainty.current_action ? humaniseUncertaintyText(uncertainty.current_action) : "none yet",
+    },
+    {
+      label: "Observation",
+      value: uncertainty.current_observation ? humaniseUncertaintyText(uncertainty.current_observation) : "none yet",
+    },
+    {
+      label: "True location",
+      value: state.view.showTrueLocation
+        ? humaniseUncertaintyText(uncertainty.current_true_location)
+        : "hidden",
+    },
+  ].forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "uncertainty-world-card";
+    const label = document.createElement("span");
+    label.className = "uncertainty-world-label";
+    label.textContent = item.label;
+    const value = document.createElement("strong");
+    value.textContent = item.value;
+    card.append(label, value);
+    summaryGrid.appendChild(card);
+  });
+  currentSection.append(currentHeading, summaryGrid);
+  shell.appendChild(currentSection);
+
+  const cuesSection = document.createElement("section");
+  cuesSection.className = "uncertainty-section";
+  const cuesHeading = document.createElement("h3");
+  cuesHeading.className = "uncertainty-section-title";
+  cuesHeading.textContent = "Room cues";
+  const cuesGrid = document.createElement("div");
+  cuesGrid.className = "uncertainty-cue-grid";
+  (uncertainty.rooms || []).forEach((room) => {
+    const card = document.createElement("div");
+    card.className = "uncertainty-cue-card";
+    const label = document.createElement("strong");
+    label.textContent = room.label;
+    const features = document.createElement("div");
+    features.className = "uncertainty-cue-list";
+    uncertaintyFeatureTokens(room).forEach((token) => {
+      const chip = document.createElement("span");
+      chip.className = "uncertainty-cue-chip";
+      chip.textContent = token;
+      features.appendChild(chip);
+    });
+    card.append(label, features);
+    cuesGrid.appendChild(card);
+  });
+  cuesSection.append(cuesHeading, cuesGrid);
+  shell.appendChild(cuesSection);
+
+  const scenarioSection = document.createElement("section");
+  scenarioSection.className = "uncertainty-section";
+  const scenarioHeading = document.createElement("h3");
+  scenarioHeading.className = "uncertainty-section-title";
+  scenarioHeading.textContent = "Scenario sequence";
+  const scenarioList = document.createElement("div");
+  scenarioList.className = "uncertainty-history-list";
+  (problem.scripted_steps || []).forEach((step, index) => {
+    const replayIndex = index + 1;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.stepIndex = String(replayIndex);
+    const stateClass =
+      replayIndex === uncertainty.step_index
+        ? " current"
+        : replayIndex < uncertainty.step_index
+        ? " completed"
+        : "";
+    button.className = `uncertainty-history-button${stateClass}`;
+    const label = document.createElement("strong");
+    label.textContent = `Step ${replayIndex}`;
+    const meta = document.createElement("span");
+    meta.textContent = `${humaniseUncertaintyText(step.action)}  |  ${humaniseUncertaintyText(step.observation)}`;
+    button.append(label, meta);
+    scenarioList.appendChild(button);
+  });
+  scenarioSection.append(scenarioHeading, scenarioList);
+  shell.appendChild(scenarioSection);
+
+  panel.appendChild(shell);
+}
+
+function renderUncertaintyWorld(data) {
+  const svg = $("problem-svg");
+  svg.innerHTML = "";
+  const uncertainty = data.uncertainty;
+  if (!uncertainty?.rooms?.length) return;
+
+  const roomBoxes = uncertaintyRoomBoxes();
+  const roomCentres = Object.fromEntries(
+    Object.entries(roomBoxes).map(([room, box]) => [
+      room,
+      { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+    ])
+  );
+  const connectors = svgNode("g");
+  const roomBases = svgNode("g");
+  const overlays = svgNode("g");
+  const roomLabels = svgNode("g");
+  const entities = svgNode("g");
+
+  (uncertainty.connections || []).forEach(([left, right]) => {
+    const from = roomCentres[left];
+    const to = roomCentres[right];
+    connectors.appendChild(
+      svgNode("line", {
+        class: "uncertainty-connector",
+        x1: from.x,
+        y1: from.y,
+        x2: to.x,
+        y2: to.y,
+      })
+    );
+  });
+
+  (uncertainty.rooms || []).forEach((room) => {
+    const box = roomBoxes[room.id];
+    const probability = Number(uncertainty.posterior_belief?.[room.id] || 0);
+    roomBases.appendChild(
+      svgNode("rect", {
+        class: `uncertainty-room${uncertainty.most_likely_location === room.id ? " active" : ""}`,
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        rx: 22,
+      })
+    );
+    overlays.appendChild(
+      svgNode("rect", {
+        class: "uncertainty-room-overlay",
+        x: box.x + 6,
+        y: box.y + 6,
+        width: box.width - 12,
+        height: box.height - 12,
+        rx: 18,
+        style: `opacity: ${0.08 + probability * 0.72};`,
+      })
+    );
+    roomLabels.appendChild(
+      svgNode(
+        "text",
+        {
+          class: "uncertainty-room-label",
+          x: box.x + box.width / 2,
+          y: box.y + 38,
+        },
+        room.label
+      )
+    );
+    roomLabels.appendChild(
+      svgNode(
+        "text",
+        {
+          class: "uncertainty-room-probability",
+          x: box.x + box.width / 2,
+          y: box.y + 64,
+        },
+        `${Math.round(probability * 100)}% belief`
+      )
+    );
+    const features = uncertaintyFeatureTokens(room);
+    features.slice(0, 2).forEach((token, index) => {
+      roomLabels.appendChild(
+        svgNode(
+          "text",
+          {
+            class: "uncertainty-room-feature",
+            x: box.x + box.width / 2,
+            y: box.y + 86 + index * 18,
+          },
+          token
+        )
+      );
+    });
+    roomLabels.appendChild(
+      svgNode("rect", {
+        class: "uncertainty-room-bar",
+        x: box.x + 20,
+        y: box.y + box.height - 18,
+        width: (box.width - 40) * probability,
+        height: 8,
+        rx: 4,
+      })
+    );
+  });
+
+  if (state.view.showTrueLocation && uncertainty.current_true_location) {
+    const centre = roomCentres[uncertainty.current_true_location];
+    const group = svgNode("g", {
+      transform: `translate(${centre.x}, ${centre.y - 6})`,
+    });
+    group.appendChild(svgNode("circle", { class: "uncertainty-robot", r: 24 }));
+    group.appendChild(svgNode("text", { class: "uncertainty-robot-label" }, "R"));
+    entities.appendChild(group);
+  }
+
+  svg.append(connectors, roomBases, overlays, roomLabels, entities);
+}
+
 function render() {
   const data = currentData();
   const step = currentStep();
@@ -1927,15 +2341,20 @@ function render() {
   $("step-range").max = String(max);
   $("step-range").value = String(state.stepIndex);
   $("message-banner").classList.add("hidden");
-  $("search-tree-svg").classList.toggle("hidden", isStrips() || isCspFamily() || isFoundationModels());
+  $("search-tree-svg").classList.toggle("hidden", isStrips() || isUncertainty() || isCspFamily() || isFoundationModels());
   $("csp-panel").classList.toggle("hidden", !isCspFamily());
   $("planning-panel").classList.toggle("hidden", !isStrips());
+  $("uncertainty-panel").classList.toggle("hidden", !isUncertainty());
   $("planning-world-panel").classList.toggle("hidden", !isStrips());
+  $("uncertainty-world-panel").classList.toggle("hidden", !isUncertainty());
   $("foundation-panel").classList.toggle("hidden", !isFoundationModels());
   if (isCsp()) {
     renderCspPanel(data);
   } else if (isDeliveryCsp()) {
     renderDeliveryCspPanel(data);
+  } else if (isUncertainty()) {
+    renderUncertaintyInternal(data);
+    renderUncertaintyWorldPanel(data);
   } else if (isStrips()) {
     renderPlanningInternal(data);
     renderPlanningWorldPanel(data);
@@ -1959,6 +2378,8 @@ function render() {
     renderCspMap(data);
   } else if (isDeliveryCsp()) {
     renderDeliverySchedule(data);
+  } else if (isUncertainty()) {
+    renderUncertaintyWorld(data);
   } else if (isStrips()) {
     renderStripsWorld(data);
   } else if (isLabyrinth()) {
@@ -2035,6 +2456,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     render();
   });
 
+  $("show-true-location").addEventListener("change", (event) => {
+    state.view.showTrueLocation = event.target.checked;
+    render();
+  });
+
   $("show-csp-domains").addEventListener("change", (event) => {
     state.view.showCspDomains = event.target.checked;
     render();
@@ -2071,6 +2497,24 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (actionSignature) {
       state.view.planningSelectedAction = actionSignature;
     }
+    render();
+  });
+  $("uncertainty-panel").addEventListener("click", (event) => {
+    const target = event.target.closest("button");
+    if (!target) return;
+    const { stepIndex } = target.dataset;
+    if (!stepIndex) return;
+    stopPlay();
+    state.stepIndex = Math.max(0, Math.min(Number(stepIndex), state.trace.steps.length));
+    render();
+  });
+  $("uncertainty-world-panel").addEventListener("click", (event) => {
+    const target = event.target.closest("button");
+    if (!target) return;
+    const { stepIndex } = target.dataset;
+    if (!stepIndex) return;
+    stopPlay();
+    state.stepIndex = Math.max(0, Math.min(Number(stepIndex), state.trace.steps.length));
     render();
   });
 

@@ -1,6 +1,6 @@
 # artificial-intelligence
 
-Phase 1 reference implementation of the `ai9414` educational AI platform, now with twelve concrete demos:
+Phase 1 reference implementation of the `ai9414` educational AI platform, now with thirteen concrete demos:
 
 - labyrinth DFS search
 - spatial graph DFS search
@@ -10,6 +10,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - spatial graph uniform-cost search
 - spatial graph branch-and-bound search
 - propositional logic DPLL
+- reasoning with uncertainty belief-state explorer
 - foundation models tokenisation explorer
 - CSP map colouring
 - CSP delivery time-slot assignment
@@ -33,6 +34,8 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
   Start with `python examples/graph_branch_and_bound_demo.py`
 - `propositional logic DPLL`
   Start with `python examples/logic_dpll_demo.py`
+- `reasoning with uncertainty belief-state explorer`
+  Start with `python examples/uncertainty_demo.py`
 - `foundation models tokenisation explorer`
   Start with `python examples/foundation_models_demo.py`
 - `CSP map colouring`
@@ -54,6 +57,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - precomputed trace replay for a generated spatial graph uniform-cost demo
 - precomputed trace replay for a generated spatial graph branch-and-bound demo
 - precomputed trace replay for a visual DPLL propositional logic demo
+- precomputed trace replay for a visual belief-state explorer demo
 - precomputed trace replay for a visual foundation models tokenisation demo
 - precomputed trace replay for a visual CSP map-colouring demo
 - precomputed trace replay for a visual CSP delivery scheduling demo
@@ -118,6 +122,12 @@ To start the DPLL logic example:
 
 ```bash
 python examples/logic_dpll_demo.py
+```
+
+To start the reasoning-with-uncertainty example:
+
+```bash
+python examples/uncertainty_demo.py
 ```
 
 To start the foundation models tokenisation example:
@@ -241,6 +251,33 @@ from ai9414.logic import DpllDemo
 
 app = DpllDemo()
 app.load_example("unit_chain")
+app.show()
+```
+
+Reasoning with uncertainty example:
+
+```python
+from ai9414.uncertainty import BeliefStateExplorer
+
+app = BeliefStateExplorer()
+app.load_example("office_localisation_basic")
+app.show()
+```
+
+Set a custom initial belief:
+
+```python
+from ai9414.uncertainty import BeliefStateExplorer
+
+app = BeliefStateExplorer()
+app.load_example("office_localisation_basic")
+app.set_belief({
+    "mail_room": 0.1,
+    "office_a": 0.4,
+    "corridor": 0.2,
+    "office_b": 0.2,
+    "lab": 0.1,
+})
 app.show()
 ```
 

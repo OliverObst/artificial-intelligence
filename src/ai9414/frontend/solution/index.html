@@ -31,6 +31,7 @@
           <svg id="search-tree-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Search tree"></svg>
           <div id="csp-panel" class="csp-panel hidden" role="img" aria-label="Constraint satisfaction state"></div>
           <div id="planning-panel" class="planning-panel hidden" role="img" aria-label="Planning state"></div>
+          <div id="uncertainty-panel" class="uncertainty-panel hidden" role="img" aria-label="Belief-state view"></div>
           <div id="foundation-panel" class="foundation-panel hidden" role="img" aria-label="Tokenisation state"></div>
         </section>
 
@@ -43,6 +44,7 @@
           </div>
           <svg id="problem-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Problem view"></svg>
           <div id="planning-world-panel" class="planning-world-panel hidden" role="img" aria-label="Planning world details"></div>
+          <div id="uncertainty-world-panel" class="uncertainty-world-panel hidden" role="img" aria-label="Belief-state world details"></div>
           <div id="logic-problem-panel" class="logic-panel hidden" role="img" aria-label="Clause view"></div>
           <div id="foundation-text-panel" class="foundation-panel hidden" role="img" aria-label="Tokenised text view"></div>
         </section>
@@ -116,6 +118,12 @@
               <span>Show planner trace</span>
             </label>
           </div>
+          <div id="uncertainty-toggle-grid" class="toggle-grid hidden">
+            <label class="toggle-row" for="show-true-location">
+              <input id="show-true-location" type="checkbox" />
+              <span>Show true location</span>
+            </label>
+          </div>
           <label id="csp-view-control" class="control-block hidden" for="csp-view-select">
             <span>Lower-left view</span>
             <select id="csp-view-select">
@@ -162,6 +170,12 @@
             <div class="legend-item"><span class="legend-swatch legend-best"></span>Reduced domain</div>
             <div class="legend-item"><span class="legend-swatch legend-dead-end"></span>Domain wipe-out</div>
             <div class="legend-item"><span class="legend-swatch legend-final"></span>Assigned value</div>
+          </div>
+          <div id="uncertainty-legend" class="legend-grid hidden">
+            <div class="legend-item"><span class="legend-swatch legend-current"></span>Most likely room</div>
+            <div class="legend-item"><span class="legend-swatch legend-best"></span>Belief mass</div>
+            <div class="legend-item"><span class="legend-swatch legend-final"></span>True location</div>
+            <div class="legend-item"><span class="legend-swatch legend-pruned"></span>Noisy cue</div>
           </div>
         </aside>
       </main>

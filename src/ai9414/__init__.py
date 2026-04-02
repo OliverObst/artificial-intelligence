@@ -1,6 +1,7 @@
 """Shared ai9414 namespace for educational AI apps."""
 
 from ai9414.core import BaseEducationalApp, launch_app
+from ai9414.uncertainty import BeliefStateExplorer
 from ai9414.csp import CSPDemo
 from ai9414.demo import PlaceholderDemo
 from ai9414.delivery_csp import DeliveryCSPDemo
@@ -17,6 +18,7 @@ from ai9414.strips import StripsDemo
 
 __all__ = [
     "BaseEducationalApp",
+    "BeliefStateExplorer",
     "CSPDemo",
     "DpllDemo",
     "DeliveryCSPDemo",

@@ -1332,6 +1332,236 @@ input[type="number"] {
   dominant-baseline: middle;
 }
 
+.uncertainty-panel,
+.uncertainty-world-panel {
+  min-height: 360px;
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(239, 231, 216, 0.46)),
+    linear-gradient(140deg, rgba(13, 110, 110, 0.06), rgba(159, 85, 39, 0.08));
+  border: 1px solid rgba(111, 123, 131, 0.14);
+  overflow: auto;
+}
+
+.uncertainty-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.uncertainty-section {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.uncertainty-section-title {
+  margin: 0 0 12px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.uncertainty-copy,
+.uncertainty-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.uncertainty-belief-grid,
+.uncertainty-transition-grid,
+.uncertainty-world-summary,
+.uncertainty-cue-grid,
+.uncertainty-history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.uncertainty-belief-card,
+.uncertainty-transition-card,
+.uncertainty-world-card,
+.uncertainty-cue-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(243, 239, 230, 0.9);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.uncertainty-belief-card.active {
+  background: rgba(13, 110, 110, 0.12);
+  border-color: rgba(13, 110, 110, 0.22);
+}
+
+.uncertainty-belief-heading,
+.uncertainty-world-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.uncertainty-belief-heading strong {
+  color: var(--ink);
+}
+
+.uncertainty-belief-bar {
+  height: 10px;
+  margin: 10px 0 8px;
+  border-radius: 999px;
+  background: rgba(111, 123, 131, 0.14);
+  overflow: hidden;
+}
+
+.uncertainty-belief-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(13, 110, 110, 0.78), rgba(180, 83, 9, 0.72));
+}
+
+.uncertainty-room-bar {
+  fill: rgba(180, 83, 9, 0.82);
+}
+
+.uncertainty-belief-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.uncertainty-update-table {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.2fr) repeat(4, minmax(72px, 1fr));
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.uncertainty-update-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.uncertainty-update-label {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.uncertainty-update-value {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  color: var(--ink);
+}
+
+.uncertainty-transition-label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.uncertainty-transition-list,
+.uncertainty-cue-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.uncertainty-transition-list span,
+.uncertainty-cue-chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+  font-size: 0.78rem;
+  color: var(--ink);
+}
+
+.uncertainty-history-button {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(111, 123, 131, 0.16);
+  background: rgba(243, 239, 230, 0.92);
+  color: var(--ink);
+}
+
+.uncertainty-history-button span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.uncertainty-history-button.current {
+  border-color: rgba(13, 110, 110, 0.22);
+  background: rgba(13, 110, 110, 0.12);
+}
+
+.uncertainty-history-button.completed {
+  opacity: 0.92;
+}
+
+.uncertainty-room {
+  fill: rgba(255, 252, 246, 0.92);
+  stroke: rgba(95, 107, 115, 0.34);
+  stroke-width: 3;
+}
+
+.uncertainty-room.active {
+  stroke: rgba(13, 110, 110, 0.88);
+  stroke-width: 4;
+}
+
+.uncertainty-room-overlay {
+  fill: rgba(13, 110, 110, 0.8);
+}
+
+.uncertainty-room-label,
+.uncertainty-room-probability,
+.uncertainty-room-feature {
+  fill: var(--ink);
+  text-anchor: middle;
+}
+
+.uncertainty-room-label {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.uncertainty-room-probability {
+  font-size: 15px;
+  fill: var(--muted);
+}
+
+.uncertainty-room-feature {
+  font-size: 13px;
+  fill: var(--muted);
+}
+
+.uncertainty-connector {
+  stroke: rgba(95, 107, 115, 0.42);
+  stroke-width: 8;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.uncertainty-robot {
+  fill: rgba(124, 63, 0, 0.92);
+}
+
+.uncertainty-robot-label {
+  fill: white;
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
 .csp-panel {
   min-height: 360px;
   margin-top: 16px;
