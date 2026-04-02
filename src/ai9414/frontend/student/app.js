@@ -1872,6 +1872,7 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 const appType = () => state.manifest?.app_type;
 const isStrips = () => appType() === "strips";
 const isLogic = () => appType() === "logic";
+const isFoundationModels = () => appType() === "foundation_models";
 const isCsp = () => appType() === "csp";
 const isDeliveryCsp = () => appType() === "delivery_csp";
 const isCspFamily = () => isCsp() || isDeliveryCsp();
@@ -2118,8 +2119,24 @@ function populateSizeOptions() {
   });
 }
 
+function populateFoundationCorpora() {
+  const select = $("foundation-corpus-select");
+  const corpora = state.session?.data?.foundation_models?.available_corpora || [];
+  select.innerHTML = "";
+  corpora.forEach((corpus) => {
+    const option = document.createElement("option");
+    option.value = corpus.value;
+    option.textContent = corpus.label;
+    if (corpus.value === state.session?.data?.foundation_models?.selected_corpus) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  });
+}
+
 function syncControls() {
   populateSizeOptions();
+  populateFoundationCorpora();
   $("speed-select").value = String(state.view.playbackSpeed);
   $("show-explored").checked = state.view.showExploredEdges;
   $("show-pruned").checked = state.view.showPrunedBranches;
@@ -2135,6 +2152,13 @@ function syncControls() {
     $("logic-unit-propagation").checked = options.unit_propagation !== false;
     $("logic-pure-literals").checked = options.pure_literals === true;
     $("logic-order-select").value = options.variable_order || "alphabetical";
+  }
+  if (isFoundationModels()) {
+    const options = state.session?.data?.options || {};
+    $("foundation-mode-select").value = options.tokeniser_mode || "bpe";
+    $("foundation-corpus-select").value = options.corpus || "office_messages";
+    $("foundation-merges-select").value = String(options.num_merges ?? 12);
+    $("foundation-context-select").value = String(options.context_window ?? 64);
   }
   if (isCspFamily()) {
     const options = state.session?.data?.options || {};
@@ -4733,6 +4757,46 @@ function buildLogicTraceFromBackend(problem, result) {
   };
 }
 
+function blankFoundationTrace(data = {}) {
+  return {
+    app_type: "foundation_models",
+    initial_state: {
+      example_title: data.example_title || "Foundation Models Demo - Tokenisation Explorer",
+      example_subtitle: data.example_subtitle || "Tokenisation replay is ready.",
+      algorithm_label: data.algorithm_label || "Foundation Models Demo - Tokenisation Explorer",
+      algorithm_note:
+        data.algorithm_note ||
+        "Tokenisation replay is ready. Load an example or step through learned BPE merges.",
+      foundation_models: data.foundation_models || {
+        mode: "bpe",
+        status: "ready",
+        text: "",
+        overlay_segments: [],
+        tokens: [],
+        stats: {
+          character_count: 0,
+          token_count: 0,
+          average_token_length: 0,
+          context_window: 64,
+          context_used: 0,
+          context_remaining: 64,
+          context_usage: "0 / 64",
+        },
+        comparison: [],
+        bpe: {
+          merge_step: 0,
+          requested_merges: 0,
+          learned_merges: [],
+          pair_counts: [],
+          segmented_corpus: [],
+        },
+      },
+    },
+    steps: [],
+    summary: { step_count: 0, result: "ready" },
+  };
+}
+
 function activeTraceContext() {
   const blankTrace = isCsp()
     ? blankCspTrace(state.session.data.csp_problem, state.session.data)
@@ -4754,6 +4818,8 @@ function activeTraceContext() {
         title: state.session.data.example_title || "Visual DPLL",
         subtitle: state.session.data.example_subtitle || "",
       })
+    : isFoundationModels()
+    ? blankFoundationTrace(state.session.data)
     : isLabyrinth()
     ? blankLabyrinthTrace(state.session.data.labyrinth)
     : isWeightedSearch()
@@ -4776,7 +4842,7 @@ function activeTraceContext() {
     return { trace: blankTrace, snapshots: blankSnapshots };
   }
 
-  if ((state.serverTrace.steps || []).length > 0) {
+  if (state.serverTrace) {
     return { trace: state.serverTrace, snapshots: state.serverSnapshots };
   }
   return { trace: blankTrace, snapshots: blankSnapshots };
@@ -4811,6 +4877,9 @@ function maxStepCount() {
 }
 
 function statusLabel(data, step) {
+  if (isFoundationModels()) {
+    return data.foundation_models?.status || "ready";
+  }
   if (isCspFamily()) {
     return data.search?.status || "ready";
   }
@@ -4832,7 +4901,14 @@ function statusLabel(data, step) {
 }
 
 function renderPanelCopy(data) {
-  if (isCsp()) {
+  if (isFoundationModels()) {
+    $("left-panel-title").textContent = "Tokenisation State";
+    $("left-panel-subtitle").textContent =
+      "Token lists, token counts, comparisons, and the BPE learning trace stay aligned with the visible text on the right.";
+    $("right-panel-title").textContent = "Text View";
+    $("right-panel-subtitle").textContent =
+      "Edit or load a text, then inspect the same string with token boundaries drawn directly onto the visible input.";
+  } else if (isCsp()) {
     $("left-panel-title").textContent = "CSP State";
     $("left-panel-subtitle").textContent =
       "Variables, domains, and the decision trace stay aligned with the map colouring on the right.";
@@ -4900,6 +4976,18 @@ function renderPanelCopy(data) {
 }
 
 function renderMetrics(data) {
+  if (isFoundationModels()) {
+    const stats = data.foundation_models?.stats || {};
+    $("metric-1-label").textContent = "Characters";
+    $("metric-1-value").textContent = String(stats.character_count || 0);
+    $("metric-2-label").textContent = "Tokens";
+    $("metric-2-value").textContent = String(stats.token_count || 0);
+    $("metric-3-label").textContent = "Avg token length";
+    $("metric-3-value").textContent = String(stats.average_token_length ?? 0);
+    $("metric-4-label").textContent = "Context usage";
+    $("metric-4-value").textContent = stats.context_usage || "0 / 64";
+    return;
+  }
   if (isCsp()) {
     const assigned = Object.keys(data.csp?.assignments || {}).length;
     const total = data.csp?.variables?.length || 0;
@@ -6355,6 +6443,250 @@ function renderPlanningWorldPanel(data) {
   panel.appendChild(shell);
 }
 
+function renderFoundationInternal(data) {
+  const panel = $("foundation-panel");
+  panel.innerHTML = "";
+  const foundation = data.foundation_models;
+  if (!foundation) return;
+
+  const shell = document.createElement("div");
+  shell.className = "foundation-shell";
+
+  const tokensSection = document.createElement("section");
+  tokensSection.className = "foundation-section";
+  const tokensHeading = document.createElement("h3");
+  tokensHeading.className = "foundation-section-title";
+  tokensHeading.textContent = "Token sequence";
+  tokensSection.appendChild(tokensHeading);
+  const tokenList = document.createElement("div");
+  tokenList.className = "foundation-token-list";
+  (foundation.tokens || []).forEach((token) => {
+    const card = document.createElement("div");
+    card.className = "foundation-token-card";
+    const meta = document.createElement("span");
+    meta.className = "foundation-token-meta";
+    meta.textContent = `token ${token.index}  |  id ${token.token_id}`;
+    const text = document.createElement("span");
+    text.className = "foundation-token-text";
+    text.textContent = token.text;
+    card.append(meta, text);
+    tokenList.appendChild(card);
+  });
+  if (!(foundation.tokens || []).length) {
+    const empty = document.createElement("div");
+    empty.className = "foundation-empty";
+    empty.textContent = "No tokens are available for the current text.";
+    tokenList.appendChild(empty);
+  }
+  tokensSection.appendChild(tokenList);
+  shell.appendChild(tokensSection);
+
+  const comparisonSection = document.createElement("section");
+  comparisonSection.className = "foundation-section";
+  const comparisonHeading = document.createElement("h3");
+  comparisonHeading.className = "foundation-section-title";
+  comparisonHeading.textContent = "Comparison";
+  comparisonSection.appendChild(comparisonHeading);
+  const comparisonGrid = document.createElement("div");
+  comparisonGrid.className = "foundation-comparison-grid";
+  (foundation.comparison || []).forEach((entry) => {
+    const card = document.createElement("div");
+    card.className = `foundation-comparison-card${entry.active ? " active" : ""}`;
+    const label = document.createElement("span");
+    label.className = "foundation-comparison-label";
+    label.textContent = entry.label;
+    const count = document.createElement("strong");
+    count.textContent = `${entry.token_count} tokens`;
+    const stats = document.createElement("div");
+    stats.className = "foundation-comparison-subtext";
+    stats.textContent = `avg ${entry.average_token_length} chars  |  context ${entry.context_usage}`;
+    card.append(label, count, stats);
+    comparisonGrid.appendChild(card);
+  });
+  comparisonSection.appendChild(comparisonGrid);
+  shell.appendChild(comparisonSection);
+
+  const bpeSection = document.createElement("section");
+  bpeSection.className = "foundation-section";
+  const bpeHeading = document.createElement("h3");
+  bpeHeading.className = "foundation-section-title";
+  bpeHeading.textContent = "BPE learning trace";
+  bpeSection.appendChild(bpeHeading);
+
+  const bpeGrid = document.createElement("div");
+  bpeGrid.className = "foundation-bpe-grid";
+
+  const summaryCard = document.createElement("div");
+  summaryCard.className = "foundation-bpe-card";
+  const summaryLabel = document.createElement("span");
+  summaryLabel.className = "foundation-bpe-label";
+  summaryLabel.textContent = "Current merge step";
+  const summaryValue = document.createElement("strong");
+  summaryValue.textContent = `${foundation.bpe?.merge_step || 0} / ${foundation.bpe?.requested_merges || 0}`;
+  summaryCard.append(summaryLabel, summaryValue);
+  if (foundation.mode !== "bpe") {
+    const copy = document.createElement("div");
+    copy.className = "foundation-bpe-copy";
+    copy.textContent = "Switch to learned BPE to step through one merge per replay step.";
+    summaryCard.appendChild(copy);
+  } else if (foundation.bpe?.selected_pair) {
+    const merge = document.createElement("div");
+    merge.className = "foundation-bpe-merge";
+    merge.textContent = `${foundation.bpe.selected_pair.left} + ${foundation.bpe.selected_pair.right} -> ${foundation.bpe.selected_pair.merged}`;
+    const copy = document.createElement("div");
+    copy.className = "foundation-bpe-copy";
+    copy.textContent = `Selected because it appears ${foundation.bpe.selected_pair.count} time(s) in the current corpus segmentation.`;
+    summaryCard.append(merge, copy);
+  } else {
+    const copy = document.createElement("div");
+    copy.className = "foundation-bpe-copy";
+    copy.textContent = "The corpus is still at character level. Step forward to start merging frequent pairs.";
+    summaryCard.appendChild(copy);
+  }
+  bpeGrid.appendChild(summaryCard);
+
+  const pairsCard = document.createElement("div");
+  pairsCard.className = "foundation-bpe-card";
+  const pairsLabel = document.createElement("span");
+  pairsLabel.className = "foundation-bpe-label";
+  pairsLabel.textContent = "Most frequent pairs";
+  pairsCard.appendChild(pairsLabel);
+  const pairList = document.createElement("div");
+  pairList.className = "foundation-pair-list";
+  (foundation.bpe?.pair_counts || []).forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "foundation-pair-row";
+    const pair = document.createElement("span");
+    pair.className = "foundation-pair-text";
+    pair.textContent = entry.pair;
+    const count = document.createElement("span");
+    count.className = "foundation-pair-count";
+    count.textContent = `${entry.count}`;
+    row.append(pair, count);
+    pairList.appendChild(row);
+  });
+  if (!(foundation.bpe?.pair_counts || []).length) {
+    const empty = document.createElement("div");
+    empty.className = "foundation-empty";
+    empty.textContent = "No adjacent pairs remain to merge.";
+    pairList.appendChild(empty);
+  }
+  pairsCard.appendChild(pairList);
+  bpeGrid.appendChild(pairsCard);
+
+  const corpusCard = document.createElement("div");
+  corpusCard.className = "foundation-bpe-card";
+  const corpusLabel = document.createElement("span");
+  corpusLabel.className = "foundation-bpe-label";
+  corpusLabel.textContent = "Segmented corpus";
+  corpusCard.appendChild(corpusLabel);
+  const corpusList = document.createElement("div");
+  corpusList.className = "foundation-corpus-list";
+  (foundation.bpe?.segmented_corpus || []).forEach((line) => {
+    const row = document.createElement("div");
+    row.className = "foundation-corpus-row";
+    row.textContent = line;
+    corpusList.appendChild(row);
+  });
+  corpusCard.appendChild(corpusList);
+  bpeGrid.appendChild(corpusCard);
+
+  const mergesCard = document.createElement("div");
+  mergesCard.className = "foundation-bpe-card";
+  const mergesLabel = document.createElement("span");
+  mergesLabel.className = "foundation-bpe-label";
+  mergesLabel.textContent = "Learned merges";
+  mergesCard.appendChild(mergesLabel);
+  const mergeList = document.createElement("div");
+  mergeList.className = "foundation-merge-list";
+  (foundation.bpe?.learned_merges || []).forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "foundation-merge-row";
+    row.textContent = entry;
+    mergeList.appendChild(row);
+  });
+  if (!(foundation.bpe?.learned_merges || []).length) {
+    const empty = document.createElement("div");
+    empty.className = "foundation-empty";
+    empty.textContent = "No merges have been learned yet.";
+    mergeList.appendChild(empty);
+  }
+  mergesCard.appendChild(mergeList);
+  bpeGrid.appendChild(mergesCard);
+
+  bpeSection.appendChild(bpeGrid);
+  shell.appendChild(bpeSection);
+
+  panel.appendChild(shell);
+}
+
+function renderFoundationTextPanel(data) {
+  const panel = $("foundation-text-panel");
+  panel.innerHTML = "";
+  const foundation = data.foundation_models;
+  if (!foundation) return;
+
+  const shell = document.createElement("div");
+  shell.className = "foundation-shell";
+
+  const inputSection = document.createElement("section");
+  inputSection.className = "foundation-section";
+  const inputHeading = document.createElement("h3");
+  inputHeading.className = "foundation-section-title";
+  inputHeading.textContent = foundation.custom_text_active ? "Custom text" : "Current text";
+  const inputCopy = document.createElement("p");
+  inputCopy.className = "foundation-copy";
+  inputCopy.textContent =
+    foundation.mode === "bpe"
+      ? "The replay stepper follows the learned BPE merge process for the selected corpus. Edit the text and apply it to compare how the same merges behave on a new input."
+      : "Edit the text and apply it to compare how different tokenisers segment the same visible string.";
+  const textarea = document.createElement("textarea");
+  textarea.id = "foundation-textarea";
+  textarea.className = "foundation-textarea";
+  textarea.value = foundation.text || "";
+  textarea.spellcheck = false;
+  const actions = document.createElement("div");
+  actions.className = "foundation-text-actions";
+  const applyButton = document.createElement("button");
+  applyButton.type = "button";
+  applyButton.dataset.foundationAction = "apply-text";
+  applyButton.textContent = "Apply text";
+  const resetButton = document.createElement("button");
+  resetButton.type = "button";
+  resetButton.className = "secondary-button";
+  resetButton.dataset.foundationAction = "reset-text";
+  resetButton.textContent = "Reset to example";
+  actions.append(applyButton, resetButton);
+  inputSection.append(inputHeading, inputCopy, textarea, actions);
+  shell.appendChild(inputSection);
+
+  const overlaySection = document.createElement("section");
+  overlaySection.className = "foundation-section";
+  const overlayHeading = document.createElement("h3");
+  overlayHeading.className = "foundation-section-title";
+  overlayHeading.textContent = "Token boundary overlay";
+  overlaySection.appendChild(overlayHeading);
+  const stream = document.createElement("div");
+  stream.className = "foundation-token-stream";
+  (foundation.overlay_segments || []).forEach((segment) => {
+    if (segment.kind === "whitespace") {
+      const space = document.createElement("span");
+      space.className = "foundation-space";
+      space.textContent = segment.text;
+      stream.appendChild(space);
+      return;
+    }
+    const chip = document.createElement("span");
+    chip.className = `foundation-token-chip${foundation.mode === "bpe" ? " active" : ""}`;
+    chip.textContent = segment.text;
+    stream.appendChild(chip);
+  });
+  overlaySection.appendChild(stream);
+  shell.appendChild(overlaySection);
+
+  panel.appendChild(shell);
+}
+
 function renderStripsWorld(data) {
   const svg = $("problem-svg");
   svg.innerHTML = "";
@@ -6482,13 +6814,17 @@ function renderStripsWorld(data) {
 
 function renderControls() {
   const livePythonApp = isLivePythonApp();
-  const generatedProblemApp = livePythonApp && !isLogic() && !isStrips() && !isCspFamily();
+  const generatedProblemApp = livePythonApp && !isLogic() && !isStrips() && !isCspFamily() && !isFoundationModels();
   $("example-control-label").textContent = generatedProblemApp ? "Configuration" : "Example";
   $("size-control-label").textContent = isLabyrinth() ? "Labyrinth size" : "Graph size";
   $("generate-button").textContent = isLabyrinth() ? "Generate new labyrinth" : "Generate new graph";
   $("mode-control").classList.toggle("hidden", !livePythonApp);
   $("logic-mode-control").classList.toggle("hidden", !isLogic());
   $("logic-order-control").classList.toggle("hidden", !isLogic());
+  $("foundation-mode-control").classList.toggle("hidden", !isFoundationModels());
+  $("foundation-corpus-control").classList.toggle("hidden", !isFoundationModels());
+  $("foundation-merges-control").classList.toggle("hidden", !isFoundationModels());
+  $("foundation-context-control").classList.toggle("hidden", !isFoundationModels());
   $("csp-algorithm-control").classList.toggle("hidden", !isCspFamily());
   $("csp-variable-order-control").classList.toggle("hidden", !isCspFamily());
   $("csp-value-order-control").classList.toggle("hidden", !isCspFamily());
@@ -6548,10 +6884,11 @@ function render() {
     banner.classList.add("hidden");
   }
 
-  $("search-tree-svg").classList.toggle("hidden", isStrips() || isCspFamily());
+  $("search-tree-svg").classList.toggle("hidden", isStrips() || isCspFamily() || isFoundationModels());
   $("csp-panel").classList.toggle("hidden", !isCspFamily());
   $("planning-panel").classList.toggle("hidden", !isStrips());
   $("planning-world-panel").classList.toggle("hidden", !isStrips());
+  $("foundation-panel").classList.toggle("hidden", !isFoundationModels());
   if (isCsp()) {
     renderCspPanel(data);
   } else if (isDeliveryCsp()) {
@@ -6559,17 +6896,22 @@ function render() {
   } else if (isStrips()) {
     renderPlanningInternal(data);
     renderPlanningWorldPanel(data);
+  } else if (isFoundationModels()) {
+    renderFoundationInternal(data);
   } else {
     renderTree(data);
   }
-  $("problem-svg").classList.toggle("hidden", isLogic());
+  $("problem-svg").classList.toggle("hidden", isLogic() || isFoundationModels());
   $("problem-svg").classList.toggle("delivery-world-canvas", isDeliveryCsp());
   if (!isDeliveryCsp()) {
     $("problem-svg").setAttribute("viewBox", "0 0 1000 700");
   }
   $("logic-problem-panel").classList.toggle("hidden", !isLogic());
+  $("foundation-text-panel").classList.toggle("hidden", !isFoundationModels());
   if (isLogic()) {
     renderLogicProblem(data);
+  } else if (isFoundationModels()) {
+    renderFoundationTextPanel(data);
   } else if (isCsp()) {
     renderCspMap(data);
   } else if (isDeliveryCsp()) {
@@ -6939,6 +7281,40 @@ async function updateCspOptions(patch) {
   await refreshFromServer(response);
 }
 
+async function updateFoundationOptions(patch) {
+  stopPlay();
+  setMessage("");
+  const response = await postAction("set_option", patch);
+  const trace = await requestJson("/api/trace");
+  response.trace = trace;
+  await refreshFromServer(response);
+}
+
+async function applyFoundationText() {
+  const textarea = $("foundation-textarea");
+  if (!textarea) return;
+  stopPlay();
+  setMessage("");
+  const response = await postAction("app_command", {
+    command: "set_text",
+    text: textarea.value,
+  });
+  const trace = await requestJson("/api/trace");
+  response.trace = trace;
+  await refreshFromServer(response);
+}
+
+async function resetFoundationText() {
+  stopPlay();
+  setMessage("");
+  const response = await postAction("app_command", {
+    command: "reset_text",
+  });
+  const trace = await requestJson("/api/trace");
+  response.trace = trace;
+  await refreshFromServer(response);
+}
+
 function bindEvents() {
   $("previous-button").addEventListener("click", () => {
     stopPlay();
@@ -7019,6 +7395,18 @@ function bindEvents() {
   $("logic-order-select").addEventListener("change", async (event) => {
     await updateLogicOptions({ variable_order: event.target.value });
   });
+  $("foundation-mode-select").addEventListener("change", async (event) => {
+    await updateFoundationOptions({ tokeniser_mode: event.target.value });
+  });
+  $("foundation-corpus-select").addEventListener("change", async (event) => {
+    await updateFoundationOptions({ corpus: event.target.value });
+  });
+  $("foundation-merges-select").addEventListener("change", async (event) => {
+    await updateFoundationOptions({ num_merges: Number(event.target.value) });
+  });
+  $("foundation-context-select").addEventListener("change", async (event) => {
+    await updateFoundationOptions({ context_window: Number(event.target.value) });
+  });
   $("csp-algorithm-select").addEventListener("change", async (event) => {
     await updateCspOptions({ algorithm: event.target.value });
   });
@@ -7096,6 +7484,23 @@ function bindEvents() {
       state.view.planningSelectedAction = actionSignature;
     }
     render();
+  });
+  $("foundation-text-panel").addEventListener("click", async (event) => {
+    const target = event.target.closest("button");
+    if (!target) return;
+    const action = target.dataset.foundationAction;
+    if (action === "apply-text") {
+      await applyFoundationText();
+    } else if (action === "reset-text") {
+      await resetFoundationText();
+    }
+  });
+  $("foundation-text-panel").addEventListener("keydown", async (event) => {
+    if (event.target.id !== "foundation-textarea") return;
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      await applyFoundationText();
+    }
   });
   $("csp-panel").addEventListener("click", (event) => {
     const target = event.target.closest("button");

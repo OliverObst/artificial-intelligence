@@ -19,6 +19,7 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 const appType = () => state.trace?.app_type;
 const isStrips = () => appType() === "strips";
 const isLogic = () => appType() === "logic";
+const isFoundationModels = () => appType() === "foundation_models";
 const isCsp = () => appType() === "csp";
 const isDeliveryCsp = () => appType() === "delivery_csp";
 const isCspFamily = () => isCsp() || isDeliveryCsp();
@@ -121,7 +122,23 @@ function currentStep() {
 }
 
 function renderPanelCopy() {
-  if (isCsp()) {
+  if (isFoundationModels()) {
+    $("left-panel-title").textContent = "Tokenisation State";
+    $("left-panel-subtitle").textContent =
+      "Static replay of the token sequence, token counts, comparisons, and BPE merge learning state.";
+    $("right-panel-title").textContent = "Text View";
+    $("right-panel-subtitle").textContent =
+      "Static replay of the visible text with token boundaries drawn directly onto the input.";
+    $("search-toggle-grid").classList.add("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
+    $("search-legend").classList.add("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
+  } else if (isCsp()) {
     $("left-panel-title").textContent = "CSP State";
     $("left-panel-subtitle").textContent = "Static replay of the variables, domains, and decision trace.";
     $("right-panel-title").textContent = "Map View";
@@ -284,6 +301,18 @@ function renderPanelCopy() {
 }
 
 function renderMetrics(data) {
+  if (isFoundationModels()) {
+    const stats = data.foundation_models?.stats || {};
+    $("metric-1-label").textContent = "Characters";
+    $("metric-1-value").textContent = String(stats.character_count || 0);
+    $("metric-2-label").textContent = "Tokens";
+    $("metric-2-value").textContent = String(stats.token_count || 0);
+    $("metric-3-label").textContent = "Avg token length";
+    $("metric-3-value").textContent = String(stats.average_token_length ?? 0);
+    $("metric-4-label").textContent = "Context usage";
+    $("metric-4-value").textContent = stats.context_usage || "0 / 64";
+    return;
+  }
   if (isCsp()) {
     const assigned = Object.keys(data.csp?.assignments || {}).length;
     const total = data.csp?.variables?.length || 0;
@@ -1563,6 +1592,202 @@ function renderPlanningWorldPanel(data) {
   panel.appendChild(shell);
 }
 
+function renderFoundationInternal(data) {
+  const panel = $("foundation-panel");
+  panel.innerHTML = "";
+  const foundation = data.foundation_models;
+  if (!foundation) return;
+
+  const shell = document.createElement("div");
+  shell.className = "foundation-shell";
+
+  const tokensSection = document.createElement("section");
+  tokensSection.className = "foundation-section";
+  const tokensHeading = document.createElement("h3");
+  tokensHeading.className = "foundation-section-title";
+  tokensHeading.textContent = "Token sequence";
+  tokensSection.appendChild(tokensHeading);
+  const tokenList = document.createElement("div");
+  tokenList.className = "foundation-token-list";
+  (foundation.tokens || []).forEach((token) => {
+    const card = document.createElement("div");
+    card.className = "foundation-token-card";
+    const meta = document.createElement("span");
+    meta.className = "foundation-token-meta";
+    meta.textContent = `token ${token.index}  |  id ${token.token_id}`;
+    const text = document.createElement("span");
+    text.className = "foundation-token-text";
+    text.textContent = token.text;
+    card.append(meta, text);
+    tokenList.appendChild(card);
+  });
+  tokensSection.appendChild(tokenList);
+  shell.appendChild(tokensSection);
+
+  const comparisonSection = document.createElement("section");
+  comparisonSection.className = "foundation-section";
+  const comparisonHeading = document.createElement("h3");
+  comparisonHeading.className = "foundation-section-title";
+  comparisonHeading.textContent = "Comparison";
+  comparisonSection.appendChild(comparisonHeading);
+  const comparisonGrid = document.createElement("div");
+  comparisonGrid.className = "foundation-comparison-grid";
+  (foundation.comparison || []).forEach((entry) => {
+    const card = document.createElement("div");
+    card.className = `foundation-comparison-card${entry.active ? " active" : ""}`;
+    const label = document.createElement("span");
+    label.className = "foundation-comparison-label";
+    label.textContent = entry.label;
+    const count = document.createElement("strong");
+    count.textContent = `${entry.token_count} tokens`;
+    const stats = document.createElement("div");
+    stats.className = "foundation-comparison-subtext";
+    stats.textContent = `avg ${entry.average_token_length} chars  |  context ${entry.context_usage}`;
+    card.append(label, count, stats);
+    comparisonGrid.appendChild(card);
+  });
+  comparisonSection.appendChild(comparisonGrid);
+  shell.appendChild(comparisonSection);
+
+  const bpeSection = document.createElement("section");
+  bpeSection.className = "foundation-section";
+  const bpeHeading = document.createElement("h3");
+  bpeHeading.className = "foundation-section-title";
+  bpeHeading.textContent = "BPE learning trace";
+  bpeSection.appendChild(bpeHeading);
+  const bpeGrid = document.createElement("div");
+  bpeGrid.className = "foundation-bpe-grid";
+
+  const summaryCard = document.createElement("div");
+  summaryCard.className = "foundation-bpe-card";
+  const summaryLabel = document.createElement("span");
+  summaryLabel.className = "foundation-bpe-label";
+  summaryLabel.textContent = "Current merge step";
+  const summaryValue = document.createElement("strong");
+  summaryValue.textContent = `${foundation.bpe?.merge_step || 0} / ${foundation.bpe?.requested_merges || 0}`;
+  summaryCard.append(summaryLabel, summaryValue);
+  if (foundation.bpe?.selected_pair) {
+    const merge = document.createElement("div");
+    merge.className = "foundation-bpe-merge";
+    merge.textContent = `${foundation.bpe.selected_pair.left} + ${foundation.bpe.selected_pair.right} -> ${foundation.bpe.selected_pair.merged}`;
+    summaryCard.appendChild(merge);
+  }
+  bpeGrid.appendChild(summaryCard);
+
+  const pairsCard = document.createElement("div");
+  pairsCard.className = "foundation-bpe-card";
+  const pairsLabel = document.createElement("span");
+  pairsLabel.className = "foundation-bpe-label";
+  pairsLabel.textContent = "Most frequent pairs";
+  pairsCard.appendChild(pairsLabel);
+  const pairList = document.createElement("div");
+  pairList.className = "foundation-pair-list";
+  (foundation.bpe?.pair_counts || []).forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "foundation-pair-row";
+    const pair = document.createElement("span");
+    pair.className = "foundation-pair-text";
+    pair.textContent = entry.pair;
+    const count = document.createElement("span");
+    count.className = "foundation-pair-count";
+    count.textContent = `${entry.count}`;
+    row.append(pair, count);
+    pairList.appendChild(row);
+  });
+  pairsCard.appendChild(pairList);
+  bpeGrid.appendChild(pairsCard);
+
+  const corpusCard = document.createElement("div");
+  corpusCard.className = "foundation-bpe-card";
+  const corpusLabel = document.createElement("span");
+  corpusLabel.className = "foundation-bpe-label";
+  corpusLabel.textContent = "Segmented corpus";
+  corpusCard.appendChild(corpusLabel);
+  const corpusList = document.createElement("div");
+  corpusList.className = "foundation-corpus-list";
+  (foundation.bpe?.segmented_corpus || []).forEach((line) => {
+    const row = document.createElement("div");
+    row.className = "foundation-corpus-row";
+    row.textContent = line;
+    corpusList.appendChild(row);
+  });
+  corpusCard.appendChild(corpusList);
+  bpeGrid.appendChild(corpusCard);
+
+  const mergesCard = document.createElement("div");
+  mergesCard.className = "foundation-bpe-card";
+  const mergesLabel = document.createElement("span");
+  mergesLabel.className = "foundation-bpe-label";
+  mergesLabel.textContent = "Learned merges";
+  mergesCard.appendChild(mergesLabel);
+  const mergeList = document.createElement("div");
+  mergeList.className = "foundation-merge-list";
+  (foundation.bpe?.learned_merges || []).forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "foundation-merge-row";
+    row.textContent = entry;
+    mergeList.appendChild(row);
+  });
+  mergesCard.appendChild(mergeList);
+  bpeGrid.appendChild(mergesCard);
+
+  bpeSection.appendChild(bpeGrid);
+  shell.appendChild(bpeSection);
+
+  panel.appendChild(shell);
+}
+
+function renderFoundationTextPanel(data) {
+  const panel = $("foundation-text-panel");
+  panel.innerHTML = "";
+  const foundation = data.foundation_models;
+  if (!foundation) return;
+
+  const shell = document.createElement("div");
+  shell.className = "foundation-shell";
+
+  const inputSection = document.createElement("section");
+  inputSection.className = "foundation-section";
+  const inputHeading = document.createElement("h3");
+  inputHeading.className = "foundation-section-title";
+  inputHeading.textContent = "Current text";
+  const inputCopy = document.createElement("p");
+  inputCopy.className = "foundation-copy";
+  inputCopy.textContent =
+    "This exported replay keeps the original text fixed while the merge steps and token boundaries change around it.";
+  const textBlock = document.createElement("div");
+  textBlock.className = "foundation-corpus-row";
+  textBlock.textContent = foundation.text || "";
+  inputSection.append(inputHeading, inputCopy, textBlock);
+  shell.appendChild(inputSection);
+
+  const overlaySection = document.createElement("section");
+  overlaySection.className = "foundation-section";
+  const overlayHeading = document.createElement("h3");
+  overlayHeading.className = "foundation-section-title";
+  overlayHeading.textContent = "Token boundary overlay";
+  overlaySection.appendChild(overlayHeading);
+  const stream = document.createElement("div");
+  stream.className = "foundation-token-stream";
+  (foundation.overlay_segments || []).forEach((segment) => {
+    if (segment.kind === "whitespace") {
+      const space = document.createElement("span");
+      space.className = "foundation-space";
+      space.textContent = segment.text;
+      stream.appendChild(space);
+      return;
+    }
+    const chip = document.createElement("span");
+    chip.className = `foundation-token-chip${foundation.mode === "bpe" ? " active" : ""}`;
+    chip.textContent = segment.text;
+    stream.appendChild(chip);
+  });
+  overlaySection.appendChild(stream);
+  shell.appendChild(overlaySection);
+
+  panel.appendChild(shell);
+}
+
 function renderStripsWorld(data) {
   const svg = $("problem-svg");
   svg.innerHTML = "";
@@ -1702,10 +1927,11 @@ function render() {
   $("step-range").max = String(max);
   $("step-range").value = String(state.stepIndex);
   $("message-banner").classList.add("hidden");
-  $("search-tree-svg").classList.toggle("hidden", isStrips() || isCspFamily());
+  $("search-tree-svg").classList.toggle("hidden", isStrips() || isCspFamily() || isFoundationModels());
   $("csp-panel").classList.toggle("hidden", !isCspFamily());
   $("planning-panel").classList.toggle("hidden", !isStrips());
   $("planning-world-panel").classList.toggle("hidden", !isStrips());
+  $("foundation-panel").classList.toggle("hidden", !isFoundationModels());
   if (isCsp()) {
     renderCspPanel(data);
   } else if (isDeliveryCsp()) {
@@ -1713,17 +1939,22 @@ function render() {
   } else if (isStrips()) {
     renderPlanningInternal(data);
     renderPlanningWorldPanel(data);
+  } else if (isFoundationModels()) {
+    renderFoundationInternal(data);
   } else {
     renderTree(data);
   }
-  $("problem-svg").classList.toggle("hidden", isLogic());
+  $("problem-svg").classList.toggle("hidden", isLogic() || isFoundationModels());
   $("problem-svg").classList.toggle("delivery-world-canvas", isDeliveryCsp());
   if (!isDeliveryCsp()) {
     $("problem-svg").setAttribute("viewBox", "0 0 1000 700");
   }
   $("logic-problem-panel").classList.toggle("hidden", !isLogic());
+  $("foundation-text-panel").classList.toggle("hidden", !isFoundationModels());
   if (isLogic()) {
     renderLogicProblem(data);
+  } else if (isFoundationModels()) {
+    renderFoundationTextPanel(data);
   } else if (isCsp()) {
     renderCspMap(data);
   } else if (isDeliveryCsp()) {

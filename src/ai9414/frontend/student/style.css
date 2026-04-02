@@ -932,6 +932,196 @@ input[type="number"] {
   gap: 8px;
 }
 
+.foundation-panel {
+  min-height: 360px;
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(239, 231, 216, 0.42)),
+    linear-gradient(140deg, rgba(13, 110, 110, 0.05), rgba(159, 85, 39, 0.08));
+  border: 1px solid rgba(111, 123, 131, 0.14);
+  overflow: auto;
+}
+
+.foundation-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.foundation-section {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.foundation-section-title {
+  margin: 0 0 12px;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 1.05rem;
+}
+
+.foundation-copy,
+.foundation-empty {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.foundation-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(111, 123, 131, 0.18);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.foundation-text-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.foundation-token-stream {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 0;
+  line-height: 1.85;
+}
+
+.foundation-token-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(13, 110, 110, 0.1);
+  border: 1px solid rgba(13, 110, 110, 0.18);
+  color: var(--ink);
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.foundation-token-chip.active {
+  background: rgba(180, 83, 9, 0.12);
+  border-color: rgba(180, 83, 9, 0.24);
+}
+
+.foundation-space {
+  white-space: pre-wrap;
+}
+
+.foundation-token-list,
+.foundation-comparison-grid,
+.foundation-bpe-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.foundation-token-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.foundation-comparison-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.foundation-bpe-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.foundation-token-card,
+.foundation-comparison-card,
+.foundation-bpe-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(243, 239, 230, 0.9);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.foundation-comparison-card.active {
+  border-color: rgba(13, 110, 110, 0.26);
+  background: rgba(13, 110, 110, 0.08);
+}
+
+.foundation-token-meta,
+.foundation-comparison-label,
+.foundation-bpe-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.foundation-token-text {
+  display: block;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.foundation-token-subtext,
+.foundation-comparison-subtext,
+.foundation-bpe-copy {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.foundation-bpe-merge {
+  margin-top: 8px;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.foundation-pair-list,
+.foundation-corpus-list,
+.foundation-merge-list {
+  display: grid;
+  gap: 8px;
+}
+
+.foundation-pair-row,
+.foundation-corpus-row,
+.foundation-merge-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(111, 123, 131, 0.12);
+}
+
+.foundation-pair-text,
+.foundation-merge-row {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+}
+
+.foundation-pair-count {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.foundation-corpus-row {
+  display: block;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .planning-action-button,
 .planning-plan-button {
   width: 100%;
@@ -1585,7 +1775,10 @@ input[type="number"] {
   .toggle-grid,
   .legend-grid,
   .logic-summary-grid,
-  .planning-world-summary {
+  .planning-world-summary,
+  .foundation-token-list,
+  .foundation-comparison-grid,
+  .foundation-bpe-grid {
     grid-template-columns: 1fr;
   }
 

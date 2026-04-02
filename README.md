@@ -1,6 +1,6 @@
 # artificial-intelligence
 
-Phase 1 reference implementation of the `ai9414` educational AI platform, now with eleven concrete demos:
+Phase 1 reference implementation of the `ai9414` educational AI platform, now with twelve concrete demos:
 
 - labyrinth DFS search
 - spatial graph DFS search
@@ -10,6 +10,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - spatial graph uniform-cost search
 - spatial graph branch-and-bound search
 - propositional logic DPLL
+- foundation models tokenisation explorer
 - CSP map colouring
 - CSP delivery time-slot assignment
 - STRIPS planning
@@ -32,6 +33,8 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
   Start with `python examples/graph_branch_and_bound_demo.py`
 - `propositional logic DPLL`
   Start with `python examples/logic_dpll_demo.py`
+- `foundation models tokenisation explorer`
+  Start with `python examples/foundation_models_demo.py`
 - `CSP map colouring`
   Start with `python examples/csp_demo.py`
 - `CSP delivery time-slot assignment`
@@ -51,6 +54,7 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - precomputed trace replay for a generated spatial graph uniform-cost demo
 - precomputed trace replay for a generated spatial graph branch-and-bound demo
 - precomputed trace replay for a visual DPLL propositional logic demo
+- precomputed trace replay for a visual foundation models tokenisation demo
 - precomputed trace replay for a visual CSP map-colouring demo
 - precomputed trace replay for a visual CSP delivery scheduling demo
 - precomputed trace replay for a visual STRIPS planning demo
@@ -114,6 +118,12 @@ To start the DPLL logic example:
 
 ```bash
 python examples/logic_dpll_demo.py
+```
+
+To start the foundation models tokenisation example:
+
+```bash
+python examples/foundation_models_demo.py
 ```
 
 To start the CSP map-colouring example:
@@ -231,6 +241,28 @@ from ai9414.logic import DpllDemo
 
 app = DpllDemo()
 app.load_example("unit_chain")
+app.show()
+```
+
+Foundation models tokenisation example:
+
+```python
+from ai9414.foundation_models import TokenisationExplorer
+
+app = TokenisationExplorer()
+app.load_example("simple_sentence")
+app.show()
+```
+
+Custom tokenisation text:
+
+```python
+from ai9414.foundation_models import TokenisationExplorer
+
+app = TokenisationExplorer()
+app.load_corpus("office_messages")
+app.learn_merges(12)
+app.set_text("Deliver parcel to Office A before 10:30.")
 app.show()
 ```
 

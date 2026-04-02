@@ -1,6 +1,6 @@
 # ai9414 Architecture Overview
 
-This repository contains the Phase 1 reference infrastructure for the `ai9414` platform together with concrete search, CSP, logic, and planning demo modules.
+This repository contains the Phase 1 reference infrastructure for the `ai9414` platform together with concrete search, CSP, logic, planning, and foundation-models demo modules.
 
 ## Included in Phase 1
 
@@ -13,6 +13,7 @@ This repository contains the Phase 1 reference infrastructure for the `ai9414` p
 - `ai9414.search.SearchDemo` with deterministic weighted geometric graph examples
 - `ai9414.labyrinth.LabyrinthDemo` with built-in labyrinth playback examples and live-Python handoff
 - `ai9414.logic.DpllDemo` with built-in SAT and entailment playback examples plus live-Python DPLL handoff
+- `ai9414.foundation_models.TokenisationExplorer` with curated text scenarios, token comparisons, and toy BPE merge replay
 - Depth-first branch-and-bound trace generation in Python
 - Synchronised two-panel replay UI for the search tree and geometric graph
 
@@ -91,3 +92,5 @@ src/ai9414/logic/
 The labyrinth package follows the same shape, but swaps the weighted-graph world for a grid maze, plain DFS reachability, built-in playback examples, and a live-Python `/solve` workflow.
 
 The logic package follows the same overall contract, but its right-hand panel renders CNF clauses and literal states while the left-hand tree shows DPLL partial assignments, forced literals, contradictions, and backtracking.
+
+The foundation-models package keeps the same shell while swapping both visual panes to text-oriented views: the right-hand panel shows editable text with token-boundary overlays, and the left-hand panel shows token lists, token statistics, comparison summaries, and the replayable BPE merge-learning state.

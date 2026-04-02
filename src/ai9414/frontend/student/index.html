@@ -32,6 +32,7 @@
           <svg id="search-tree-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Search tree"></svg>
           <div id="csp-panel" class="csp-panel hidden" role="img" aria-label="Constraint satisfaction state"></div>
           <div id="planning-panel" class="planning-panel hidden" role="img" aria-label="Planning state"></div>
+          <div id="foundation-panel" class="foundation-panel hidden" role="img" aria-label="Tokenisation state"></div>
         </section>
 
         <section class="panel visual-panel">
@@ -44,6 +45,7 @@
           <svg id="problem-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Problem view"></svg>
           <div id="planning-world-panel" class="planning-world-panel hidden" role="img" aria-label="Planning world details"></div>
           <div id="logic-problem-panel" class="logic-panel hidden" role="img" aria-label="Clause view"></div>
+          <div id="foundation-text-panel" class="foundation-panel hidden" role="img" aria-label="Tokenised text view"></div>
         </section>
 
         <section class="panel explanation-panel">
@@ -98,6 +100,42 @@
           <label class="control-block" for="example-select">
             <span id="example-control-label">Example</span>
             <select id="example-select"></select>
+          </label>
+
+          <label id="foundation-mode-control" class="control-block hidden" for="foundation-mode-select">
+            <span>Tokeniser</span>
+            <select id="foundation-mode-select">
+              <option value="character">character</option>
+              <option value="word">word</option>
+              <option value="bpe">learned BPE</option>
+            </select>
+          </label>
+
+          <label id="foundation-corpus-control" class="control-block hidden" for="foundation-corpus-select">
+            <span>Learning corpus</span>
+            <select id="foundation-corpus-select"></select>
+          </label>
+
+          <label id="foundation-merges-control" class="control-block hidden" for="foundation-merges-select">
+            <span>BPE merges</span>
+            <select id="foundation-merges-select">
+              <option value="0">0</option>
+              <option value="4">4</option>
+              <option value="8">8</option>
+              <option value="12">12</option>
+              <option value="16">16</option>
+              <option value="20">20</option>
+            </select>
+          </label>
+
+          <label id="foundation-context-control" class="control-block hidden" for="foundation-context-select">
+            <span>Context window</span>
+            <select id="foundation-context-select">
+              <option value="32">32</option>
+              <option value="64">64</option>
+              <option value="128">128</option>
+              <option value="256">256</option>
+            </select>
           </label>
 
           <label id="logic-mode-control" class="control-block hidden" for="logic-mode-select">
