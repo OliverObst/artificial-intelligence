@@ -1,6 +1,8 @@
-# artificial-intelligence
+# AI9414
 
 `ai9414` is a Python teaching toolkit for interactive artificial intelligence demos. It opens small browser-based visualisations for search, logic, uncertainty, constraint satisfaction, planning, and tokenisation, with simple installed commands that are easy to use in class.
+
+![AI9414 branch-and-bound demo screenshot](https://raw.githubusercontent.com/OliverObst/artificial-intelligence/main/docs/images/bnb-demo.png)
 
 It currently includes thirteen ready-to-run demos:
 
