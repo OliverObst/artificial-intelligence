@@ -19,31 +19,31 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 ## Available demos
 
 - `labyrinth DFS search`
-  Start with `python examples/labyrinth_demo.py`
+  Start with `ai9414 demo labyrinth`
 - `spatial graph DFS search`
-  Start with `python examples/graph_dfs_demo.py`
+  Start with `ai9414 demo graph-dfs`
 - `spatial graph BFS search`
-  Start with `python examples/graph_bfs_demo.py`
+  Start with `ai9414 demo graph-bfs`
 - `spatial graph greedy best-first search`
-  Start with `python examples/graph_gbfs_demo.py`
+  Start with `ai9414 demo graph-gbfs`
 - `spatial graph A* search`
-  Start with `python examples/graph_astar_demo.py`
+  Start with `ai9414 demo graph-astar`
 - `spatial graph uniform-cost search`
-  Start with `python examples/graph_ucs_demo.py`
+  Start with `ai9414 demo graph-ucs`
 - `spatial graph branch-and-bound search`
-  Start with `python examples/graph_branch_and_bound_demo.py`
+  Start with `ai9414 demo graph-bnb`
 - `propositional logic DPLL`
-  Start with `python examples/logic_dpll_demo.py`
+  Start with `ai9414 demo logic-dpll`
 - `reasoning with uncertainty belief-state explorer`
-  Start with `python examples/uncertainty_demo.py`
+  Start with `ai9414 demo uncertainty`
 - `foundation models tokenisation explorer`
-  Start with `python examples/foundation_models_demo.py`
+  Start with `ai9414 demo foundation-models`
 - `CSP map colouring`
-  Start with `python examples/csp_demo.py`
+  Start with `ai9414 demo csp-map`
 - `CSP delivery time-slot assignment`
-  Start with `python examples/delivery_csp_demo.py`
+  Start with `ai9414 demo csp-delivery`
 - `STRIPS planning`
-  Start with `python examples/strips_demo.py`
+  Start with `ai9414 demo strips`
 
 ## What is included
 
@@ -71,84 +71,110 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .[dev]
-pytest
-python examples/graph_branch_and_bound_demo.py
+pip install .
+ai9414 list
+ai9414 demo graph-bnb
 ```
 
-To start the labyrinth example:
+If your environment does not put console scripts on `PATH`, the module entry point works too:
+
+```bash
+python -m ai9414 demo graph-bnb
+```
+
+To see the curated example names for a demo:
+
+```bash
+ai9414 list --examples graph-dfs
+```
+
+## Development workflow
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+pytest
+ai9414 demo graph-bnb
+```
+
+## Repository example scripts
+
+The scripts under `examples/` are still useful for local development, documentation, and teaching materials, but they are no longer the primary installed interface.
+
+To start the labyrinth example directly from a repository checkout:
 
 ```bash
 python examples/labyrinth_demo.py
 ```
 
-To start the spatial graph DFS example:
+To start the spatial graph DFS example directly from a repository checkout:
 
 ```bash
 python examples/graph_dfs_demo.py
 ```
 
-To start the spatial graph BFS example:
+To start the spatial graph BFS example directly from a repository checkout:
 
 ```bash
 python examples/graph_bfs_demo.py
 ```
 
-To start the spatial graph greedy best-first example:
+To start the spatial graph greedy best-first example directly from a repository checkout:
 
 ```bash
 python examples/graph_gbfs_demo.py
 ```
 
-To start the spatial graph A* example:
+To start the spatial graph A* example directly from a repository checkout:
 
 ```bash
 python examples/graph_astar_demo.py
 ```
 
-To start the spatial graph uniform-cost example:
+To start the spatial graph uniform-cost example directly from a repository checkout:
 
 ```bash
 python examples/graph_ucs_demo.py
 ```
 
-To start the spatial graph branch-and-bound example:
+To start the spatial graph branch-and-bound example directly from a repository checkout:
 
 ```bash
 python examples/graph_branch_and_bound_demo.py
 ```
 
-To start the DPLL logic example:
+To start the DPLL logic example directly from a repository checkout:
 
 ```bash
 python examples/logic_dpll_demo.py
 ```
 
-To start the reasoning-with-uncertainty example:
+To start the reasoning-with-uncertainty example directly from a repository checkout:
 
 ```bash
 python examples/uncertainty_demo.py
 ```
 
-To start the foundation models tokenisation example:
+To start the foundation models tokenisation example directly from a repository checkout:
 
 ```bash
 python examples/foundation_models_demo.py
 ```
 
-To start the CSP map-colouring example:
+To start the CSP map-colouring example directly from a repository checkout:
 
 ```bash
 python examples/csp_demo.py
 ```
 
-To start the CSP delivery scheduling example:
+To start the CSP delivery scheduling example directly from a repository checkout:
 
 ```bash
 python examples/delivery_csp_demo.py
 ```
 
-To start the STRIPS planning example:
+To start the STRIPS planning example directly from a repository checkout:
 
 ```bash
 python examples/strips_demo.py

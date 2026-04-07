@@ -18,6 +18,9 @@ dependencies = [
   "uvicorn>=0.35,<1.0"
 ]
 
+[project.scripts]
+ai9414 = "ai9414.cli:main"
+
 [project.optional-dependencies]
 dev = [
   "httpx>=0.28,<1.0",
