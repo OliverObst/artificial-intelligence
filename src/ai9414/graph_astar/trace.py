@@ -54,7 +54,7 @@ def _layout_tree(nodes: list[dict[str, Any]]) -> dict[str, tuple[float, float]]:
 def build_blank_graph_astar_bundle(graph: WeightedGraph) -> TraceBundle:
     initial_state = solve_graph_astar(graph).initial_state
     initial_state["example_title"] = "Generated graph"
-    initial_state["example_subtitle"] = "Generate a graph, then switch to live Python mode to solve it with your own backend."
+    initial_state["example_subtitle"] = "Generate a graph, then use Solve with Python to run A* on the same graph."
     return TraceBundle(
         app_type="graph_astar",
         trace_id="graph-astar-empty",

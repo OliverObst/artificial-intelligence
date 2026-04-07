@@ -120,10 +120,10 @@ def build_examples() -> dict[str, UncertaintyExample]:
         UncertaintyExample(
             name="office_localisation_basic",
             title="Office localisation baseline",
-            subtitle="Start from a uniform belief, then see one action spread the belief and one observation sharpen it.",
+            subtitle="Starts from a uniform belief, then combines motion and observation updates.",
             problem=UncertaintyProblem(
                 title="Office localisation baseline",
-                subtitle="The same office layout as the planning demo, now with noisy motion and sensing.",
+                subtitle="An office layout with noisy motion and sensing.",
                 rooms=ROOMS,
                 connections=list(CANONICAL_CONNECTIONS),
                 initial_belief=_uniform_belief(),
@@ -157,10 +157,10 @@ def build_examples() -> dict[str, UncertaintyExample]:
         UncertaintyExample(
             name="office_localisation_motion_noise",
             title="Motion-noise spotlight",
-            subtitle="The action intention is clear, but the robot often stays put, so the prediction step remains spread out.",
+            subtitle="Higher motion noise keeps the prediction step spread across several rooms.",
             problem=UncertaintyProblem(
                 title="Motion-noise spotlight",
-                subtitle="Compare this with the baseline example to see how extra motion noise weakens localisation.",
+                subtitle="Extra motion noise weakens localisation even when the intended action is clear.",
                 rooms=ROOMS,
                 connections=list(CANONICAL_CONNECTIONS),
                 initial_belief={
@@ -243,10 +243,10 @@ def build_examples() -> dict[str, UncertaintyExample]:
         UncertaintyExample(
             name="office_localisation_repeated_evidence",
             title="Repeated evidence sharpens belief",
-            subtitle="Several moderate observations can localise the robot even when no single update is decisive on its own.",
+            subtitle="Several moderate observations can localise the robot even when no single update is decisive.",
             problem=UncertaintyProblem(
                 title="Repeated evidence sharpens belief",
-                subtitle="Watch the posterior tighten over several Bayes-filter steps rather than after a single dramatic observation.",
+                subtitle="The posterior narrows over several Bayes-filter steps rather than all at once.",
                 rooms=ROOMS,
                 connections=list(CANONICAL_CONNECTIONS),
                 initial_belief=_uniform_belief(),

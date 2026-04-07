@@ -151,8 +151,8 @@ class LabyrinthDemo(BaseEducationalApp):
                 self.labyrinth,
                 title="Generated labyrinth",
                 subtitle=(
-                    "A generated maze solved with the built-in DFS playback. "
-                    "Switch to live Python mode to compare it with your own solver."
+                    "A generated maze for DFS search. "
+                    "Use Solve with Python to run your own solver on the same maze."
                 ),
             )
         return build_labyrinth_trace(self.example)

@@ -84,8 +84,7 @@ def _build_snapshot(
         "example_subtitle": problem.subtitle,
         "algorithm_label": "Foundation Models Demo - Tokenisation Explorer",
         "algorithm_note": (
-            "Character and word tokenisers are static. Switch to learned BPE to step through merge learning "
-            "and watch the representation change."
+            "Character and word tokenisers are static. Learned BPE adds merge steps that change the token boundaries."
         ),
         "foundation_models": {
             "mode": problem.tokeniser_mode,

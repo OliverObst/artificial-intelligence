@@ -17,11 +17,11 @@ def build_examples() -> dict[str, LogicExample]:
             problem=LogicProblem(
                 mode="sat",
                 title="Simple branching",
-                subtitle="Watch DPLL branch once, then finish after the forced consequences.",
+                subtitle="DPLL branches once, then finishes through forced assignments.",
                 clauses=[["A", "B"], ["~A", "C"], ["~B", "C"]],
                 original_input=["(A or B)", "(not A or C)", "(not B or C)"],
             ),
-            metadata={"teaching_note": "This is a gentle first example because the clause list stays small."},
+            metadata={"teaching_note": "The compact clause list makes the branching pattern easy to follow."},
         ),
         LogicExample(
             name="tiny_contradiction",
@@ -54,7 +54,7 @@ def build_examples() -> dict[str, LogicExample]:
             problem=LogicProblem(
                 mode="sat",
                 title="Unsatisfiable after branching",
-                subtitle="This example makes the backtracking structure very clear.",
+                subtitle="Both branches fail, so the full backtracking pattern is visible.",
                 clauses=[["A", "B"], ["~A", "B"], ["A", "~B"], ["~A", "~B"]],
                 original_input=["(A or B)", "(not A or B)", "(A or not B)", "(not A or not B)"],
             ),
@@ -108,7 +108,7 @@ def _build_entailment_chain_example() -> LogicExample:
     return LogicExample(
         name="entailment_chain",
         title="Entailment chain",
-        subtitle="DPLL checks whether KB and not query become unsatisfiable.",
+        subtitle="Entailment is tested by checking whether KB and not query are unsatisfiable.",
         problem=LogicProblem(
             mode="entailment",
             title="Entailment chain",
@@ -119,5 +119,5 @@ def _build_entailment_chain_example() -> LogicExample:
             entailment_target="KB and not C",
             original_input=formulas + [f"query: {query}"],
         ),
-        metadata={"teaching_note": "Unsatisfiability of KB and not query is the visual bridge to entailment."},
+        metadata={"teaching_note": "Entailment holds when KB and not query become unsatisfiable together."},
     )

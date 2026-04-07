@@ -10,22 +10,22 @@ def build_examples() -> dict[str, LabyrinthExample]:
     small = LabyrinthExample(
         name="small",
         title="Small configuration",
-        subtitle="A compact generated maze configuration for quick DFS playback.",
+        subtitle="A compact maze with a short DFS route and clear branch choices.",
         labyrinth=generate_labyrinth(size="small", seed=13),
-        metadata={"difficulty": "small", "teaching_note": "Watch where DFS commits too early."},
+        metadata={"difficulty": "small", "teaching_note": "DFS commits to one branch until it reaches a dead end or the exit."},
     )
     medium = LabyrinthExample(
         name="medium",
         title="Medium configuration",
-        subtitle="A medium generated maze configuration chosen to show visible backtracking.",
+        subtitle="A medium maze with visible backtracking through several side branches.",
         labyrinth=generate_labyrinth(size="medium", seed=10),
-        metadata={"difficulty": "medium", "teaching_note": "Notice how the maze view and tree view diverge."},
+        metadata={"difficulty": "medium", "teaching_note": "Backtracking shortens the route in the maze while the tree keeps the full search history."},
     )
     large = LabyrinthExample(
         name="large",
         title="Large configuration",
-        subtitle="A larger generated maze configuration with a longer DFS trace and visible backtracking.",
+        subtitle="A larger maze with longer DFS branches and more visible backtracking.",
         labyrinth=generate_labyrinth(size="large", seed=10),
-        metadata={"difficulty": "large", "teaching_note": "Large mazes make DFS commitment and backtracking more obvious."},
+        metadata={"difficulty": "large", "teaching_note": "Longer routes make DFS commitment and backtracking easier to spot."},
     )
     return {small.name: small, medium.name: medium, large.name: large}

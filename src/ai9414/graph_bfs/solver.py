@@ -284,7 +284,7 @@ def solve_graph_bfs(graph: SpatialGraphDefinition) -> GraphBfsSolveResult:
             event_type="fail",
             label="No path found",
             annotation="BFS exhausted the reachable graph and did not find the goal.",
-            teaching_note="This is unusual for the generated graphs because they are constructed to be connected.",
+            teaching_note="No route from start to goal was found in the current graph.",
         )
 
     initial_state = {

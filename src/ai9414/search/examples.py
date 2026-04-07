@@ -11,20 +11,18 @@ def build_examples() -> dict[str, SearchExample]:
         name="small",
         title="Small configuration",
         subtitle=(
-            "A compact generated weighted graph for branch-and-bound playback. "
-            "It remains readable while still showing best-cost updates and pruning."
+            "A compact weighted graph with clear best-cost updates and pruning decisions."
         ),
         graph=generate_weighted_graph(size="small", seed=17),
-        metadata={"difficulty": "small", "teaching_note": "Watch how a first solution creates a pruning bound."},
+        metadata={"difficulty": "small", "teaching_note": "The first complete path establishes the initial pruning bound."},
     )
     large = SearchExample(
         name="large",
         title="Large configuration",
         subtitle=(
-            "A larger generated weighted graph with a longer branch-and-bound trace, "
-            "more backtracking, and more pruning opportunities."
+            "A larger weighted graph with more backtracking and more opportunities for pruning."
         ),
         graph=generate_weighted_graph(size="large", seed=31),
-        metadata={"difficulty": "large", "teaching_note": "Larger weighted graphs make branch-and-bound behaviour more visible."},
+        metadata={"difficulty": "large", "teaching_note": "Larger weighted graphs highlight pruning and backtracking more clearly."},
     )
     return {small.name: small, large.name: large}

@@ -4864,11 +4864,11 @@ function blankFoundationTrace(data = {}) {
     app_type: "foundation_models",
     initial_state: {
       example_title: data.example_title || "Foundation Models Demo - Tokenisation Explorer",
-      example_subtitle: data.example_subtitle || "Tokenisation replay is ready.",
+      example_subtitle: data.example_subtitle || "Tokenisation view is ready.",
       algorithm_label: data.algorithm_label || "Foundation Models Demo - Tokenisation Explorer",
       algorithm_note:
         data.algorithm_note ||
-        "Tokenisation replay is ready. Load an example or step through learned BPE merges.",
+        "Load an example or step through learned BPE merges.",
       foundation_models: data.foundation_models || {
         mode: "bpe",
         status: "ready",
@@ -4904,7 +4904,7 @@ function blankUncertaintyTrace(problem = {}, data = {}) {
     app_type: "uncertainty",
     initial_state: {
       example_title: data.example_title || problem.title || "Reasoning with Uncertainty - Belief-State Explorer",
-      example_subtitle: data.example_subtitle || problem.subtitle || "Bayes-filter replay is ready.",
+      example_subtitle: data.example_subtitle || problem.subtitle || "Bayes-filter view is ready.",
       algorithm_label: data.algorithm_label || "Bayes filter",
       algorithm_note:
         data.algorithm_note ||
@@ -5020,8 +5020,8 @@ function currentStep() {
     return {
       event_type: "initialise",
       label: "Initial state",
-      annotation: data.algorithm_note || "The replay is ready.",
-      teaching_note: "Step forward or press play to start the replay.",
+      annotation: data.algorithm_note || "The view is ready.",
+      teaching_note: "Step forward or press play to begin.",
     };
   }
   return trace.steps[state.player.stepIndex - 1];
@@ -5062,45 +5062,45 @@ function renderPanelCopy(data) {
   if (isFoundationModels()) {
     $("left-panel-title").textContent = "Tokenisation State";
     $("left-panel-subtitle").textContent =
-      "Token lists, token counts, comparisons, and the BPE learning trace stay aligned with the visible text on the right.";
+      "Token lists, token counts, comparisons, and BPE merge steps are shown alongside the active text.";
     $("right-panel-title").textContent = "Text View";
     $("right-panel-subtitle").textContent =
-      "Edit or load a text, then inspect the same string with token boundaries drawn directly onto the visible input.";
+      "Inspect the active text with token boundaries drawn directly onto the input.";
   } else if (isCsp()) {
     $("left-panel-title").textContent = "CSP State";
     $("left-panel-subtitle").textContent =
-      "Variables, domains, and the decision trace stay aligned with the map colouring on the right.";
+      "Variables, domains, and search steps are shown alongside the current map colouring.";
     $("right-panel-title").textContent = "Map View";
     $("right-panel-subtitle").textContent =
-      "The map shows assigned colours directly and keeps the remaining candidate colours visible for every unassigned region.";
+      "Assigned colours appear directly on the map, with remaining candidates visible for each unassigned region.";
   } else if (isDeliveryCsp()) {
     $("left-panel-title").textContent = "CSP State";
     $("left-panel-subtitle").textContent =
-      "Deliveries, remaining slot-room options, and the decision trace stay aligned with the schedule board on the right.";
+      "Deliveries, remaining slot-room options, and search steps are shown alongside the schedule board.";
     $("right-panel-title").textContent = "Schedule Board";
     $("right-panel-subtitle").textContent =
-      "Each cell is a room and time slot. Assigned deliveries fill a cell, while candidate badges show which unassigned deliveries can still use it.";
+      "Each cell represents a room and time slot. Assigned deliveries fill a cell, and candidate badges show remaining options.";
   } else if (isUncertainty()) {
     $("left-panel-title").textContent = "Belief State";
     $("left-panel-subtitle").textContent =
-      "Prior, prediction, likelihoods, and posterior stay aligned so students can see the full Bayes-filter update.";
+      "Prior, prediction, likelihoods, and posterior are shown together for each Bayes-filter update.";
     $("right-panel-title").textContent = "Office World";
     $("right-panel-subtitle").textContent =
-      "The office map stays fixed while the belief heat and current sensor reading show the difference between hidden truth and internal belief.";
+      "The office map shows the current belief distribution, sensor reading, and true location when enabled.";
   } else if (isStrips()) {
     $("left-panel-title").textContent = "Planning State";
     $("left-panel-subtitle").textContent =
-      "Predicates, applicable actions, and the grounded plan stay aligned with the rendered office world.";
+      "Predicates, applicable actions, and the current plan are shown alongside the office world.";
     $("right-panel-title").textContent = "Office World";
     $("right-panel-subtitle").textContent =
-      "The robot, parcel, keycard, and lab door are drawn directly from the symbolic state rather than controlled separately.";
+      "The robot, parcel, keycard, and lab door are drawn directly from the symbolic state.";
   } else if (isLogic()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Each node is a partial assignment, so the tree shows where DPLL branched and where literals were forced.";
+    $("left-panel-subtitle").textContent = "Each node is a partial assignment, showing where DPLL branches and where literals become forced.";
     $("right-panel-title").textContent = data.problem_mode === "entailment" ? "Knowledge Base and CNF" : "Clause State";
     $("right-panel-subtitle").textContent =
       data.problem_mode === "entailment"
-        ? "The original knowledge base stays visible while the CNF clause list shows why KB and not query succeed or fail."
+        ? "The knowledge base and CNF clause list show whether KB and not query are jointly satisfiable."
         : "The clause list shows which clauses are satisfied, unresolved, unit, or contradicted under the current assignment.";
   } else if (isLabyrinth()) {
     $("left-panel-title").textContent = "Search Tree";
@@ -5109,19 +5109,19 @@ function renderPanelCopy(data) {
     $("right-panel-subtitle").textContent = "The maze view shows the current route, dead ends, and the final discovered path.";
   } else if (isGraphAStar()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Search states appear here as A* balances the path cost so far with the straight-line heuristic to the goal.";
+    $("left-panel-subtitle").textContent = "A* orders the frontier by path cost so far plus the heuristic estimate to the goal.";
     $("right-panel-title").textContent = "Weighted Spatial Graph";
-    $("right-panel-subtitle").textContent = "The weighted graph stays fixed while the replay highlights the current frontier route and the final optimal path.";
+    $("right-panel-subtitle").textContent = "The graph view highlights the active frontier route and the final optimal path.";
   } else if (isGraphGbfs()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Search states appear here as greedy best-first search follows the most promising-looking frontier node.";
+    $("left-panel-subtitle").textContent = "Greedy best-first search orders the frontier by heuristic estimate alone.";
     $("right-panel-title").textContent = "Weighted Spatial Graph";
-    $("right-panel-subtitle").textContent = "The weighted graph stays fixed while the replay highlights the heuristic-driven route and the final path found.";
+    $("right-panel-subtitle").textContent = "The graph view highlights the heuristic-driven route and the path found.";
   } else if (isGraphUcs()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Search states appear here as uniform-cost search expands the cheapest frontier path first.";
+    $("left-panel-subtitle").textContent = "Uniform-cost search always expands the lowest-cost frontier path first.";
     $("right-panel-title").textContent = "Weighted Spatial Graph";
-    $("right-panel-subtitle").textContent = "The weighted graph stays fixed while the replay highlights the active frontier route and the final optimal path.";
+    $("right-panel-subtitle").textContent = "The graph view highlights the active frontier route and the final optimal path.";
   } else if (isGraphBfs()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "The tree grows in BFS order and shows how the frontier expands level by level.";
@@ -5134,9 +5134,9 @@ function renderPanelCopy(data) {
     $("right-panel-subtitle").textContent = "The graph view shows the current route, explored edges, dead ends, and the final discovered path.";
   } else {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Search states appear here as depth-first branch-and-bound explores and prunes branches.";
+    $("left-panel-subtitle").textContent = "Branch-and-bound explores one branch at a time and prunes paths that cannot beat the current best cost.";
     $("right-panel-title").textContent = "Geometric Graph";
-    $("right-panel-subtitle").textContent = "The weighted graph stays fixed while the replay highlights the active branch, best path, and final optimal path.";
+    $("right-panel-subtitle").textContent = "The graph view highlights the active branch, current best path, and final optimal path.";
   }
 }
 
@@ -7577,7 +7577,7 @@ async function generateLabyrinth() {
   response.trace = trace;
   state.player.mode = "playback";
   await refreshFromServer(response);
-  setMessage("Generated a new labyrinth. Playback is ready, and you can switch to live Python mode to compare it with your own solver.");
+  setMessage("Generated a new labyrinth. Use the controls to explore it or run your own Python solver on the same maze.");
   render();
 }
 
@@ -7602,8 +7602,8 @@ async function generateGraph() {
   await refreshFromServer(response);
   setMessage(
     isWeightedGraphSearch()
-      ? "Generated a new weighted graph. Playback is ready, and you can switch to live Python mode to compare it with your own solver."
-      : "Generated a new graph. Playback is ready, and you can switch to live Python mode to compare it with your own solver."
+      ? "Generated a new weighted graph. Use the controls to explore it or run your own Python solver on the same graph."
+      : "Generated a new graph. Use the controls to explore it or run your own Python solver on the same graph."
   );
   render();
 }

@@ -57,7 +57,7 @@ def build_examples() -> dict[str, DeliveryCspExample]:
     examples = {
         "weekday_schedule": DeliveryCspExample(
             title="CSP Demo - Delivery Time Slots",
-            subtitle="Five deliveries, three time slots, and room-specific availability. Watch how ordering and slot conflicts prune future options.",
+            subtitle="Five deliveries, three time slots, and room-specific availability create ordering and slot conflicts.",
             problem=DeliveryCspProblem(
                 title="Weekday delivery schedule",
                 subtitle="Assign each delivery to a room and time slot.",

@@ -150,8 +150,8 @@ class GraphDfsDemo(BaseEducationalApp):
                 self.graph,
                 title="Generated graph",
                 subtitle=(
-                    "A generated spatial graph solved with the built-in DFS playback. "
-                    "Switch to live Python mode to compare it with your own solver."
+                    "A generated spatial graph for DFS search. "
+                    "Use Solve with Python to run your own solver on the same graph."
                 ),
             )
         return build_graph_dfs_trace(self.example)

@@ -55,7 +55,7 @@ def build_blank_graph_gbfs_bundle(graph: WeightedGraph) -> TraceBundle:
     start_heuristic = heuristic_to_goal(build_position_map(graph), graph.goal, graph.start)
     initial_state = {
         "example_title": "Generated graph",
-        "example_subtitle": "Generate a graph, then switch to live Python mode to solve it with your own backend.",
+        "example_subtitle": "Generate a graph, then use Solve with Python to run greedy best-first search on the same graph.",
         "algorithm_label": ALGORITHM_LABEL,
         "algorithm_note": ALGORITHM_NOTE,
         "goal_label": "Find any path from start to goal",

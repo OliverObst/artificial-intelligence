@@ -148,8 +148,8 @@ class GraphGbfsDemo(BaseEducationalApp):
                 self.graph,
                 title="Generated graph",
                 subtitle=(
-                    "A generated weighted graph solved with built-in greedy best-first playback. "
-                    "Switch to live Python mode to compare it with your own solver."
+                    "A generated weighted graph for greedy best-first search. "
+                    "Use Solve with Python to run your own solver on the same graph."
                 ),
             )
         return build_graph_gbfs_trace(self.example)

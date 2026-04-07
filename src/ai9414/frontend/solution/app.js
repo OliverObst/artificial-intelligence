@@ -116,8 +116,8 @@ function currentStep() {
     return {
       event_type: "initialise",
       label: "Initial state",
-      annotation: state.trace.initial_state.algorithm_note || "The replay is ready.",
-      teaching_note: "Step forward or press play to start the replay.",
+      annotation: state.trace.initial_state.algorithm_note || "The view is ready.",
+      teaching_note: "Step forward or press play to begin.",
     };
   }
   return state.trace.steps[state.stepIndex - 1];
@@ -127,10 +127,10 @@ function renderPanelCopy() {
   if (isFoundationModels()) {
     $("left-panel-title").textContent = "Tokenisation State";
     $("left-panel-subtitle").textContent =
-      "Static replay of the token sequence, token counts, comparisons, and BPE merge learning state.";
+      "Token sequence, token counts, comparisons, and BPE merge steps.";
     $("right-panel-title").textContent = "Text View";
     $("right-panel-subtitle").textContent =
-      "Static replay of the visible text with token boundaries drawn directly onto the input.";
+      "Visible text with token boundaries drawn directly onto the input.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("csp-view-control").classList.add("hidden");
@@ -142,9 +142,9 @@ function renderPanelCopy() {
     $("csp-legend").classList.add("hidden");
   } else if (isCsp()) {
     $("left-panel-title").textContent = "CSP State";
-    $("left-panel-subtitle").textContent = "Static replay of the variables, domains, and decision trace.";
+    $("left-panel-subtitle").textContent = "Variables, domains, and search steps.";
     $("right-panel-title").textContent = "Map View";
-    $("right-panel-subtitle").textContent = "Static replay of the map colouring and live domain changes on each region.";
+    $("right-panel-subtitle").textContent = "Map colouring with live domain changes for each region.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("csp-view-control").classList.remove("hidden");
@@ -156,9 +156,9 @@ function renderPanelCopy() {
     $("csp-legend").classList.remove("hidden");
   } else if (isDeliveryCsp()) {
     $("left-panel-title").textContent = "CSP State";
-    $("left-panel-subtitle").textContent = "Static replay of the deliveries, domains, and decision trace.";
+    $("left-panel-subtitle").textContent = "Deliveries, domains, and search steps.";
     $("right-panel-title").textContent = "Schedule Board";
-    $("right-panel-subtitle").textContent = "Static replay of the delivery schedule board, assigned cells, and live candidate badges.";
+    $("right-panel-subtitle").textContent = "Schedule board with assigned cells and candidate badges.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("csp-view-control").classList.remove("hidden");
@@ -171,9 +171,9 @@ function renderPanelCopy() {
     $("uncertainty-legend").classList.add("hidden");
   } else if (isUncertainty()) {
     $("left-panel-title").textContent = "Belief State";
-    $("left-panel-subtitle").textContent = "Static replay of the prior, prediction, likelihoods, and posterior for each Bayes-filter step.";
+    $("left-panel-subtitle").textContent = "Prior, prediction, likelihoods, and posterior for each Bayes-filter step.";
     $("right-panel-title").textContent = "Office World";
-    $("right-panel-subtitle").textContent = "Static replay of the office map, belief overlay, and current sensor reading.";
+    $("right-panel-subtitle").textContent = "Office map with the belief overlay and current sensor reading.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("uncertainty-toggle-grid").classList.remove("hidden");
@@ -188,10 +188,10 @@ function renderPanelCopy() {
   } else if (isStrips()) {
     $("left-panel-title").textContent = "Planning State";
     $("left-panel-subtitle").textContent =
-      "Static replay of the symbolic state, applicable actions, and grounded plan.";
+      "Symbolic state, applicable actions, and grounded plan.";
     $("right-panel-title").textContent = "Office World";
     $("right-panel-subtitle").textContent =
-      "Static replay of the rendered office map that is derived from the symbolic facts.";
+      "Office map derived directly from the symbolic facts.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.remove("hidden");
     $("csp-view-control").classList.add("hidden");
@@ -204,12 +204,12 @@ function renderPanelCopy() {
     $("uncertainty-legend").classList.add("hidden");
   } else if (isLogic()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Static replay of the DPLL assignment tree.";
+    $("left-panel-subtitle").textContent = "DPLL assignment tree.";
     $("right-panel-title").textContent = currentData().problem_mode === "entailment" ? "Knowledge Base and CNF" : "Clause State";
     $("right-panel-subtitle").textContent =
       currentData().problem_mode === "entailment"
-        ? "Static replay of the knowledge base view and the CNF used for the entailment test."
-        : "Static replay of the clause statuses under the current partial assignment.";
+        ? "Knowledge base view and CNF used for the entailment test."
+        : "Clause statuses under the current partial assignment.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("csp-view-control").classList.add("hidden");
@@ -222,9 +222,9 @@ function renderPanelCopy() {
     $("uncertainty-legend").classList.add("hidden");
   } else if (isLabyrinth()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Static replay of the DFS tree built while exploring the labyrinth.";
+    $("left-panel-subtitle").textContent = "DFS tree for the labyrinth search.";
     $("right-panel-title").textContent = "Labyrinth";
-    $("right-panel-subtitle").textContent = "Static replay of the maze route, dead ends, and final discovered path.";
+    $("right-panel-subtitle").textContent = "Maze route, dead ends, and final path.";
     $("search-toggle-grid").classList.add("hidden");
     $("search-legend").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
@@ -237,9 +237,9 @@ function renderPanelCopy() {
     $("uncertainty-legend").classList.add("hidden");
   } else if (isGraphBfs()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Static replay of the BFS tree built while exploring the graph.";
+    $("left-panel-subtitle").textContent = "BFS tree for the graph search.";
     $("right-panel-title").textContent = "Spatial Graph";
-    $("right-panel-subtitle").textContent = "Static replay of the highlighted route, explored edges, visited nodes, and final discovered path.";
+    $("right-panel-subtitle").textContent = "Highlighted route, explored edges, visited nodes, and final path.";
     $("search-toggle-grid").classList.add("hidden");
     $("search-legend").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
@@ -252,9 +252,9 @@ function renderPanelCopy() {
     $("uncertainty-legend").classList.add("hidden");
   } else if (isGraphDfs()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Static replay of the DFS tree built while exploring the graph.";
+    $("left-panel-subtitle").textContent = "DFS tree for the graph search.";
     $("right-panel-title").textContent = "Spatial Graph";
-    $("right-panel-subtitle").textContent = "Static replay of the graph route, explored edges, dead ends, and final discovered path.";
+    $("right-panel-subtitle").textContent = "Graph route, explored edges, dead ends, and final path.";
     $("search-toggle-grid").classList.add("hidden");
     $("search-legend").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
@@ -267,9 +267,9 @@ function renderPanelCopy() {
     $("uncertainty-legend").classList.add("hidden");
   } else if (isGraphAStar()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Static replay of the A* tree built while exploring the weighted graph.";
+    $("left-panel-subtitle").textContent = "A* search tree for the weighted graph.";
     $("right-panel-title").textContent = "Weighted Spatial Graph";
-    $("right-panel-subtitle").textContent = "Static replay of the cost-plus-heuristic frontier route and final optimal path.";
+    $("right-panel-subtitle").textContent = "Cost-plus-heuristic frontier route and final optimal path.";
     $("search-toggle-grid").classList.remove("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("csp-view-control").classList.add("hidden");
@@ -282,9 +282,9 @@ function renderPanelCopy() {
     $("uncertainty-legend").classList.add("hidden");
   } else if (isGraphGbfs()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Static replay of the greedy best-first tree built while exploring the weighted graph.";
+    $("left-panel-subtitle").textContent = "Greedy best-first tree for the weighted graph.";
     $("right-panel-title").textContent = "Weighted Spatial Graph";
-    $("right-panel-subtitle").textContent = "Static replay of the heuristic-driven route and the final path found.";
+    $("right-panel-subtitle").textContent = "Heuristic-driven route and final path.";
     $("search-toggle-grid").classList.remove("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("csp-view-control").classList.add("hidden");
@@ -297,9 +297,9 @@ function renderPanelCopy() {
     $("uncertainty-legend").classList.add("hidden");
   } else if (isGraphUcs()) {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Static replay of the UCS tree built while exploring the weighted graph.";
+    $("left-panel-subtitle").textContent = "Uniform-cost search tree for the weighted graph.";
     $("right-panel-title").textContent = "Weighted Spatial Graph";
-    $("right-panel-subtitle").textContent = "Static replay of the cheapest frontier route and final optimal path.";
+    $("right-panel-subtitle").textContent = "Cheapest frontier route and final optimal path.";
     $("search-toggle-grid").classList.remove("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("csp-view-control").classList.add("hidden");
@@ -312,9 +312,9 @@ function renderPanelCopy() {
     $("uncertainty-legend").classList.add("hidden");
   } else {
     $("left-panel-title").textContent = "Search Tree";
-    $("left-panel-subtitle").textContent = "Static replay of the precomputed search tree.";
+    $("left-panel-subtitle").textContent = "Branch-and-bound search tree.";
     $("right-panel-title").textContent = "Geometric Graph";
-    $("right-panel-subtitle").textContent = "Static replay of the weighted graph.";
+    $("right-panel-subtitle").textContent = "Weighted graph with the active branch and best path.";
     $("search-toggle-grid").classList.remove("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("csp-view-control").classList.add("hidden");
@@ -539,7 +539,7 @@ function renderCspPanel(data) {
   stateHeading.textContent = "Current CSP state";
   const stateCopy = document.createElement("p");
   stateCopy.className = "csp-copy";
-  stateCopy.textContent = `Static replay of the variable table and the current focus region. Focus: ${csp.focus_variable || "none"}.`;
+  stateCopy.textContent = `Variable table and current focus region. Focus: ${csp.focus_variable || "none"}.`;
   stateSection.append(stateHeading, stateCopy);
 
   const table = document.createElement("table");
@@ -650,7 +650,7 @@ function renderDeliveryCspPanel(data) {
   stateHeading.textContent = "Current CSP state";
   const stateCopy = document.createElement("p");
   stateCopy.className = "csp-copy";
-  stateCopy.textContent = `Static replay of the delivery table and the current focus delivery. Focus: ${csp.focus_variable || "none"}.`;
+  stateCopy.textContent = `Delivery table and current focus delivery. Focus: ${csp.focus_variable || "none"}.`;
   stateSection.append(stateHeading, stateCopy);
 
   const table = document.createElement("table");
@@ -1794,7 +1794,7 @@ function renderFoundationTextPanel(data) {
   const inputCopy = document.createElement("p");
   inputCopy.className = "foundation-copy";
   inputCopy.textContent =
-    "This exported replay keeps the original text fixed while the merge steps and token boundaries change around it.";
+    "The original text stays fixed while merge steps and token boundaries change around it.";
   const textBlock = document.createElement("div");
   textBlock.className = "foundation-corpus-row";
   textBlock.textContent = foundation.text || "";

@@ -13,7 +13,7 @@ def build_examples() -> dict[str, StripsExample]:
             subtitle="Fetch the keycard, collect the parcel, unlock the lab door, and deliver the parcel.",
             problem=StripsProblem(
                 title="Canonical delivery",
-                subtitle="The default office world keeps every symbolic detail small enough to follow on screen.",
+                subtitle="A compact office world with one parcel, one keycard, and one locked door.",
             ),
         ),
         StripsExample(
@@ -22,7 +22,7 @@ def build_examples() -> dict[str, StripsExample]:
             subtitle="The parcel is nearby, but picking it up too early blocks the keycard action.",
             problem=StripsProblem(
                 title="Robot starts in the mail room",
-                subtitle="Compare the action order with the canonical case before stepping through the plan.",
+                subtitle="The parcel starts nearby, but collecting it too early blocks the keycard action.",
                 robot_start="mail_room",
             ),
         ),
@@ -42,7 +42,7 @@ def build_examples() -> dict[str, StripsExample]:
             subtitle="Without the lock, the plan no longer needs the keycard or the unlock action.",
             problem=StripsProblem(
                 title="Unlocked-door baseline",
-                subtitle="This short case is useful for debugging and for seeing which action disappears.",
+                subtitle="Without the lock, the plan no longer needs the keycard or unlock action.",
                 door_locked=False,
             ),
         ),

@@ -145,8 +145,8 @@ class GraphBfsDemo(BaseEducationalApp):
                 self.graph,
                 title="Generated graph",
                 subtitle=(
-                    "A generated spatial graph solved with the built-in BFS playback. "
-                    "Switch to live Python mode to compare it with your own solver."
+                    "A generated spatial graph for BFS search. "
+                    "Use Solve with Python to run your own solver on the same graph."
                 ),
             )
         return build_graph_bfs_trace(self.example)

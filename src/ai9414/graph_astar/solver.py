@@ -377,7 +377,7 @@ def solve_graph_astar(graph: WeightedGraph) -> GraphAStarSolveResult:
         event_type="fail",
         label="No path found",
         annotation="A* exhausted the frontier without reaching the goal.",
-        teaching_note="This is unusual for the generated graphs because they are constructed to be connected.",
+        teaching_note="No route from start to goal was found in the current graph.",
     )
     return GraphAStarSolveResult(
         trace_id=recorder.trace_id,

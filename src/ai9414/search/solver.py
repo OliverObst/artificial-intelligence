@@ -238,7 +238,7 @@ def solve_weighted_graph(graph: WeightedGraph) -> SolverResult:
                     f"Check whether extending the current branch from {graph_node} to {neighbour} "
                     f"is still worth exploring."
                 ),
-                teaching_note="Each step reflects a meaningful search decision rather than a low-level implementation detail.",
+                teaching_note="Each step records one search decision in the active branch.",
             )
 
             next_cost = cost_so_far + edge_cost
@@ -260,7 +260,7 @@ def solve_weighted_graph(graph: WeightedGraph) -> SolverResult:
                         f"The branch would revisit {neighbour}, which is already on the current DFS path, "
                         "so the cycle is rejected."
                     ),
-                    teaching_note="For this first demo, cycle handling only blocks repeated nodes within the current path.",
+                    teaching_note="Cycle handling blocks repeated nodes within the current path.",
                 )
                 continue
 

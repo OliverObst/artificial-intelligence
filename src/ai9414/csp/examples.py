@@ -418,7 +418,7 @@ def build_examples() -> dict[str, CspExample]:
     examples = {
         "australia": CspExample(
             title="CSP Demo - Australia Map Colouring",
-            subtitle="The standard Australia map-colouring CSP. Tasmania stays unconstrained, so compare it with the more informative mainland regions.",
+            subtitle="The standard Australia map-colouring CSP, including an unconstrained Tasmania region.",
             problem=CspProblem(
                 title="Australia map colouring",
                 subtitle="Colour Australia so neighbouring regions are always different.",
@@ -430,7 +430,7 @@ def build_examples() -> dict[str, CspExample]:
         ),
         "australia_unsat_2_colours": CspExample(
             title="CSP Demo - Australia with Two Colours",
-            subtitle="The same Australia map, but only two colours are available. Forward checking will eventually prove that no legal colouring exists.",
+            subtitle="The Australia map with only two colours available, making the CSP unsatisfiable.",
             problem=CspProblem(
                 title="Australia with two colours",
                 subtitle="Try to colour the map with only red and green. This CSP is unsatisfiable.",
@@ -442,7 +442,7 @@ def build_examples() -> dict[str, CspExample]:
         ),
         "mini_map_easy": CspExample(
             title="CSP Demo - Mini Map (Easy)",
-            subtitle="A small six-region map with a clear structure. Useful for a first run before switching to Australia.",
+            subtitle="A small six-region map with a clear constraint structure.",
             problem=CspProblem(
                 title="Mini map",
                 subtitle="A small made-up map for first exposure to variables, domains, and constraints.",
@@ -454,7 +454,7 @@ def build_examples() -> dict[str, CspExample]:
         ),
         "mini_map_tight": CspExample(
             title="CSP Demo - Mini Map (Tight)",
-            subtitle="A tighter six-region map with a highly connected centre. Forward checking removes colours quickly, especially around the middle region.",
+            subtitle="A tighter six-region map with a highly connected centre and faster domain reduction.",
             problem=CspProblem(
                 title="Tight mini map",
                 subtitle="A tighter made-up map where local propagation is much more visible.",

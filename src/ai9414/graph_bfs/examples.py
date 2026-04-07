@@ -10,15 +10,15 @@ def build_examples() -> dict[str, GraphBfsExample]:
     small = GraphBfsExample(
         name="small",
         title="Small configuration",
-        subtitle="A compact generated spatial graph configuration for quick BFS playback.",
+        subtitle="A compact spatial graph with a clear breadth-first frontier.",
         graph=generate_spatial_graph(size="small", seed=17),
-        metadata={"difficulty": "small", "teaching_note": "Watch how BFS expands outward level by level."},
+        metadata={"difficulty": "small", "teaching_note": "BFS expands nodes level by level from the start."},
     )
     large = GraphBfsExample(
         name="large",
         title="Large configuration",
-        subtitle="A larger generated spatial graph configuration with a broader BFS frontier.",
+        subtitle="A larger spatial graph with a broader breadth-first frontier.",
         graph=generate_spatial_graph(size="large", seed=16),
-        metadata={"difficulty": "large", "teaching_note": "Larger sparse graphs make the breadth-first frontier easier to see."},
+        metadata={"difficulty": "large", "teaching_note": "The wider frontier makes the breadth-first expansion pattern easier to see."},
     )
     return {small.name: small, large.name: large}

@@ -10,17 +10,17 @@ def build_examples() -> dict[str, GraphGbfsExample]:
     small = GraphGbfsExample(
         name="small",
         title="Small configuration",
-        subtitle="A compact generated weighted graph configuration for quick greedy best-first playback.",
+        subtitle="A compact weighted graph with a clear heuristic-driven frontier.",
         graph=generate_weighted_graph(size="small", seed=17),
         metadata={
             "difficulty": "small",
-            "teaching_note": "Watch how greedy best-first search chases the most promising-looking node first.",
+            "teaching_note": "Greedy best-first search selects the frontier node with the best heuristic estimate.",
         },
     )
     large = GraphGbfsExample(
         name="large",
         title="Large configuration",
-        subtitle="A larger generated weighted graph configuration where the heuristic can lead the search down misleading routes.",
+        subtitle="A larger weighted graph where the heuristic can favour longer routes.",
         graph=generate_weighted_graph(size="large", seed=31),
         metadata={
             "difficulty": "large",

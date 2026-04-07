@@ -258,7 +258,7 @@ def solve_labyrinth(labyrinth: LabyrinthDefinition) -> LabyrinthSolveResult:
             event_type="fail",
             label="No path found",
             annotation="DFS exhausted every reachable branch and did not find an exit path.",
-            teaching_note="This is unusual for the generated mazes because they are constructed to be solvable.",
+            teaching_note="No route from start to exit was found in the current maze.",
         )
 
     initial_state = {

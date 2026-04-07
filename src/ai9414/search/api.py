@@ -168,8 +168,8 @@ class SearchDemo(BaseEducationalApp):
                 self.graph,
                 title="Generated weighted graph",
                 subtitle=(
-                    "A generated weighted graph solved with built-in branch-and-bound playback. "
-                    "Switch to live Python mode to compare it with your own solver."
+                    "A generated weighted graph for branch-and-bound search. "
+                    "Use Solve with Python to run your own solver on the same graph."
                 ),
             )
         return build_search_trace(self.example)

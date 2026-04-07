@@ -52,11 +52,11 @@ def _layout_tree(nodes: list[dict[str, Any]]) -> dict[str, tuple[float, float]]:
 def build_blank_search_bundle(graph: WeightedGraph) -> TraceBundle:
     initial_state = {
         "example_title": "Generated weighted graph",
-        "example_subtitle": "Generate a graph, then switch to live Python mode to solve it with your own backend.",
+        "example_subtitle": "Generate a graph, then use Solve with Python to run branch-and-bound on the same graph.",
         "algorithm_label": "Depth-first branch-and-bound",
         "algorithm_note": (
             "This view is ready for depth-first branch-and-bound. "
-            "Solve the current weighted graph with Python to populate the trace."
+            "Use Solve with Python to fill the search tree and explanation panels."
         ),
         "goal_label": "Find the optimal path from start to goal",
         "graph": graph.model_dump(),

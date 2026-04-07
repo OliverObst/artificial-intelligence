@@ -53,7 +53,7 @@ def _layout_tree(nodes: list[dict[str, Any]]) -> dict[str, tuple[float, float]]:
 def build_empty_labyrinth_bundle(labyrinth: LabyrinthDefinition) -> TraceBundle:
     initial_state = {
         "example_title": "Generated labyrinth",
-        "example_subtitle": "Generate a maze, then switch to live Python mode to solve it with your own backend.",
+        "example_subtitle": "Generate a maze, then use Solve with Python to run DFS on the same maze.",
         "algorithm_label": ALGORITHM_LABEL,
         "algorithm_note": ALGORITHM_NOTE,
         "goal_label": "Find any path from start to exit",

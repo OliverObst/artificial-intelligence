@@ -53,7 +53,7 @@ def _layout_tree(nodes: list[dict[str, Any]]) -> dict[str, tuple[float, float]]:
 def build_blank_graph_dfs_bundle(graph: SpatialGraphDefinition) -> TraceBundle:
     initial_state = {
         "example_title": "Generated graph",
-        "example_subtitle": "Generate a graph, then switch to live Python mode to solve it with your own backend.",
+        "example_subtitle": "Generate a graph, then use Solve with Python to run DFS on the same graph.",
         "algorithm_label": ALGORITHM_LABEL,
         "algorithm_note": ALGORITHM_NOTE,
         "goal_label": "Find any path from start to goal",

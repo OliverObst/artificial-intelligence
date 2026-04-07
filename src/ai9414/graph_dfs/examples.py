@@ -10,15 +10,15 @@ def build_examples() -> dict[str, GraphDfsExample]:
     small = GraphDfsExample(
         name="small",
         title="Small configuration",
-        subtitle="A compact generated spatial graph configuration for quick DFS playback.",
+        subtitle="A compact spatial graph with a clear DFS branch order.",
         graph=generate_spatial_graph(size="small", seed=17),
-        metadata={"difficulty": "small", "teaching_note": "Watch how DFS commits to one branch in the graph."},
+        metadata={"difficulty": "small", "teaching_note": "DFS commits to one branch until it must backtrack."},
     )
     large = GraphDfsExample(
         name="large",
         title="Large configuration",
-        subtitle="A larger generated spatial graph configuration with a longer DFS trace and visible backtracking.",
+        subtitle="A larger spatial graph with longer DFS branches and more visible backtracking.",
         graph=generate_spatial_graph(size="large", seed=16),
-        metadata={"difficulty": "large", "teaching_note": "Larger sparse graphs make backtracking more visible."},
+        metadata={"difficulty": "large", "teaching_note": "Sparse structure makes DFS backtracking easier to follow."},
     )
     return {small.name: small, large.name: large}
