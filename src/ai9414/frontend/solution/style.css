@@ -23,6 +23,14 @@ body {
   width: min(760px, 100%);
 }
 
+.page-credit {
+  margin: 18px 4px 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
 .panel {
   margin-top: 24px;
   padding: 24px;

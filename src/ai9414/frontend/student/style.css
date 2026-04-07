@@ -42,6 +42,14 @@ input {
   padding: 32px 20px 48px;
 }
 
+.page-credit {
+  margin: 18px 4px 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
 .header,
 .layout {
   display: grid;

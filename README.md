@@ -1,6 +1,8 @@
 # artificial-intelligence
 
-Phase 1 reference implementation of the `ai9414` educational AI platform, now with thirteen concrete demos:
+`ai9414` is a Python teaching toolkit for interactive artificial intelligence demos. It opens small browser-based visualisations for search, logic, uncertainty, constraint satisfaction, planning, and tokenisation, with simple installed commands that are easy to use in class.
+
+It currently includes thirteen ready-to-run demos:
 
 - labyrinth DFS search
 - spatial graph DFS search
@@ -45,28 +47,27 @@ Phase 1 reference implementation of the `ai9414` educational AI platform, now wi
 - `STRIPS planning`
   Start with `ai9414 demo strips`
 
-## What is included
+## Why use it
 
-- shared `ai9414` namespace package
-- common FastAPI launcher and route contract
-- common JSON schema models
-- precomputed trace replay for a generated spatial graph DFS demo
-- precomputed trace replay for a generated spatial graph BFS demo
-- precomputed trace replay for a generated spatial graph greedy best-first demo
-- precomputed trace replay for a generated spatial graph A* demo
-- precomputed trace replay for a generated spatial graph uniform-cost demo
-- precomputed trace replay for a generated spatial graph branch-and-bound demo
-- precomputed trace replay for a visual DPLL propositional logic demo
-- precomputed trace replay for a visual belief-state explorer demo
-- precomputed trace replay for a visual foundation models tokenisation demo
-- precomputed trace replay for a visual CSP map-colouring demo
-- precomputed trace replay for a visual CSP delivery scheduling demo
-- precomputed trace replay for a visual STRIPS planning demo
-- static solution replay export with no backend dependency
-- deterministic labyrinth presets plus seeded graph generation
-- automated tests and developer documentation
+- one installed package with a small command-line interface: `ai9414 ...`
+- browser-based visualisations with packaged frontend assets and no separate web build step
+- curated examples for search, logic, uncertainty, CSP, planning, and tokenisation
+- Python APIs for loading custom problems and launching demos directly from code
+- replayable traces for classroom walkthroughs and static solution export
+- automated tests plus contributor documentation
 
 ## Quick start
+
+Install from PyPI:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install ai9414
+ai9414 demo graph-bnb
+```
+
+Install directly from this repository:
 
 ```bash
 python -m venv .venv
@@ -88,93 +89,94 @@ To see the curated example names for a demo:
 ai9414 list --examples graph-dfs
 ```
 
-## Development workflow
+## For contributors
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
 pytest
+python -m build
 ai9414 demo graph-bnb
 ```
 
-## Repository example scripts
+## Direct example scripts
 
-The scripts under `examples/` are still useful for local development, documentation, and teaching materials, but they are no longer the primary installed interface.
+The scripts under `examples/` are still useful when working directly in the repository, but they are no longer the main installed interface.
 
-To start the labyrinth example directly from a repository checkout:
+To start the labyrinth example directly from the repository:
 
 ```bash
 python examples/labyrinth_demo.py
 ```
 
-To start the spatial graph DFS example directly from a repository checkout:
+To start the spatial graph DFS example directly from the repository:
 
 ```bash
 python examples/graph_dfs_demo.py
 ```
 
-To start the spatial graph BFS example directly from a repository checkout:
+To start the spatial graph BFS example directly from the repository:
 
 ```bash
 python examples/graph_bfs_demo.py
 ```
 
-To start the spatial graph greedy best-first example directly from a repository checkout:
+To start the spatial graph greedy best-first example directly from the repository:
 
 ```bash
 python examples/graph_gbfs_demo.py
 ```
 
-To start the spatial graph A* example directly from a repository checkout:
+To start the spatial graph A* example directly from the repository:
 
 ```bash
 python examples/graph_astar_demo.py
 ```
 
-To start the spatial graph uniform-cost example directly from a repository checkout:
+To start the spatial graph uniform-cost example directly from the repository:
 
 ```bash
 python examples/graph_ucs_demo.py
 ```
 
-To start the spatial graph branch-and-bound example directly from a repository checkout:
+To start the spatial graph branch-and-bound example directly from the repository:
 
 ```bash
 python examples/graph_branch_and_bound_demo.py
 ```
 
-To start the DPLL logic example directly from a repository checkout:
+To start the DPLL logic example directly from the repository:
 
 ```bash
 python examples/logic_dpll_demo.py
 ```
 
-To start the reasoning-with-uncertainty example directly from a repository checkout:
+To start the reasoning-with-uncertainty example directly from the repository:
 
 ```bash
 python examples/uncertainty_demo.py
 ```
 
-To start the foundation models tokenisation example directly from a repository checkout:
+To start the foundation models tokenisation example directly from the repository:
 
 ```bash
 python examples/foundation_models_demo.py
 ```
 
-To start the CSP map-colouring example directly from a repository checkout:
+To start the CSP map-colouring example directly from the repository:
 
 ```bash
 python examples/csp_demo.py
 ```
 
-To start the CSP delivery scheduling example directly from a repository checkout:
+To start the CSP delivery scheduling example directly from the repository:
 
 ```bash
 python examples/delivery_csp_demo.py
 ```
 
-To start the STRIPS planning example directly from a repository checkout:
+To start the STRIPS planning example directly from the repository:
 
 ```bash
 python examples/strips_demo.py
