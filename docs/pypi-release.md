@@ -13,22 +13,19 @@ The repository is now structured for PyPI distribution:
 Run the following from a clean working tree:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .[dev]
-pytest
-python -m build
-python -m twine check dist/*
+uv sync --extra dev
+uv run pytest
+uv build
+uv run twine check dist/*
 ```
 
 Then verify the wheel in a fresh environment:
 
 ```bash
-python -m venv .venv-wheel-test
-source .venv-wheel-test/bin/activate
-pip install dist/ai9414-*.whl
-ai9414 list
-python -m ai9414 list --examples graph-bnb
+uv venv --clear .venv-wheel-test
+uv pip install --python .venv-wheel-test dist/ai9414-*.whl
+.venv-wheel-test/bin/ai9414 list
+.venv-wheel-test/bin/python -m ai9414 list --examples graph-bnb
 ```
 
 ## PyPI project setup
@@ -52,8 +49,8 @@ Before the first upload:
 
 1. Bump `version` in `pyproject.toml`.
 2. Commit and push the version bump to `main`.
-3. Rebuild locally with `python -m build`.
-4. Re-run `python -m twine check dist/*`.
+3. Rebuild locally with `uv build`.
+4. Re-run `uv run twine check dist/*`.
 5. Test-install the wheel in a fresh virtual environment.
 6. Tag the release, for example `git tag v0.1.0 && git push origin v0.1.0`.
 7. GitHub Actions will build the distributions and publish them to PyPI.
@@ -63,9 +60,9 @@ Before the first upload:
 If Trusted Publishing is not available for some reason, manual upload still works:
 
 ```bash
-python -m build
-python -m twine check dist/*
-python -m twine upload dist/*
+uv build
+uv run twine check dist/*
+uv run twine upload dist/*
 ```
 
 Use `__token__` as the username and a PyPI API token as the password.

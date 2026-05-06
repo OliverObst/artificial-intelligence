@@ -63,43 +63,36 @@ It currently includes thirteen ready-to-run demos:
 Install from PyPI:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install ai9414
-ai9414 demo graph-bnb
+uvx ai9414 demo graph-bnb
 ```
 
 Install directly from this repository:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install .
-ai9414 list
-ai9414 demo graph-bnb
+uv sync
+uv run ai9414 list
+uv run ai9414 demo graph-bnb
 ```
 
 If your environment does not put console scripts on `PATH`, the module entry point works too:
 
 ```bash
-python -m ai9414 demo graph-bnb
+uv run python -m ai9414 demo graph-bnb
 ```
 
 To see the curated example names for a demo:
 
 ```bash
-ai9414 list --examples graph-dfs
+uv run ai9414 list --examples graph-dfs
 ```
 
 ## For contributors
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .[dev]
-pytest
-python -m build
-ai9414 demo graph-bnb
+uv sync --extra dev
+uv run pytest
+uv build
+uv run ai9414 demo graph-bnb
 ```
 
 ## Direct example scripts
@@ -109,79 +102,79 @@ The scripts under `examples/` are still useful when working directly in the repo
 To start the labyrinth example directly from the repository:
 
 ```bash
-python examples/labyrinth_demo.py
+uv run python examples/labyrinth_demo.py
 ```
 
 To start the spatial graph DFS example directly from the repository:
 
 ```bash
-python examples/graph_dfs_demo.py
+uv run python examples/graph_dfs_demo.py
 ```
 
 To start the spatial graph BFS example directly from the repository:
 
 ```bash
-python examples/graph_bfs_demo.py
+uv run python examples/graph_bfs_demo.py
 ```
 
 To start the spatial graph greedy best-first example directly from the repository:
 
 ```bash
-python examples/graph_gbfs_demo.py
+uv run python examples/graph_gbfs_demo.py
 ```
 
 To start the spatial graph A* example directly from the repository:
 
 ```bash
-python examples/graph_astar_demo.py
+uv run python examples/graph_astar_demo.py
 ```
 
 To start the spatial graph uniform-cost example directly from the repository:
 
 ```bash
-python examples/graph_ucs_demo.py
+uv run python examples/graph_ucs_demo.py
 ```
 
 To start the spatial graph branch-and-bound example directly from the repository:
 
 ```bash
-python examples/graph_branch_and_bound_demo.py
+uv run python examples/graph_branch_and_bound_demo.py
 ```
 
 To start the DPLL logic example directly from the repository:
 
 ```bash
-python examples/logic_dpll_demo.py
+uv run python examples/logic_dpll_demo.py
 ```
 
 To start the reasoning-with-uncertainty example directly from the repository:
 
 ```bash
-python examples/uncertainty_demo.py
+uv run python examples/uncertainty_demo.py
 ```
 
 To start the foundation models tokenisation example directly from the repository:
 
 ```bash
-python examples/foundation_models_demo.py
+uv run python examples/foundation_models_demo.py
 ```
 
 To start the CSP map-colouring example directly from the repository:
 
 ```bash
-python examples/csp_demo.py
+uv run python examples/csp_demo.py
 ```
 
 To start the CSP delivery scheduling example directly from the repository:
 
 ```bash
-python examples/delivery_csp_demo.py
+uv run python examples/delivery_csp_demo.py
 ```
 
 To start the STRIPS planning example directly from the repository:
 
 ```bash
-python examples/strips_demo.py
+uv run python examples/strips_demo.py
 ```
 
 The same install is enough for the labyrinth live-Python stub as well. The
@@ -191,7 +184,7 @@ wrapper, so no separate Flask setup is required.
 To export a backend-free replay bundle:
 
 ```bash
-PYTHONPATH=src python - <<'PY'
+PYTHONPATH=src uv run python - <<'PY'
 from pathlib import Path
 from ai9414.search import SearchDemo
 
