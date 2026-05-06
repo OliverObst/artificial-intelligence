@@ -26,6 +26,8 @@ const isCsp = () => appType() === "csp";
 const isDeliveryCsp = () => appType() === "delivery_csp";
 const isCspFamily = () => isCsp() || isDeliveryCsp();
 const isLabyrinth = () => appType() === "labyrinth";
+const isDelivery = () => appType() === "delivery";
+const isGridSearch = () => isLabyrinth() || isDelivery();
 const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
 const isGraphAStar = () => appType() === "graph_astar";
@@ -220,6 +222,21 @@ function renderPanelCopy() {
     $("logic-legend").classList.remove("hidden");
     $("csp-legend").classList.add("hidden");
     $("uncertainty-legend").classList.add("hidden");
+  } else if (isDelivery()) {
+    $("left-panel-title").textContent = "Search Tree";
+    $("left-panel-subtitle").textContent = "DFS tree for the delivery search.";
+    $("right-panel-title").textContent = "Delivery Office";
+    $("right-panel-subtitle").textContent = "Office route, unhelpful branches, and final route.";
+    $("search-toggle-grid").classList.add("hidden");
+    $("search-legend").classList.add("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
+    $("labyrinth-legend").classList.remove("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   } else if (isLabyrinth()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "DFS tree for the labyrinth search.";
@@ -402,15 +419,15 @@ function renderMetrics(data) {
     $("metric-4-value").textContent = String(data.stats?.backtracks || 0);
     return;
   }
-  if (isLabyrinth()) {
+  if (isGridSearch()) {
     $("metric-1-label").textContent = "Explored cells";
     $("metric-1-value").textContent = String(data.search?.explored_count || 0);
     $("metric-2-label").textContent = "Current depth";
     $("metric-2-value").textContent = String(data.search?.current_depth || 0);
     $("metric-3-label").textContent = "Status";
     $("metric-3-value").textContent = data.search?.status || "searching";
-    $("metric-4-label").textContent = "Seed";
-    $("metric-4-value").textContent = String(data.labyrinth?.seed ?? "none");
+    $("metric-4-label").textContent = isDelivery() ? "Action order" : "Seed";
+    $("metric-4-value").textContent = isDelivery() ? String(data.action_order_label ?? "straight, left, right") : String(data.labyrinth?.seed ?? "none");
     return;
   }
   if (isGraphReachability()) {
@@ -995,12 +1012,12 @@ function renderTree(data) {
       );
       group.appendChild(svgNode("text", { class: "tree-node-reason", y: 28 }, node.reason || ""));
     } else {
-      group.appendChild(svgNode("circle", { class: "tree-node-circle", r: isLabyrinth() ? 38 : 34 }));
-      const label = isLabyrinth() ? String(node.graph_node).replace(", ", ",") : node.graph_node;
+      group.appendChild(svgNode("circle", { class: "tree-node-circle", r: isGridSearch() ? 38 : 34 }));
+      const label = isGridSearch() ? String(node.graph_node).replace(", ", ",") : node.graph_node;
       group.appendChild(
         svgNode(
           "text",
-          { class: isLabyrinth() ? "tree-node-label tree-node-label-labyrinth" : "tree-node-label", y: isLabyrinth() ? 4 : -6 },
+          { class: isGridSearch() ? "tree-node-label tree-node-label-labyrinth" : "tree-node-label", y: isGridSearch() ? 4 : -6 },
           label
         )
       );
@@ -1194,6 +1211,7 @@ function renderLabyrinth(data) {
       const key = cellKey([row, col]);
       const value = labyrinth.grid[row][col];
       const classes = ["maze-cell"];
+      if (isDelivery()) classes.push("delivery-cell");
       if (value === "#") {
         classes.push("wall");
       } else {
@@ -1215,7 +1233,26 @@ function renderLabyrinth(data) {
           rx: Math.max(1, cellSize * 0.14),
         })
       );
-      if (value === "S" || value === "E") {
+      if (isDelivery() && value === "S") {
+        const cx = offsetX + col * cellSize + cellSize / 2;
+        const cy = offsetY + row * cellSize + cellSize / 2;
+        const radius = cellSize * 0.32;
+        textGroup.appendChild(
+          svgNode("polygon", {
+            class: "delivery-robot",
+            points: `${cx},${cy - radius} ${cx - radius * 0.92},${cy + radius * 0.78} ${cx + radius * 0.92},${cy + radius * 0.78}`,
+          })
+        );
+      } else if (isDelivery() && value === "E") {
+        textGroup.appendChild(
+          svgNode("circle", {
+            class: "delivery-goal",
+            cx: offsetX + col * cellSize + cellSize / 2,
+            cy: offsetY + row * cellSize + cellSize / 2,
+            r: cellSize * 0.32,
+          })
+        );
+      } else if (value === "S" || value === "E") {
         textGroup.appendChild(
           svgNode(
             "text",
@@ -2382,7 +2419,7 @@ function render() {
     renderUncertaintyWorld(data);
   } else if (isStrips()) {
     renderStripsWorld(data);
-  } else if (isLabyrinth()) {
+  } else if (isGridSearch()) {
     renderLabyrinth(data);
   } else if (isGraphReachability()) {
     renderGraphReachability(data);

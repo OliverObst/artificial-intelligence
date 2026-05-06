@@ -12,6 +12,7 @@ This repository contains the Phase 1 reference infrastructure for the `ai9414` p
 - Static solution replay export with no backend dependency
 - `ai9414.search.SearchDemo` with deterministic weighted geometric graph examples
 - `ai9414.labyrinth.LabyrinthDemo` with built-in labyrinth playback examples and live-Python handoff
+- `ai9414.delivery.DeliveryDemo` with fixed office-grid DFS examples and live-Python handoff
 - `ai9414.logic.DpllDemo` with built-in SAT and entailment playback examples plus live-Python DPLL handoff
 - `ai9414.uncertainty.BeliefStateExplorer` with discrete office-localisation scenarios, Bayes-filter traces, and live-Python belief updates
 - `ai9414.foundation_models.TokenisationExplorer` with curated text scenarios, token comparisons, and toy BPE merge replay
@@ -25,7 +26,7 @@ This repository contains the Phase 1 reference infrastructure for the `ai9414` p
 
 The search demo currently uses `precomputed` mode only, because Phase 1 is validating the replay model rather than incremental execution.
 
-The labyrinth demo also uses `precomputed` mode for built-in examples, then hands off generated mazes to a separate student Python stub in live mode.
+The labyrinth demo also uses `precomputed` mode for built-in examples, then hands off generated mazes to a separate student Python stub in live mode. The delivery demo uses the same grid-search replay contract, but keeps the office layouts fixed and does not expose generation controls.
 
 The DPLL demo uses the same trace-first precomputed model, but swaps the right-hand geometric view for a clause-state panel and supports both SAT and entailment within the same replay shell.
 
@@ -72,6 +73,14 @@ src/ai9414/labyrinth/
   solver.py
   trace.py
 
+src/ai9414/delivery/
+  __init__.py
+  api.py
+  examples.py
+  models.py
+  solver.py
+  trace.py
+
 src/ai9414/logic/
   __init__.py
   api.py
@@ -91,6 +100,8 @@ src/ai9414/logic/
 - `models.py` and `configs.py`: graph, tree, and configuration validation models
 
 The labyrinth package follows the same shape, but swaps the weighted-graph world for a grid maze, plain DFS reachability, built-in playback examples, and a live-Python `/solve` workflow.
+
+The delivery package reuses the grid-search trace shape for first-lecture DFS examples in simple office layouts. It has two fixed configurations, no generator, an action-order option for neighbour expansion, and office-specific copy in the replay UI.
 
 The logic package follows the same overall contract, but its right-hand panel renders CNF clauses and literal states while the left-hand tree shows DPLL partial assignments, forced literals, contradictions, and backtracking.
 

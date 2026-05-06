@@ -280,6 +280,44 @@ It receives a maze as a Python dictionary and must return a dictionary containin
 - visited_order
 `;
 
+const DELIVERY_PYTHON_README = `# delivery dfs solver
+
+This folder runs a tiny local solver for the delivery office search example.
+The web-app connection is handled for you by ai9414.
+Your job is to implement the DFS logic.
+
+## install
+
+Install the dependency with:
+
+    pip install -r requirements.txt
+
+## run
+
+Start the local solver with:
+
+    python solve_delivery.py
+
+The solver starts on the local port expected by the browser app.
+
+## what to implement
+
+Open solve_delivery.py and look at:
+
+- get_neighbours(...)
+- reconstruct_path(...)
+- solve_dfs(...)
+
+The main function is solve_dfs(...).
+It receives the delivery office grid as a Python dictionary and must return a dictionary containing:
+
+- algorithm
+- status
+- trace
+- path
+- visited_order
+`;
+
 const GRAPH_PYTHON_STUB = `from __future__ import annotations
 
 from typing import Any
@@ -1978,6 +2016,8 @@ const isCsp = () => appType() === "csp";
 const isDeliveryCsp = () => appType() === "delivery_csp";
 const isCspFamily = () => isCsp() || isDeliveryCsp();
 const isLabyrinth = () => appType() === "labyrinth";
+const isDelivery = () => appType() === "delivery";
+const isGridSearch = () => isLabyrinth() || isDelivery();
 const isGraphBfs = () => appType() === "graph_bfs";
 const isGraphDfs = () => appType() === "graph_dfs";
 const isGraphAStar = () => appType() === "graph_astar";
@@ -2270,6 +2310,10 @@ function syncControls() {
     if (isCsp()) {
       $("csp-colour-select").value = String(options.num_colours || 3);
     }
+  }
+  if (isDelivery()) {
+    const options = state.session?.data?.options || {};
+    $("delivery-order-select").value = options.action_order || "straight_left_right";
   }
 }
 
@@ -2604,15 +2648,17 @@ function blankStripsTrace(problem, snapshot) {
 function blankLabyrinthTrace(labyrinth) {
   const start = labyrinth.start;
   return {
-    app_type: "labyrinth",
+    app_type: appType() || "labyrinth",
     initial_state: {
-      example_title: state.session?.data?.example_title || "Generated labyrinth",
+      example_title: state.session?.data?.example_title || (isDelivery() ? "Delivery office" : "Generated labyrinth"),
       example_subtitle:
         state.session?.data?.example_subtitle ||
-        "Generate a labyrinth, then solve it in live Python mode.",
+        isDelivery() ? "Solve the current office layout in live Python mode." : "Generate a labyrinth, then solve it in live Python mode.",
       algorithm_label: "Depth-first search",
       algorithm_note:
-        "This view is ready for DFS reachability. Solve the current labyrinth with Python to populate the trace.",
+        isDelivery()
+          ? "This view is ready for DFS reachability. Solve the current delivery office with Python to populate the trace."
+          : "This view is ready for DFS reachability. Solve the current labyrinth with Python to populate the trace.",
       goal_label: "Find any path from start to exit",
       labyrinth,
       tree: {
@@ -3161,12 +3207,12 @@ function buildLabyrinthTraceFromBackend(labyrinth, result) {
         }
       });
       currentTreeId = activeTreePath[activeTreePath.length - 1] || currentTreeId;
-      searchStatus = "exit found";
+      searchStatus = isDelivery() ? "delivery found" : "exit found";
     } else if (action === "fail") {
       currentRoute = [];
       activeTreePath.length = 0;
       currentTreeId = null;
-      searchStatus = "no path";
+      searchStatus = isDelivery() ? "no route" : "no path";
     }
 
     rawSnapshots.push({
@@ -3175,26 +3221,38 @@ function buildLabyrinthTraceFromBackend(labyrinth, result) {
         action === "start"
           ? "Start DFS"
           : action === "expand"
-            ? `Expand (${cell[0]},${cell[1]})`
+            ? `${isDelivery() ? "Move to" : "Expand"} (${cell[0]},${cell[1]})`
             : action === "backtrack"
               ? `Backtrack from (${cell[0]},${cell[1]})`
               : action === "found"
-                ? "Exit found"
-                : "No path found",
+                ? isDelivery() ? "Delivery location found" : "Exit found"
+                : isDelivery() ? "No delivery route found" : "No path found",
       annotation:
         action === "start"
-          ? "The maze is ready. DFS starts at the entrance."
+          ? isDelivery()
+            ? "The office is ready. DFS starts at the robot location."
+            : "The maze is ready. DFS starts at the entrance."
           : action === "expand"
             ? `DFS steps into (${cell[0]},${cell[1]}) and keeps exploring.`
             : action === "backtrack"
-              ? `DFS retreats from (${cell[0]},${cell[1]}) after reaching a dead end.`
+              ? isDelivery()
+                ? `DFS retreats from (${cell[0]},${cell[1]}) after reaching an unhelpful route.`
+                : `DFS retreats from (${cell[0]},${cell[1]}) after reaching a dead end.`
               : action === "found"
-                ? "DFS has reached the exit and the successful path is now highlighted."
-                : "DFS has exhausted the reachable maze without finding an exit.",
+                ? isDelivery()
+                  ? "DFS has reached the delivery location and the successful route is now highlighted."
+                  : "DFS has reached the exit and the successful path is now highlighted."
+                : isDelivery()
+                  ? "DFS has exhausted the reachable office without finding the delivery location."
+                  : "DFS has exhausted the reachable maze without finding an exit.",
       teaching_note:
         action === "found"
-          ? "Plain DFS stops as soon as it finds any exit path."
-          : "The tree shows search history, while the maze view shows spatial movement.",
+          ? isDelivery()
+            ? "Plain DFS stops as soon as it finds any delivery route."
+            : "Plain DFS stops as soon as it finds any exit path."
+          : isDelivery()
+            ? "The tree shows search history, while the office view shows spatial movement."
+            : "The tree shows search history, while the maze view shows spatial movement.",
       snapshot: snapshot(),
     });
   });
@@ -3203,7 +3261,7 @@ function buildLabyrinthTraceFromBackend(labyrinth, result) {
   const layoutById = new Map(laidOutNodes.map((node) => [node.tree_id, node]));
 
   const initialState = blankLabyrinthTrace(labyrinth).initial_state;
-  initialState.example_title = "Live Python labyrinth";
+  initialState.example_title = isDelivery() ? "Live Python delivery" : "Live Python labyrinth";
   initialState.example_subtitle = "Trace returned by your local Python DFS backend.";
   initialState.tree.nodes = initialState.tree.nodes.map((node) => layoutById.get(node.tree_id) || node);
 
@@ -3221,7 +3279,7 @@ function buildLabyrinthTraceFromBackend(labyrinth, result) {
   });
 
   return {
-    app_type: "labyrinth",
+    app_type: appType() || "labyrinth",
     initial_state: initialState,
     steps,
     summary: { step_count: steps.length, result: result.status || "found" },
@@ -4975,7 +5033,7 @@ function activeTraceContext() {
       })
     : isFoundationModels()
     ? blankFoundationTrace(state.session.data)
-    : isLabyrinth()
+    : isGridSearch()
     ? blankLabyrinthTrace(state.session.data.labyrinth)
     : isWeightedSearch()
       ? blankSearchTrace(state.session.data.graph)
@@ -5047,7 +5105,7 @@ function statusLabel(data, step) {
   if (isLogic()) {
     return data.search?.status || data.search?.result || "ready";
   }
-  if (isLabyrinth() || isGraphReachability()) {
+  if (isGridSearch() || isGraphReachability()) {
     return data.search?.status || "ready";
   }
   if (isWeightedGraphSearch() && data.search?.status) {
@@ -5102,6 +5160,11 @@ function renderPanelCopy(data) {
       data.problem_mode === "entailment"
         ? "The knowledge base and CNF clause list show whether KB and not query are jointly satisfiable."
         : "The clause list shows which clauses are satisfied, unresolved, unit, or contradicted under the current assignment.";
+  } else if (isDelivery()) {
+    $("left-panel-title").textContent = "Search Tree";
+    $("left-panel-subtitle").textContent = "The tree grows in DFS order and keeps backtracked routes visible.";
+    $("right-panel-title").textContent = "Delivery Office";
+    $("right-panel-subtitle").textContent = "The office map shows the robot route, unhelpful branches, and the first route to the delivery location.";
   } else if (isLabyrinth()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "The tree grows in DFS order and keeps backtracked branches visible.";
@@ -5214,15 +5277,15 @@ function renderMetrics(data) {
     $("metric-4-value").textContent = String(data.stats?.backtracks || 0);
     return;
   }
-  if (isLabyrinth()) {
+  if (isGridSearch()) {
     $("metric-1-label").textContent = "Explored cells";
     $("metric-1-value").textContent = String(data.search?.explored_count || 0);
     $("metric-2-label").textContent = "Current depth";
     $("metric-2-value").textContent = String(data.search?.current_depth || 0);
     $("metric-3-label").textContent = "Status";
     $("metric-3-value").textContent = data.search?.status || "searching";
-    $("metric-4-label").textContent = "Seed";
-    $("metric-4-value").textContent = String(data.labyrinth?.seed ?? "none");
+    $("metric-4-label").textContent = isDelivery() ? "Action order" : "Seed";
+    $("metric-4-value").textContent = isDelivery() ? String(data.action_order_label ?? "straight, left, right") : String(data.labyrinth?.seed ?? "none");
     return;
   }
 
@@ -5943,12 +6006,12 @@ function renderTree(data) {
         $svgNode("text", { class: "tree-node-reason", y: 28 }, node.reason || "")
       );
     } else {
-      group.appendChild($svgNode("circle", { class: "tree-node-circle", r: isLabyrinth() ? 38 : 34 }));
-      const label = isLabyrinth() ? String(node.graph_node).replace(", ", ",") : node.graph_node;
+      group.appendChild($svgNode("circle", { class: "tree-node-circle", r: isGridSearch() ? 38 : 34 }));
+      const label = isGridSearch() ? String(node.graph_node).replace(", ", ",") : node.graph_node;
       group.appendChild(
         $svgNode(
           "text",
-          { class: isLabyrinth() ? "tree-node-label tree-node-label-labyrinth" : "tree-node-label", y: isLabyrinth() ? 4 : -6 },
+          { class: isGridSearch() ? "tree-node-label tree-node-label-labyrinth" : "tree-node-label", y: isGridSearch() ? 4 : -6 },
           label
         )
       );
@@ -6145,6 +6208,7 @@ function renderLabyrinth(data) {
       const key = cellKey(cell);
       const value = labyrinth.grid[row][col];
       const classes = ["maze-cell"];
+      if (isDelivery()) classes.push("delivery-cell");
       if (value === "#") {
         classes.push("wall");
       } else {
@@ -6168,7 +6232,26 @@ function renderLabyrinth(data) {
         })
       );
 
-      if (value === "S" || value === "E") {
+      if (isDelivery() && value === "S") {
+        const cx = offsetX + col * cellSize + cellSize / 2;
+        const cy = offsetY + row * cellSize + cellSize / 2;
+        const radius = cellSize * 0.32;
+        textGroup.appendChild(
+          $svgNode("polygon", {
+            class: "delivery-robot",
+            points: `${cx},${cy - radius} ${cx - radius * 0.92},${cy + radius * 0.78} ${cx + radius * 0.92},${cy + radius * 0.78}`,
+          })
+        );
+      } else if (isDelivery() && value === "E") {
+        textGroup.appendChild(
+          $svgNode("circle", {
+            class: "delivery-goal",
+            cx: offsetX + col * cellSize + cellSize / 2,
+            cy: offsetY + row * cellSize + cellSize / 2,
+            r: cellSize * 0.32,
+          })
+        );
+      } else if (value === "S" || value === "E") {
         textGroup.appendChild(
           $svgNode(
             "text",
@@ -7392,7 +7475,7 @@ function renderUncertaintyWorld(data) {
 function renderControls() {
   const livePythonApp = isLivePythonApp();
   const generatedProblemApp =
-    livePythonApp && !isLogic() && !isStrips() && !isUncertainty() && !isCspFamily() && !isFoundationModels();
+    livePythonApp && !isDelivery() && !isLogic() && !isStrips() && !isUncertainty() && !isCspFamily() && !isFoundationModels();
   $("example-control-label").textContent = generatedProblemApp ? "Configuration" : "Example";
   $("size-control-label").textContent = isLabyrinth() ? "Labyrinth size" : "Graph size";
   $("generate-button").textContent = isLabyrinth() ? "Generate new labyrinth" : "Generate new graph";
@@ -7408,6 +7491,7 @@ function renderControls() {
   $("csp-value-order-control").classList.toggle("hidden", !isCspFamily());
   $("csp-colour-control").classList.toggle("hidden", !isCsp());
   $("csp-view-control").classList.toggle("hidden", !isCspFamily());
+  $("delivery-order-control").classList.toggle("hidden", !isDelivery());
   $("planning-toggle-grid").classList.toggle("hidden", !isStrips());
   $("uncertainty-toggle-grid").classList.toggle("hidden", !isUncertainty());
   $("csp-toggle-grid").classList.toggle("hidden", !isCspFamily());
@@ -7423,7 +7507,7 @@ function renderControls() {
   $("search-toggle-grid").classList.toggle("hidden", !isWeightedGraphSearch());
   $("logic-toggle-grid").classList.toggle("hidden", !isLogic());
   $("search-legend").classList.toggle("hidden", !isWeightedGraphSearch());
-  $("labyrinth-legend").classList.toggle("hidden", !isLabyrinth());
+  $("labyrinth-legend").classList.toggle("hidden", !isGridSearch());
   $("graph-dfs-legend").classList.toggle("hidden", !isGraphReachability());
   $("logic-legend").classList.toggle("hidden", !isLogic());
   $("csp-legend").classList.toggle("hidden", !isCspFamily());
@@ -7508,7 +7592,7 @@ function render() {
     renderUncertaintyWorld(data);
   } else if (isStrips()) {
     renderStripsWorld(data);
-  } else if (isLabyrinth()) {
+  } else if (isGridSearch()) {
     renderLabyrinth(data);
   } else if (isGraphReachability()) {
     renderGraphReachability(data);
@@ -7656,7 +7740,7 @@ async function solveWithPython() {
         algorithm: "strips_bfs",
         problem: clone(state.session.data.strips_problem),
       }
-    : isLabyrinth()
+    : isGridSearch()
     ? { algorithm: "dfs", labyrinth: state.session.data.labyrinth }
     : {
         algorithm: isWeightedSearch()
@@ -7682,7 +7766,7 @@ async function solveWithPython() {
       ? state.session.data.delivery_problem
     : isStrips()
       ? state.session.data.strips_problem
-    : isLabyrinth()
+    : isGridSearch()
       ? state.session.data.labyrinth
       : state.session.data.graph;
 
@@ -7707,7 +7791,7 @@ async function solveWithPython() {
       ? payload.trace_bundle
       : isStrips()
       ? payload.trace_bundle
-      : isLabyrinth()
+      : isGridSearch()
       ? buildLabyrinthTraceFromBackend(problemData, payload)
       : isWeightedSearch()
         ? buildSearchTraceFromBackend(problemData, payload)
@@ -7809,9 +7893,9 @@ function downloadPythonStub() {
           { name: "ai9414/README.md", content: GRAPH_PYTHON_README },
         ]
       : [
-          { name: "ai9414/solve_labyrinth.py", content: PYTHON_STUB },
+          { name: isDelivery() ? "ai9414/solve_delivery.py" : "ai9414/solve_labyrinth.py", content: PYTHON_STUB },
           { name: "ai9414/requirements.txt", content: PYTHON_REQUIREMENTS },
-          { name: "ai9414/README.md", content: PYTHON_README },
+          { name: "ai9414/README.md", content: isDelivery() ? DELIVERY_PYTHON_README : PYTHON_README },
         ]
   );
   const url = window.URL.createObjectURL(archive);
@@ -7839,7 +7923,9 @@ function downloadPythonStub() {
     ? "graph-bfs-python-stub.zip"
     : isGraphDfs()
       ? "graph-dfs-python-stub.zip"
-      : "labyrinth-dfs-python-stub.zip";
+      : isDelivery()
+        ? "delivery-dfs-python-stub.zip"
+        : "labyrinth-dfs-python-stub.zip";
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
@@ -7867,7 +7953,9 @@ function downloadPythonStub() {
       ? "Downloaded graph-bfs-python-stub.zip."
       : isGraphDfs()
       ? "Downloaded graph-dfs-python-stub.zip."
-      : "Downloaded labyrinth-dfs-python-stub.zip."
+      : isDelivery()
+        ? "Downloaded delivery-dfs-python-stub.zip."
+        : "Downloaded labyrinth-dfs-python-stub.zip."
   );
   render();
 }
@@ -7891,6 +7979,15 @@ async function updateCspOptions(patch) {
 }
 
 async function updateFoundationOptions(patch) {
+  stopPlay();
+  setMessage("");
+  const response = await postAction("set_option", patch);
+  const trace = await requestJson("/api/trace");
+  response.trace = trace;
+  await refreshFromServer(response);
+}
+
+async function updateDeliveryOptions(patch) {
   stopPlay();
   setMessage("");
   const response = await postAction("set_option", patch);
@@ -7953,7 +8050,7 @@ function bindEvents() {
     await loadExample(state.session.example_name);
   });
   $("example-select").addEventListener("change", async (event) => {
-    if (isLivePythonApp() && !isLogic() && !isStrips() && !isUncertainty() && !isCspFamily()) {
+    if (isLivePythonApp() && !isDelivery() && !isLogic() && !isStrips() && !isUncertainty() && !isCspFamily()) {
       stopPlay();
       state.player.size = event.target.value;
       state.player.seed = "";
@@ -7987,6 +8084,8 @@ function bindEvents() {
           ? "Live Python mode is ready. Run your local delivery CSP solver and replay the returned trace."
           : isStrips()
           ? "Live Python mode is ready. Run your local STRIPS planner and replay the returned plan."
+          : isDelivery()
+          ? "Live Python mode is ready. Solve the current delivery office with your backend."
           : !isLabyrinth()
           ? "Live Python mode is ready. Generate a graph or solve the current one with your backend."
           : "Live Python mode is ready. Generate a labyrinth or solve the current one with your backend."
@@ -8033,6 +8132,9 @@ function bindEvents() {
   $("csp-view-select").addEventListener("change", (event) => {
     state.view.cspViewMode = event.target.value;
     render();
+  });
+  $("delivery-order-select").addEventListener("change", async (event) => {
+    await updateDeliveryOptions({ action_order: event.target.value });
   });
   $("size-select").addEventListener("change", (event) => {
     state.player.size = event.target.value;

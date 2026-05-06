@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Callable
 from dataclasses import dataclass
 from uuid import uuid4
 
@@ -13,6 +14,11 @@ ALGORITHM_NOTE = (
     "This example uses plain depth-first search for reachability. "
     "It stops once it finds any path from the start to the exit, so it does not guarantee a shortest path."
 )
+
+NeighbourOrder = Callable[
+    [LabyrinthDefinition, tuple[int, int], tuple[int, int] | None, int],
+    list[tuple[int, int]],
+]
 
 
 @dataclass
@@ -161,7 +167,21 @@ def _neighbours(labyrinth: LabyrinthDefinition, cell: tuple[int, int]) -> list[t
     return valid
 
 
-def solve_labyrinth(labyrinth: LabyrinthDefinition) -> LabyrinthSolveResult:
+def _default_neighbours(
+    labyrinth: LabyrinthDefinition,
+    cell: tuple[int, int],
+    previous: tuple[int, int] | None,
+    depth: int,
+) -> list[tuple[int, int]]:
+    _ = (previous, depth)
+    return _neighbours(labyrinth, cell)
+
+
+def solve_labyrinth(
+    labyrinth: LabyrinthDefinition,
+    *,
+    neighbour_order: NeighbourOrder | None = None,
+) -> LabyrinthSolveResult:
     recorder = _Recorder(labyrinth)
     root_id = recorder.create_tree_node(list(labyrinth.start), None, 0, "active")
     recorder.active_tree_node = root_id
@@ -176,7 +196,14 @@ def solve_labyrinth(labyrinth: LabyrinthDefinition) -> LabyrinthSolveResult:
 
     found = False
 
-    def dfs(cell: tuple[int, int], tree_id: str, depth: int) -> bool:
+    order_neighbours = neighbour_order or _default_neighbours
+
+    def dfs(
+        cell: tuple[int, int],
+        tree_id: str,
+        depth: int,
+        previous: tuple[int, int] | None,
+    ) -> bool:
         nonlocal found
         if cell == tuple(labyrinth.exit):
             recorder.set_status(tree_id, "final")
@@ -199,7 +226,7 @@ def solve_labyrinth(labyrinth: LabyrinthDefinition) -> LabyrinthSolveResult:
             return True
 
         recorder.set_status(tree_id, "active")
-        for neighbour in _neighbours(labyrinth, cell):
+        for neighbour in order_neighbours(labyrinth, cell, previous, depth):
             if neighbour in recorder.visited_set:
                 continue
             child = list(neighbour)
@@ -220,7 +247,7 @@ def solve_labyrinth(labyrinth: LabyrinthDefinition) -> LabyrinthSolveResult:
                 teaching_note="The maze route on the right and the tree branch on the left advance together.",
             )
 
-            if dfs(neighbour, child_id, depth + 1):
+            if dfs(neighbour, child_id, depth + 1, cell):
                 recorder.set_status(tree_id, "final")
                 return True
 
@@ -246,7 +273,7 @@ def solve_labyrinth(labyrinth: LabyrinthDefinition) -> LabyrinthSolveResult:
             recorder.set_status(tree_id, "backtracked")
         return False
 
-    dfs(tuple(labyrinth.start), root_id, 0)
+    dfs(tuple(labyrinth.start), root_id, 0, None)
 
     if not found:
         recorder.status = "no path"

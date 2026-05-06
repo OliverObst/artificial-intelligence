@@ -4,9 +4,10 @@
 
 ![AI9414 branch-and-bound demo screenshot](https://raw.githubusercontent.com/OliverObst/artificial-intelligence/main/docs/images/bnb-demo.png)
 
-It currently includes thirteen ready-to-run demos:
+It currently includes fourteen ready-to-run demos:
 
 - labyrinth DFS search
+- office delivery DFS search
 - spatial graph DFS search
 - spatial graph BFS search
 - spatial graph greedy best-first search
@@ -24,6 +25,8 @@ It currently includes thirteen ready-to-run demos:
 
 - `labyrinth DFS search`
   Start with `ai9414 demo labyrinth`
+- `office delivery DFS search`
+  Start with `ai9414 demo delivery`. This demo has fixed office layouts and an action-order control for DFS.
 - `spatial graph DFS search`
   Start with `ai9414 demo graph-dfs`
 - `spatial graph BFS search`
@@ -103,6 +106,12 @@ To start the labyrinth example directly from the repository:
 
 ```bash
 uv run python examples/labyrinth_demo.py
+```
+
+To start the delivery DFS example directly from the repository:
+
+```bash
+uv run python examples/delivery_demo.py
 ```
 
 To start the spatial graph DFS example directly from the repository:

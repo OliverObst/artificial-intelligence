@@ -631,24 +631,49 @@ input[type="number"] {
   fill: #2f3941;
 }
 
+.maze-cell.delivery-cell.wall {
+  fill: #666865;
+}
+
 .maze-cell.open {
   fill: #f6f2ea;
+}
+
+.maze-cell.delivery-cell.open {
+  fill: #050505;
+  stroke: rgba(255, 255, 255, 0.25);
 }
 
 .maze-cell.visited {
   fill: rgba(13, 110, 110, 0.18);
 }
 
+.maze-cell.delivery-cell.visited {
+  fill: rgba(13, 110, 110, 0.55);
+}
+
 .maze-cell.dead-end {
   fill: rgba(140, 94, 75, 0.32);
+}
+
+.maze-cell.delivery-cell.dead-end {
+  fill: rgba(140, 94, 75, 0.72);
 }
 
 .maze-cell.current {
   fill: rgba(13, 110, 110, 0.5);
 }
 
+.maze-cell.delivery-cell.current {
+  fill: rgba(15, 185, 177, 0.78);
+}
+
 .maze-cell.final {
   fill: rgba(124, 63, 0, 0.46);
+}
+
+.maze-cell.delivery-cell.final {
+  fill: rgba(255, 211, 0, 0.68);
 }
 
 .maze-cell.start {
@@ -666,6 +691,17 @@ input[type="number"] {
   font-size: 12px;
   font-weight: 700;
   text-anchor: middle;
+}
+
+.delivery-robot {
+  fill: #ff2a16;
+  stroke: rgba(255, 208, 200, 0.95);
+  stroke-width: 2;
+}
+
+.delivery-goal {
+  fill: #ffd400;
+  stroke: #ffd400;
 }
 
 .logic-shell {

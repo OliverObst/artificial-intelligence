@@ -4,6 +4,7 @@ from ai9414.core import BaseEducationalApp, launch_app
 from ai9414.uncertainty import BeliefStateExplorer
 from ai9414.csp import CSPDemo
 from ai9414.demo import PlaceholderDemo
+from ai9414.delivery import DeliveryDemo
 from ai9414.delivery_csp import DeliveryCSPDemo
 from ai9414.foundation_models import TokenisationExplorer
 from ai9414.graph_astar import GraphAStarDemo
@@ -21,6 +22,7 @@ __all__ = [
     "BeliefStateExplorer",
     "CSPDemo",
     "DpllDemo",
+    "DeliveryDemo",
     "DeliveryCSPDemo",
     "TokenisationExplorer",
     "GraphAStarDemo",

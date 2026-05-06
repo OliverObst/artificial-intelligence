@@ -205,6 +205,13 @@ def demo_specs() -> tuple[DemoSpec, ...]:
             factory=_create_labyrinth_demo,
         ),
         DemoSpec(
+            name="delivery",
+            title="Delivery DFS",
+            description="Office delivery depth-first search",
+            default_example="four_rooms",
+            factory=_create_delivery_demo,
+        ),
+        DemoSpec(
             name="graph-dfs",
             title="Graph DFS",
             description="Spatial graph depth-first search",
@@ -306,6 +313,12 @@ def _create_labyrinth_demo() -> BaseEducationalApp:
     from ai9414.labyrinth import LabyrinthDemo
 
     return LabyrinthDemo()
+
+
+def _create_delivery_demo() -> BaseEducationalApp:
+    from ai9414.delivery import DeliveryDemo
+
+    return DeliveryDemo()
 
 
 def _create_graph_dfs_demo() -> BaseEducationalApp:

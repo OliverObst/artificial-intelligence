@@ -17,6 +17,7 @@ def test_cli_lists_available_demos(capsys):
     assert cli.main(["list"]) == 0
 
     captured = capsys.readouterr()
+    assert "delivery" in captured.out
     assert "graph-dfs" in captured.out
     assert "logic-dpll" in captured.out
     assert "csp-delivery" in captured.out
