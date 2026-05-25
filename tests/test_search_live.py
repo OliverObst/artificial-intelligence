@@ -22,6 +22,17 @@ def test_generated_weighted_graphs_are_solvable():
     assert final_search["final_graph_path"][-1] == graph.goal
 
 
+def test_generated_weighted_graphs_use_conventional_endpoint_labels():
+    for size, seed in [("small", 17), ("large", 31)]:
+        graph = generate_weighted_graph(size=size, seed=seed)
+        node_ids = [node.id for node in graph.nodes]
+        assert graph.start == "S"
+        assert graph.goal == "G"
+        assert "S" in node_ids
+        assert "G" in node_ids
+        assert len(node_ids) == len(set(node_ids))
+
+
 def test_weighted_student_helpers_expose_problem_formalisation():
     graph = generate_weighted_graph(size="small", seed=17)
     payload = validate_weighted_graph_payload(graph.model_dump())

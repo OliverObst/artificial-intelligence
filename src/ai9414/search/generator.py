@@ -13,6 +13,9 @@ SIZE_NODE_COUNTS = {
     "large": 18,
 }
 
+START_NODE_ID = "S"
+GOAL_NODE_ID = "G"
+
 
 def euclidean_distance(a: GraphNode, b: GraphNode) -> float:
     return math.hypot(a.x - b.x, a.y - b.y)
@@ -135,6 +138,52 @@ def build_graph_from_pairs(
     return WeightedGraph(nodes=nodes, edges=edges, start=start, goal=goal)
 
 
+def _relabel_terminal_nodes(graph: WeightedGraph) -> WeightedGraph:
+    """Rename the selected endpoints to conventional start/goal labels."""
+    id_map = {
+        graph.start: START_NODE_ID,
+        graph.goal: GOAL_NODE_ID,
+    }
+    used_ids = {START_NODE_ID, GOAL_NODE_ID}
+    displaced_ids: list[str] = []
+
+    for node in graph.nodes:
+        if node.id in id_map:
+            continue
+        if node.id in used_ids:
+            displaced_ids.append(node.id)
+            continue
+        id_map[node.id] = node.id
+        used_ids.add(node.id)
+
+    replacement_ids = [
+        node_id
+        for node_id in [graph.start, graph.goal, *generate_node_ids(26)]
+        if node_id not in used_ids
+    ]
+    if len(replacement_ids) < len(displaced_ids):
+        raise ValueError("Not enough non-terminal labels for generated graph.")
+
+    for old_id, new_id in zip(displaced_ids, replacement_ids[: len(displaced_ids)], strict=True):
+        id_map[old_id] = new_id
+        used_ids.add(new_id)
+
+    return WeightedGraph(
+        nodes=[
+            GraphNode(id=id_map[node.id], x=node.x, y=node.y)
+            for node in graph.nodes
+        ],
+        edges=[
+            GraphEdge(u=id_map[edge.u], v=id_map[edge.v], cost=edge.cost)
+            for edge in graph.edges
+        ],
+        start=START_NODE_ID,
+        goal=GOAL_NODE_ID,
+        seed=graph.seed,
+        size=graph.size,
+    )
+
+
 def generate_sparse_geometric_graph(
     node_count: int = 16,
     seed: int = 7,
@@ -166,7 +215,7 @@ def generate_sparse_geometric_graph(
     graph = build_graph_from_pairs(nodes, edge_pairs, start=start, goal=goal)
     graph.seed = seed
     graph.size = size
-    return graph
+    return _relabel_terminal_nodes(graph)
 
 
 def generate_weighted_graph(*, size: str = "small", seed: int = 7) -> WeightedGraph:

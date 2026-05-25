@@ -57,6 +57,7 @@ It currently includes fourteen ready-to-run demos:
 - one installed package with a small command-line interface: `ai9414 ...`
 - browser-based visualisations with packaged frontend assets and no separate web build step
 - curated examples for search, logic, uncertainty, CSP, planning, and tokenisation
+- graph-search examples use conventional `S` and `G` labels for start and goal nodes
 - Python APIs for loading custom problems and launching demos directly from code
 - replayable traces for classroom walkthroughs and static solution export
 - automated tests plus contributor documentation

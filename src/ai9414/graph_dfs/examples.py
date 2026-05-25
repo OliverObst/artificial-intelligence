@@ -18,7 +18,7 @@ def build_examples() -> dict[str, GraphDfsExample]:
         name="large",
         title="Large configuration",
         subtitle="A larger spatial graph with longer DFS branches and more visible backtracking.",
-        graph=generate_spatial_graph(size="large", seed=16),
+        graph=generate_spatial_graph(size="large", seed=3),
         metadata={"difficulty": "large", "teaching_note": "Sparse structure makes DFS backtracking easier to follow."},
     )
     return {small.name: small, large.name: large}

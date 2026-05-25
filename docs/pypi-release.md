@@ -52,7 +52,7 @@ Before the first upload:
 3. Rebuild locally with `uv build`.
 4. Re-run `uv run twine check dist/*`.
 5. Test-install the wheel in a fresh virtual environment.
-6. Tag the release, for example `git tag v0.1.0 && git push origin v0.1.0`.
+6. Tag the release, for example `git tag v0.1.1 && git push origin v0.1.1`.
 7. GitHub Actions will build the distributions and publish them to PyPI.
 
 ## Manual fallback
