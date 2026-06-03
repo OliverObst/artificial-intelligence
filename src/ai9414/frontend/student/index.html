@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ai9414</title>
-    <link rel="stylesheet" href="/assets/style.css" />
+    <link rel="stylesheet" href="/assets/style.css?v=20260603" />
   </head>
   <body>
     <div class="page-shell">
@@ -41,6 +41,12 @@
             <div>
               <h2 id="right-panel-title">Problem View</h2>
               <p id="right-panel-subtitle" class="muted">The problem world stays fixed while the replay highlights what DFS is doing.</p>
+            </div>
+            <div class="quick-player" aria-label="Replay controls">
+              <button class="quick-player-button" type="button" data-player-action="previous" title="Previous step" aria-label="Previous step" disabled>&#10074;&#9664;</button>
+              <button class="quick-player-button" type="button" data-player-action="next" title="Play one step" aria-label="Play one step">&#9654;&#10074;</button>
+              <button class="quick-player-button" type="button" data-player-action="play" title="Play" aria-label="Play">&#9654;</button>
+              <button class="quick-player-button secondary-button" type="button" data-player-action="pause" title="Pause" aria-label="Pause" disabled>&#10074;&#10074;</button>
             </div>
           </div>
           <svg id="problem-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Problem view"></svg>
@@ -88,10 +94,10 @@
           </div>
 
           <div class="controls-grid">
-            <button id="previous-button" type="button">Previous</button>
+            <button id="previous-button" type="button" disabled>Previous</button>
             <button id="next-button" type="button">Next</button>
             <button id="play-button" type="button">Play</button>
-            <button id="pause-button" type="button" class="secondary-button">Pause</button>
+            <button id="pause-button" type="button" class="secondary-button" disabled>Pause</button>
             <button id="reset-button" type="button">Reset</button>
             <button id="reload-button" type="button" class="secondary-button">Reload example</button>
             <button id="generate-button" type="button" class="secondary-button">Generate new problem</button>
@@ -335,6 +341,6 @@
       <p class="page-credit">Copyright 2026 UNSW. Author: Oliver Obst &lt;o.obst@unsw.edu.au&gt;. Released under GNU GPL v3.</p>
     </div>
 
-    <script src="/assets/app.js" defer></script>
+    <script src="/assets/app.js?v=20260603" defer></script>
   </body>
 </html>

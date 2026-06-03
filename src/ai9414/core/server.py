@@ -16,6 +16,15 @@ from fastapi.staticfiles import StaticFiles
 from ai9414.core.errors import AI9414Error
 
 
+class NoCacheStaticFiles(StaticFiles):
+    """Serve bundled demo assets without browser caching during local teaching runs."""
+
+    async def get_response(self, path: str, scope: dict[str, Any]):  # type: ignore[override]
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+
 def find_free_port(host: str = "127.0.0.1") -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind((host, 0))
@@ -28,14 +37,17 @@ def create_fastapi_app(app_instance: Any) -> FastAPI:
 
     api.mount(
         "/assets",
-        StaticFiles(packages=[("ai9414.frontend", "student")]),
+        NoCacheStaticFiles(packages=[("ai9414.frontend", "student")]),
         name="assets",
     )
 
     @api.get("/", include_in_schema=False)
     def index() -> HTMLResponse:
         html = resources.files("ai9414.frontend").joinpath("student").joinpath("index.html")
-        return HTMLResponse(html.read_text(encoding="utf-8"))
+        return HTMLResponse(
+            html.read_text(encoding="utf-8"),
+            headers={"Cache-Control": "no-store"},
+        )
 
     @api.get("/api/health")
     def health() -> dict[str, str]:

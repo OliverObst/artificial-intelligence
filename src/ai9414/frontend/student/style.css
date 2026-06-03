@@ -95,6 +95,22 @@ input {
   gap: 16px;
 }
 
+.quick-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.quick-player-button {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 999px;
+  line-height: 1;
+  font-size: 0.92rem;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   font-size: 0.78rem;
@@ -2043,6 +2059,10 @@ input[type="number"] {
 
   .controls-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel-header {
+    flex-wrap: wrap;
   }
 
   .metric-grid,

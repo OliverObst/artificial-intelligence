@@ -1620,7 +1620,6 @@ Your solver returns:
 
 const STRIPS_PYTHON_STUB = `from __future__ import annotations
 
-from collections import deque
 from typing import Any
 
 from ai9414.strips import (
@@ -1669,40 +1668,30 @@ def solve_planner(problem: dict[str, Any]) -> dict[str, Any]:
         }
     """
     start_facts = get_initial_facts(problem)
-    start_state = canonical_state_id(start_facts)
-    queue: deque[tuple[list[tuple[str, ...]], list[str]]] = deque([(start_facts, [])])
-    visited = {start_state}
+
+    # TODO:
+    # 1. Create a BFS frontier of (facts, plan) pairs.
+    # 2. Keep a visited set using canonical_state_id(...).
+    # 3. Repeatedly pop the next state.
+    # 4. Test goal_satisfied(...).
+    # 5. Generate actions with get_applicable_actions(...).
+    # 6. Apply actions with apply_action_signature(...).
+    # 7. Return the first valid plan found.
+    #
+    # The helper call below is deliberately unused. It lets you inspect the
+    # starting state while you are implementing the planner.
+    _ = start_facts
+
     stats = {
         "expanded_states": 0,
         "generated_states": 1,
         "frontier_peak": 1,
     }
 
-    while queue:
-        stats["frontier_peak"] = max(stats["frontier_peak"], len(queue))
-        facts, plan = queue.popleft()
-        stats["expanded_states"] += 1
-
-        if goal_satisfied(facts, problem["goal"]):
-            return {
-                "algorithm": "strips_bfs",
-                "status": "found",
-                "plan": plan,
-                "stats": stats,
-            }
-
-        for action in get_applicable_actions(problem, facts):
-            next_facts = apply_action_signature(problem, facts, action)
-            state_id = canonical_state_id(next_facts)
-            if state_id in visited:
-                continue
-            visited.add(state_id)
-            queue.append((next_facts, [*plan, action]))
-            stats["generated_states"] += 1
-
     return {
         "algorithm": "strips_bfs",
-        "status": "not_found",
+        "status": "error",
+        "message": "TODO: implement forward STRIPS BFS planning.",
         "plan": [],
         "stats": stats,
     }
@@ -5089,6 +5078,10 @@ function maxStepCount() {
   return currentTrace().steps?.length || 0;
 }
 
+function canStepBack() {
+  return state.player.mode !== "live" && state.player.stepIndex > 0;
+}
+
 function statusLabel(data, step) {
   if (isFoundationModels()) {
     return data.foundation_models?.status || "ready";
@@ -7534,10 +7527,22 @@ function render() {
   $("step-range").max = String(max);
   $("step-range").value = String(state.player.stepIndex);
   $("step-readout").textContent = `${state.player.stepIndex} / ${max}`;
-  $("previous-button").disabled = state.player.stepIndex === 0;
+  $("previous-button").disabled = !canStepBack();
   $("next-button").disabled = state.player.stepIndex >= max;
   $("play-button").disabled = max === 0;
   $("pause-button").disabled = !state.playTimer;
+  document.querySelectorAll("[data-player-action='previous']").forEach((button) => {
+    button.disabled = !canStepBack();
+  });
+  document.querySelectorAll("[data-player-action='next']").forEach((button) => {
+    button.disabled = state.player.stepIndex >= max;
+  });
+  document.querySelectorAll("[data-player-action='play']").forEach((button) => {
+    button.disabled = max === 0;
+  });
+  document.querySelectorAll("[data-player-action='pause']").forEach((button) => {
+    button.disabled = !state.playTimer;
+  });
   renderPanelCopy(data);
   renderMetrics(data);
   renderControls();
@@ -7612,6 +7617,26 @@ function startPlay() {
     state.player.stepIndex += 1;
     render();
   }, playIntervalMs());
+  render();
+}
+
+function stepPrevious() {
+  if (!canStepBack()) return;
+  stopPlay();
+  state.player.stepIndex = Math.max(state.player.stepIndex - 1, 0);
+  state.view.planningSelectedAction = "";
+  render();
+}
+
+function stepNext() {
+  stopPlay();
+  state.player.stepIndex = Math.min(state.player.stepIndex + 1, maxStepCount());
+  state.view.planningSelectedAction = "";
+  render();
+}
+
+function pausePlay() {
+  stopPlay();
   render();
 }
 
@@ -8022,22 +8047,23 @@ async function resetFoundationText() {
 }
 
 function bindEvents() {
-  $("previous-button").addEventListener("click", () => {
-    stopPlay();
-    state.player.stepIndex = Math.max(state.player.stepIndex - 1, 0);
-    state.view.planningSelectedAction = "";
-    render();
-  });
-  $("next-button").addEventListener("click", () => {
-    stopPlay();
-    state.player.stepIndex = Math.min(state.player.stepIndex + 1, maxStepCount());
-    state.view.planningSelectedAction = "";
-    render();
-  });
+  $("previous-button").addEventListener("click", stepPrevious);
+  $("next-button").addEventListener("click", stepNext);
   $("play-button").addEventListener("click", () => startPlay());
-  $("pause-button").addEventListener("click", () => {
-    stopPlay();
-    render();
+  $("pause-button").addEventListener("click", pausePlay);
+  document.querySelectorAll("[data-player-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.playerAction;
+      if (action === "previous") {
+        stepPrevious();
+      } else if (action === "next") {
+        stepNext();
+      } else if (action === "play") {
+        startPlay();
+      } else if (action === "pause") {
+        pausePlay();
+      }
+    });
   });
   $("reset-button").addEventListener("click", () => {
     stopPlay();

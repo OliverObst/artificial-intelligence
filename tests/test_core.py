@@ -15,7 +15,14 @@ def test_find_free_port_returns_positive_integer():
 def test_root_serves_student_shell(precomputed_client):
     response = precomputed_client.get("/")
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
     assert "Search Tree" in response.text
+
+
+def test_frontend_assets_are_not_cached(precomputed_client):
+    response = precomputed_client.get("/assets/app.js")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
 
 
 def test_manifest_route(precomputed_client):
