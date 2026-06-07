@@ -201,6 +201,8 @@ def solve_graph_ucs(graph: WeightedGraph) -> GraphUcsSolveResult:
         recorder.current_cost = current_cost
         recorder.considered_edge = None
         recorder.status = "searching"
+        expanded.add(node_id)
+        recorder.stats["expanded"] += 1
         recorder.record_simple(
             action="expand",
             node_id=node_id,
@@ -273,8 +275,6 @@ def solve_graph_ucs(graph: WeightedGraph) -> GraphUcsSolveResult:
                 best_cost=current_cost,
             )
 
-        expanded.add(node_id)
-        recorder.stats["expanded"] += 1
         recorder.set_status(current_tree_id, "expanded")
 
         for neighbour, edge_cost in adjacency[node_id]:

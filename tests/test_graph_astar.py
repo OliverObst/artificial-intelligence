@@ -27,6 +27,16 @@ def test_graph_astar_trace_reaches_found_state():
     assert trace["summary"]["result"] == "found"
 
 
+def test_graph_astar_expanded_count_matches_expand_steps():
+    app = GraphAStarDemo()
+    trace = app.get_trace_payload()
+    expand_steps = [step for step in trace["steps"] if step["event_type"] == "expand"]
+
+    assert expand_steps[0]["label"] == "Expand S"
+    assert expand_steps[0]["state_patch"]["stats"]["expanded"] == 1
+    assert trace["steps"][-1]["state_patch"]["stats"]["expanded"] == len(expand_steps)
+
+
 def test_generate_graph_command_returns_playback_trace():
     app = GraphAStarDemo()
     payload = app.handle_action(
