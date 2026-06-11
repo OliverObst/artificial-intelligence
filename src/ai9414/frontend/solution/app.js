@@ -188,12 +188,16 @@ function renderPanelCopy() {
     $("csp-legend").classList.add("hidden");
     $("uncertainty-legend").classList.remove("hidden");
   } else if (isStrips()) {
+    const data = currentData();
+    const blocksworld = data.planning?.world?.domain === "blocksworld" || data.strips_problem?.domain === "blocksworld";
     $("left-panel-title").textContent = "Planning State";
     $("left-panel-subtitle").textContent =
       "Symbolic state, applicable actions, and grounded plan.";
-    $("right-panel-title").textContent = "Office World";
+    $("right-panel-title").textContent = blocksworld ? "Blocks World" : "Office World";
     $("right-panel-subtitle").textContent =
-      "Office map derived directly from the symbolic facts.";
+      blocksworld
+        ? "Block stacks derived directly from the symbolic facts."
+        : "Office map derived directly from the symbolic facts.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.remove("hidden");
     $("csp-view-control").classList.add("hidden");
@@ -1587,6 +1591,20 @@ function renderPlanningInternal(data) {
   panel.appendChild(shell);
 }
 
+function describeBlockStacks(world) {
+  const stacks = world.stacks || [];
+  if (!stacks.length) return "none";
+  const supports = world.supports || ["table"];
+  const labelled = supports.length > 1 || supports[0] !== "table";
+  const descriptions = stacks.map((stack, index) => {
+    const stackText = stack.length ? stack.slice().reverse().join(" on ") : "empty";
+    if (!labelled) return stackText;
+    const support = (world.stack_supports?.[index] || `support ${index + 1}`).replaceAll("_", " ");
+    return `${support}: ${stackText}`;
+  });
+  return descriptions.join("; ");
+}
+
 function renderPlanningWorldPanel(data) {
   const panel = $("planning-world-panel");
   panel.innerHTML = "";
@@ -1604,29 +1622,47 @@ function renderPlanningWorldPanel(data) {
   summarySection.appendChild(summaryHeading);
 
   const world = planning.world || {};
+  const blocksworld = world.domain === "blocksworld";
+  const stackSummary = describeBlockStacks(world);
   const summaryCopy = document.createElement("p");
   summaryCopy.className = "planning-world-copy";
-  summaryCopy.textContent = [
-    `Robot: ${world.robot_room || "unknown"}.`,
-    world.parcel_carried
-      ? "Parcel: carried by the robot."
-      : `Parcel: ${world.parcel_room || "unknown"}.`,
-    world.robot_has_keycard
-      ? "Keycard: held by the robot."
-      : `Keycard: ${world.keycard_room || "unknown"}.`,
-    `Door: ${world.door_locked ? "locked" : "unlocked"}.`,
-    "Goal: make at(parcel, lab) true.",
-  ].join(" ");
+  const goalText = (planning.goal_facts || []).map((fact) => fact.text).join(" and ");
+  summaryCopy.textContent = blocksworld
+    ? [
+        `Stacks: ${stackSummary}.`,
+        world.holding ? `Hand: holding ${world.holding}.` : "Hand: empty.",
+        `Clear: ${(world.clear_blocks || []).join(", ") || "none"}.`,
+        `Goal: ${goalText || "satisfy all goal facts"}.`,
+      ].join(" ")
+    : [
+        `Robot: ${world.robot_room || "unknown"}.`,
+        world.parcel_carried
+          ? "Parcel: carried by the robot."
+          : `Parcel: ${world.parcel_room || "unknown"}.`,
+        world.robot_has_keycard
+          ? "Keycard: held by the robot."
+          : `Keycard: ${world.keycard_room || "unknown"}.`,
+        `Door: ${world.door_locked ? "locked" : "unlocked"}.`,
+        `Goal: ${goalText || "make at(parcel, lab) true"}.`,
+      ].join(" ");
   summarySection.appendChild(summaryCopy);
 
   const summaryGrid = document.createElement("div");
   summaryGrid.className = "planning-world-summary";
-  [
-    ["Robot", world.robot_room || "unknown"],
-    ["Parcel", world.parcel_carried ? "carried" : world.parcel_room || "unknown"],
-    ["Keycard", world.robot_has_keycard ? "held" : world.keycard_room || "unknown"],
-    ["Door", world.door_locked ? "locked" : "unlocked"],
-  ].forEach(([labelText, valueText]) => {
+  const summaryItems = blocksworld
+    ? [
+        ["Stacks", stackSummary],
+        ["Hand", world.holding ? `holding ${world.holding}` : "empty"],
+        ["Clear", (world.clear_blocks || []).join(", ") || "none"],
+        ["Blocks", (world.blocks || []).join(", ") || "unknown"],
+      ]
+    : [
+        ["Robot", world.robot_room || "unknown"],
+        ["Parcel", world.parcel_carried ? "carried" : world.parcel_room || "unknown"],
+        ["Keycard", world.robot_has_keycard ? "held" : world.keycard_room || "unknown"],
+        ["Door", world.door_locked ? "locked" : "unlocked"],
+      ];
+  summaryItems.forEach(([labelText, valueText]) => {
     const card = document.createElement("div");
     card.className = "planning-group-card";
     const label = document.createElement("span");
@@ -1869,6 +1905,10 @@ function renderStripsWorld(data) {
   const svg = $("problem-svg");
   svg.innerHTML = "";
   const world = data.planning?.world;
+  if (world?.domain === "blocksworld") {
+    renderBlocksWorld(svg, world);
+    return;
+  }
   if (!world?.rooms?.length) return;
 
   const roomBoxes = {
@@ -1988,6 +2028,146 @@ function renderStripsWorld(data) {
   svg.appendChild(connectors);
   svg.appendChild(rooms);
   svg.appendChild(entities);
+}
+
+function renderBlocksWorld(svg, world) {
+  const tableY = 560;
+  const blockWidth = 140;
+  const blockHeight = 58;
+  const stackGap = 86;
+  const stacks = world.stacks || [];
+  const supports = world.supports || ["table"];
+  const labelledSupports = supports.length > 1 || supports[0] !== "table";
+  const slots = labelledSupports ? supports : stacks.map((_, index) => `table_${index}`);
+  const totalWidth = slots.length * blockWidth + Math.max(0, slots.length - 1) * stackGap;
+  const startX = Math.max(90, (1000 - totalWidth) / 2);
+  const blocks = svgNode("g");
+
+  if (labelledSupports) {
+    slots.forEach((support, index) => {
+      const centreX = startX + index * (blockWidth + stackGap) + blockWidth / 2;
+      svg.appendChild(svgNode("line", { class: "planning-table-line", x1: centreX - 68, y1: tableY + 10, x2: centreX + 68, y2: tableY + 10 }));
+      svg.appendChild(svgNode("line", { class: "planning-peg-line", x1: centreX, y1: 210, x2: centreX, y2: tableY + 8 }));
+      svg.appendChild(
+        svgNode(
+          "text",
+          {
+            class: "planning-table-label",
+            x: centreX,
+            y: tableY + 54,
+          },
+          support.replaceAll("_", " ")
+        )
+      );
+    });
+  } else {
+    svg.appendChild(
+      svgNode("line", {
+        class: "planning-table-line",
+        x1: 120,
+        y1: tableY + 10,
+        x2: 880,
+        y2: tableY + 10,
+      })
+    );
+    svg.appendChild(
+      svgNode(
+        "text",
+        {
+          class: "planning-table-label",
+          x: 500,
+          y: tableY + 54,
+        },
+        "table"
+      )
+    );
+  }
+
+  stacks.forEach((stack, stackIndex) => {
+    const support = world.stack_supports?.[stackIndex];
+    const slotIndex = labelledSupports && support ? Math.max(0, slots.indexOf(support)) : stackIndex;
+    const x = startX + slotIndex * (blockWidth + stackGap);
+    stack.forEach((block, level) => {
+      const width = blockVisualWidth(world, block, blockWidth);
+      appendBlock(
+        blocks,
+        block,
+        x + (blockWidth - width) / 2,
+        tableY - blockHeight * (level + 1),
+        width,
+        blockHeight,
+        world.clear_blocks?.includes(block)
+      );
+    });
+  });
+
+  if (world.holding) {
+    const width = blockVisualWidth(world, world.holding, blockWidth);
+    appendBlock(blocks, world.holding, 500 - width / 2, 120, width, blockHeight, true, " held");
+    svg.appendChild(
+      svgNode(
+        "text",
+        {
+          class: "planning-held-label",
+          x: 500,
+          y: 104,
+        },
+        "holding"
+      )
+    );
+  }
+
+  if (!stacks.length && !world.holding) {
+    svg.appendChild(
+      svgNode(
+        "text",
+        {
+          class: "planning-empty-world-label",
+          x: 500,
+          y: 330,
+        },
+        "No blocks are currently on the table."
+      )
+    );
+  }
+
+  svg.appendChild(blocks);
+}
+
+function blockVisualWidth(world, block, baseWidth) {
+  const sizes = world.block_sizes || {};
+  const sizeValues = Object.values(sizes).map((value) => Number(value)).filter((value) => Number.isFinite(value));
+  const size = Number(sizes[block]);
+  if (!Number.isFinite(size) || !sizeValues.length) return baseWidth;
+  const minSize = Math.min(...sizeValues);
+  const maxSize = Math.max(...sizeValues);
+  if (maxSize === minSize) return baseWidth;
+  const scale = 0.78 + ((size - minSize) / (maxSize - minSize)) * 0.22;
+  return Math.round(baseWidth * scale);
+}
+
+function appendBlock(group, block, x, y, width, height, clear, extraClass = "") {
+  group.appendChild(
+    svgNode("rect", {
+      class: `planning-block${clear ? " clear" : ""}${extraClass}`,
+      x,
+      y,
+      width,
+      height,
+      rx: 10,
+    })
+  );
+  group.appendChild(
+    svgNode(
+      "text",
+      {
+        class: "planning-block-label",
+        x: x + width / 2,
+        y: y + height / 2 + 7,
+      },
+      block.toUpperCase()
+    )
+  );
 }
 
 function uncertaintyRoomBoxes() {

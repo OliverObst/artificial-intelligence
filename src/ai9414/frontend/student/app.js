@@ -1620,81 +1620,98 @@ Your solver returns:
 
 const STRIPS_PYTHON_STUB = `from __future__ import annotations
 
-from typing import Any
-
 from ai9414.strips import (
     apply_action_signature,
+    build_unimplemented_strips_result,
     get_applicable_actions,
     get_initial_facts,
     run_strips_solver,
 )
 
 
-def canonical_state_id(facts: list[tuple[str, ...]]) -> tuple[tuple[str, ...], ...]:
-    """
-    Turn a fact list into a hashable canonical state identifier.
-    """
-    return tuple(sorted(tuple(fact) for fact in facts))
+# Complete the three small functions below. The browser connection, local
+# /solve server, request validation, grounded STRIPS actions, and visual replay
+# are handled by run_strips_solver(...).
+#
+# Your job is to implement forward STRIPS breadth-first search (BFS). The same
+# code should work unchanged for both demos:
+#
+# - demo strips: move a robot, collect a keycard, unlock a door, deliver a parcel
+# - demo blocksworld: pickup, putdown, unstack, and stack blocks
+#
+# Do not special-case either demo. In both demos, a state is just a list of
+# fact tuples. Examples:
+#
+#     ("at", "robot", "corridor")
+#     ("handempty", "robot")
+#     ("on", "a", "c")
+#     ("clear", "b")
+#
+# You do not need to write preconditions or effects. Use these helpers:
+#
+# - get_initial_facts(problem)
+# - get_applicable_actions(problem, facts)
+# - apply_action_signature(problem, facts, action)
 
 
-def goal_satisfied(facts: list[tuple[str, ...]], goal: list[list[str]]) -> bool:
+def state_id(facts):
     """
-    Return True when every goal fact already appears in the current state.
+    Return a stable id for a state so BFS can remember visited states.
+
+    Why:
+        The same facts can appear in a different order. Sorting avoids treating
+        the same state as new just because the list order changed.
+
+    Suggested one-line solution:
+        return tuple(sorted(facts))
     """
-    state = {tuple(fact) for fact in facts}
-    return all(tuple(goal_fact) in state for goal_fact in goal)
+    raise NotImplementedError("TODO: implement state_id")
 
 
-def solve_planner(problem: dict[str, Any]) -> dict[str, Any]:
+def goal_satisfied(facts, goal):
     """
-    Implement a small forward planner here.
+    Return True only when every goal fact is present in the current state.
 
-    Inputs:
-        problem: the current STRIPS office-delivery task.
-
-    Required return shape:
-        {
-            "algorithm": "strips_bfs",
-            "status": "found" / "not_found",
-            "plan": [
-                "move(robot, corridor, office_a)",
-                "pickup_keycard(robot, keycard, office_a)",
-            ],
-            "stats": {
-                "expanded_states": 0,
-                "generated_states": 1,
-                "frontier_peak": 1,
-            },
-        }
+    Suggested approach:
+        Convert both lists to sets of tuples, then use issubset(...).
     """
-    start_facts = get_initial_facts(problem)
+    raise NotImplementedError("TODO: implement goal_satisfied")
+
+
+def solve_planner(problem):
+    """
+    Run forward STRIPS BFS.
+
+    Each frontier item is:
+
+        (facts, plan)
+
+    where facts is the current state and plan is the list of action strings
+    used to reach it.
+    """
+    start = get_initial_facts(problem)
+    frontier = [(start, [])]
+    visited = {state_id(start)}
 
     # TODO:
-    # 1. Create a BFS frontier of (facts, plan) pairs.
-    # 2. Keep a visited set using canonical_state_id(...).
-    # 3. Repeatedly pop the next state.
-    # 4. Test goal_satisfied(...).
-    # 5. Generate actions with get_applicable_actions(...).
-    # 6. Apply actions with apply_action_signature(...).
-    # 7. Return the first valid plan found.
+    # Replace this placeholder with the BFS loop.
     #
-    # The helper call below is deliberately unused. It lets you inspect the
-    # starting state while you are implementing the planner.
-    _ = start_facts
+    # Pseudocode:
+    # while frontier is not empty:
+    #     remove the first (facts, plan) pair from frontier
+    #     if facts satisfy problem["goal"], return:
+    #         {"algorithm": "strips_bfs", "status": "found", "plan": plan}
+    #     for each applicable action:
+    #         next_facts = apply_action_signature(problem, facts, action)
+    #         if next_facts has not been visited:
+    #             remember it
+    #             add (next_facts, plan + [action]) to the frontier
+    #
+    # If the loop finishes, return:
+    #     {"algorithm": "strips_bfs", "status": "not_found", "plan": []}
+    _ = (frontier, visited)
 
-    stats = {
-        "expanded_states": 0,
-        "generated_states": 1,
-        "frontier_peak": 1,
-    }
-
-    return {
-        "algorithm": "strips_bfs",
-        "status": "error",
-        "message": "TODO: implement forward STRIPS BFS planning.",
-        "plan": [],
-        "stats": stats,
-    }
+    return build_unimplemented_strips_result("TODO: implement forward STRIPS BFS planning.")
 
 
 if __name__ == "__main__":
@@ -1709,6 +1726,11 @@ const STRIPS_PYTHON_README = `# visual STRIPS planner
 This folder runs a tiny local Python planner for the STRIPS planning demo.
 The browser connection and replay formatting are handled by ai9414.
 Your job is to return a grounded action plan for the current symbolic problem.
+
+The same starter file works for:
+
+- demo strips
+- demo blocksworld
 
 ## install
 
@@ -1726,14 +1748,39 @@ Start the local planner with:
 
 Open solve_strips.py and look at:
 
+- state_id(...)
+- goal_satisfied(...)
 - solve_planner(...)
-- get_initial_facts(...)
-- get_applicable_actions(...)
-- apply_action_signature(...)
 
-The browser sends:
+Most of the domain-specific work is already done for you:
 
-- problem: the current STRIPS office-delivery task
+- get_initial_facts(problem) builds the initial symbolic state
+- get_applicable_actions(problem, facts) returns currently legal grounded actions
+- apply_action_signature(problem, facts, action) applies one legal action
+
+Your code should not check whether the current problem is office delivery or
+Blocks World. A correct BFS planner just searches over facts and applicable
+actions.
+
+For Blocks World, a fact looks like:
+
+- ["on", "a", "c"]
+- ["clear", "b"]
+- ["handempty"]
+
+For the Sussman anomaly, the initial stacks are bottom-to-top:
+
+- c, then a
+- b
+
+The goal is:
+
+- on(a, b)
+- on(b, c)
+
+The key lesson is that solving on(a, b) first can be unhelpful because b still
+needs to move onto c. A complete BFS planner should find the interaction without
+hard-coding that insight.
 
 Your solver returns:
 
@@ -2160,6 +2207,20 @@ function formatNumber(value, digits = 3) {
 
 function cellKey(cell) {
   return `${cell[0]},${cell[1]}`;
+}
+
+function directionAngle(from, to) {
+  if (!from || !to) return 0;
+  return headingAngle([to[0] - from[0], to[1] - from[1]]);
+}
+
+function headingAngle(heading) {
+  const dr = heading?.[0] ?? 0;
+  const dc = heading?.[1] ?? 1;
+  if (dr === 1 && dc === 0) return 90;
+  if (dr === 0 && dc === -1) return 180;
+  if (dr === -1 && dc === 0) return -90;
+  return 0;
 }
 
 function edgeId(u, v) {
@@ -2595,15 +2656,20 @@ function blankDeliveryCspTrace(problem, snapshot) {
 }
 
 function blankStripsTrace(problem, snapshot) {
+  const blocksworld = problem?.domain === "blocksworld";
   return {
     app_type: "strips",
     initial_state: clone(snapshot || {
-      example_title: problem?.title || "Visual STRIPS planning",
-      example_subtitle: problem?.subtitle || "Load an office-delivery example and inspect the symbolic state.",
+      example_title: problem?.title || (blocksworld ? "Blocks World STRIPS planning" : "Visual STRIPS planning"),
+      example_subtitle:
+        problem?.subtitle ||
+        (blocksworld
+          ? "Load a Blocks World example and inspect the symbolic state."
+          : "Load an office-delivery example and inspect the symbolic state."),
       algorithm_label: "Forward STRIPS planning (BFS)",
       algorithm_note:
-        "This view is ready for STRIPS planning. Solve the current office-delivery task in live Python mode to populate the plan replay.",
-      goal_label: "Deliver the parcel to the lab",
+        "This view is ready for STRIPS planning. Solve the current symbolic task in live Python mode to populate the plan replay.",
+      goal_label: blocksworld ? "Build the requested block tower" : "Deliver the parcel to the lab",
       strips_problem: clone(problem || {}),
       planning: {
         facts: [],
@@ -5139,12 +5205,15 @@ function renderPanelCopy(data) {
     $("right-panel-subtitle").textContent =
       "The office map shows the current belief distribution, sensor reading, and true location when enabled.";
   } else if (isStrips()) {
+    const blocksworld = data.planning?.world?.domain === "blocksworld" || data.strips_problem?.domain === "blocksworld";
     $("left-panel-title").textContent = "Planning State";
     $("left-panel-subtitle").textContent =
-      "Predicates, applicable actions, and the current plan are shown alongside the office world.";
-    $("right-panel-title").textContent = "Office World";
+      "Predicates, applicable actions, and the current plan are shown alongside the rendered symbolic world.";
+    $("right-panel-title").textContent = blocksworld ? "Blocks World" : "Office World";
     $("right-panel-subtitle").textContent =
-      "The robot, parcel, keycard, and lab door are drawn directly from the symbolic state.";
+      blocksworld
+        ? "The stacks, clear blocks, and held block are drawn directly from the symbolic state."
+        : "The robot, parcel, keycard, and lab door are drawn directly from the symbolic state.";
   } else if (isLogic()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "Each node is a partial assignment, showing where DPLL branches and where literals become forced.";
@@ -5154,10 +5223,13 @@ function renderPanelCopy(data) {
         ? "The knowledge base and CNF clause list show whether KB and not query are jointly satisfiable."
         : "The clause list shows which clauses are satisfied, unresolved, unit, or contradicted under the current assignment.";
   } else if (isDelivery()) {
+    const isCollectionGoal = (data.labyrinth?.collectibles || []).length > 0;
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "The tree grows in DFS order and keeps backtracked routes visible.";
     $("right-panel-title").textContent = "Delivery Office";
-    $("right-panel-subtitle").textContent = "The office map shows the robot route, unhelpful branches, and the first route to the delivery location.";
+    $("right-panel-subtitle").textContent = isCollectionGoal
+      ? "The office map shows the robot route, collected dots, unhelpful branches, and the first route that collects every dot."
+      : "The office map shows the robot route, unhelpful branches, and the first route to the coloured delivery target.";
   } else if (isLabyrinth()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "The tree grows in DFS order and keeps backtracked branches visible.";
@@ -5278,7 +5350,7 @@ function renderMetrics(data) {
     $("metric-3-label").textContent = "Status";
     $("metric-3-value").textContent = data.search?.status || "searching";
     $("metric-4-label").textContent = isDelivery() ? "Action order" : "Seed";
-    $("metric-4-value").textContent = isDelivery() ? String(data.action_order_label ?? "straight, left, right") : String(data.labyrinth?.seed ?? "none");
+    $("metric-4-value").textContent = isDelivery() ? String(data.action_order_label ?? "forward, left turn, right turn") : String(data.labyrinth?.seed ?? "none");
     return;
   }
 
@@ -6184,16 +6256,61 @@ function renderLabyrinth(data) {
 
   const rows = labyrinth.rows;
   const cols = labyrinth.cols;
+  const isPacmanMaze = isDelivery() && labyrinth.size === "pacman";
   const cellSize = Math.min(880 / cols, 620 / rows);
   const offsetX = (1000 - cols * cellSize) / 2;
   const offsetY = (700 - rows * cellSize) / 2;
-  const currentRoute = new Set((data.search.current_route || []).map(cellKey));
+  const currentRouteCells = data.search.current_route || [];
+  const currentRoute = new Set(currentRouteCells.map(cellKey));
   const visited = new Set((data.search.visited_order || []).map(cellKey));
   const deadEnds = new Set((data.search.dead_end_cells || []).map(cellKey));
   const finalPath = new Set((data.search.final_path || []).map(cellKey));
+  const collectibles = new Set((labyrinth.collectibles || []).map(cellKey));
+  const collectedDots = new Set((data.search.collected_dots || []).map(cellKey));
+  const deliveryRobotCell = currentRouteCells[currentRouteCells.length - 1] || labyrinth.start;
+  const deliveryPreviousCell =
+    currentRouteCells.length > 1 ? currentRouteCells[currentRouteCells.length - 2] : null;
+  const deliveryRobotAngle = Array.isArray(data.search.delivery_heading)
+    ? headingAngle(data.search.delivery_heading)
+    : directionAngle(deliveryPreviousCell, deliveryRobotCell);
 
   const gridGroup = $svgNode("g");
+  const wallLineGroup = $svgNode("g", { class: "pacman-wall-lines" });
   const textGroup = $svgNode("g");
+
+  if (isPacmanMaze) {
+    gridGroup.appendChild(
+      $svgNode("rect", {
+        class: "pacman-background",
+        x: offsetX,
+        y: offsetY,
+        width: cols * cellSize,
+        height: rows * cellSize,
+      })
+    );
+  }
+
+  function isOpenForWallLine(row, col) {
+    return (
+      row < 0 ||
+      row >= rows ||
+      col < 0 ||
+      col >= cols ||
+      labyrinth.grid[row][col] !== "#"
+    );
+  }
+
+  function appendWallLine(x1, y1, x2, y2) {
+    wallLineGroup.appendChild(
+      $svgNode("line", {
+        class: "pacman-wall-line",
+        x1,
+        y1,
+        x2,
+        y2,
+      })
+    );
+  }
 
   for (let row = 0; row < rows; row += 1) {
     for (let col = 0; col < cols; col += 1) {
@@ -6202,8 +6319,18 @@ function renderLabyrinth(data) {
       const value = labyrinth.grid[row][col];
       const classes = ["maze-cell"];
       if (isDelivery()) classes.push("delivery-cell");
+      if (isPacmanMaze) classes.push("pacman-cell");
       if (value === "#") {
         classes.push("wall");
+        if (isPacmanMaze) {
+          const x = offsetX + col * cellSize;
+          const y = offsetY + row * cellSize;
+          if (isOpenForWallLine(row - 1, col)) appendWallLine(x, y, x + cellSize, y);
+          if (isOpenForWallLine(row, col + 1)) appendWallLine(x + cellSize, y, x + cellSize, y + cellSize);
+          if (isOpenForWallLine(row + 1, col)) appendWallLine(x, y + cellSize, x + cellSize, y + cellSize);
+          if (isOpenForWallLine(row, col - 1)) appendWallLine(x, y, x, y + cellSize);
+          continue;
+        }
       } else {
         classes.push("open");
         if (visited.has(key)) classes.push("visited");
@@ -6211,7 +6338,7 @@ function renderLabyrinth(data) {
         if (currentRoute.has(key)) classes.push("current");
         if (finalPath.has(key)) classes.push("final");
         if (row === labyrinth.start[0] && col === labyrinth.start[1]) classes.push("start");
-        if (row === labyrinth.exit[0] && col === labyrinth.exit[1]) classes.push("exit");
+        if (value === "E") classes.push("exit");
       }
 
       gridGroup.appendChild(
@@ -6225,23 +6352,15 @@ function renderLabyrinth(data) {
         })
       );
 
-      if (isDelivery() && value === "S") {
-        const cx = offsetX + col * cellSize + cellSize / 2;
-        const cy = offsetY + row * cellSize + cellSize / 2;
-        const radius = cellSize * 0.32;
+      if (isDelivery() && value === "E") {
         textGroup.appendChild(
-          $svgNode("polygon", {
-            class: "delivery-robot",
-            points: `${cx},${cy - radius} ${cx - radius * 0.92},${cy + radius * 0.78} ${cx + radius * 0.92},${cy + radius * 0.78}`,
-          })
-        );
-      } else if (isDelivery() && value === "E") {
-        textGroup.appendChild(
-          $svgNode("circle", {
+          $svgNode("rect", {
             class: "delivery-goal",
-            cx: offsetX + col * cellSize + cellSize / 2,
-            cy: offsetY + row * cellSize + cellSize / 2,
-            r: cellSize * 0.32,
+            x: offsetX + col * cellSize + cellSize * 0.22,
+            y: offsetY + row * cellSize + cellSize * 0.22,
+            width: cellSize * 0.56,
+            height: cellSize * 0.56,
+            rx: Math.max(2, cellSize * 0.08),
           })
         );
       } else if (value === "S" || value === "E") {
@@ -6257,7 +6376,36 @@ function renderLabyrinth(data) {
           )
         );
       }
+
+      if (isDelivery() && collectibles.has(key)) {
+        textGroup.appendChild(
+          $svgNode("circle", {
+            class: `delivery-dot${collectedDots.has(key) ? " collected" : ""}`,
+            cx: offsetX + col * cellSize + cellSize / 2,
+            cy: offsetY + row * cellSize + cellSize / 2,
+            r: cellSize * 0.16,
+          })
+        );
+      }
     }
+  }
+
+  if (isPacmanMaze) {
+    gridGroup.appendChild(wallLineGroup);
+  }
+
+  if (isDelivery() && deliveryRobotCell) {
+    const [robotRow, robotCol] = deliveryRobotCell;
+    const cx = offsetX + robotCol * cellSize + cellSize / 2;
+    const cy = offsetY + robotRow * cellSize + cellSize / 2;
+    const radius = cellSize * 0.36;
+    textGroup.appendChild(
+      $svgNode("path", {
+        class: "delivery-robot",
+        d: `M ${cx} ${cy} L ${cx + radius * 0.88} ${cy - radius * 0.48} A ${radius} ${radius} 0 1 0 ${cx + radius * 0.88} ${cy + radius * 0.48} Z`,
+        transform: `rotate(${deliveryRobotAngle} ${cx} ${cy})`,
+      })
+    );
   }
 
   svg.appendChild(gridGroup);
@@ -6608,6 +6756,20 @@ function renderPlanningInternal(data) {
   panel.appendChild(shell);
 }
 
+function describeBlockStacks(world) {
+  const stacks = world.stacks || [];
+  if (!stacks.length) return "none";
+  const supports = world.supports || ["table"];
+  const labelled = supports.length > 1 || supports[0] !== "table";
+  const descriptions = stacks.map((stack, index) => {
+    const stackText = stack.length ? stack.slice().reverse().join(" on ") : "empty";
+    if (!labelled) return stackText;
+    const support = (world.stack_supports?.[index] || `support ${index + 1}`).replaceAll("_", " ");
+    return `${support}: ${stackText}`;
+  });
+  return descriptions.join("; ");
+}
+
 function renderPlanningWorldPanel(data) {
   const panel = $("planning-world-panel");
   panel.innerHTML = "";
@@ -6625,29 +6787,47 @@ function renderPlanningWorldPanel(data) {
   summarySection.appendChild(summaryHeading);
 
   const world = planning.world || {};
+  const blocksworld = world.domain === "blocksworld";
+  const stackSummary = describeBlockStacks(world);
   const summaryCopy = document.createElement("p");
   summaryCopy.className = "planning-world-copy";
-  summaryCopy.textContent = [
-    `Robot: ${world.robot_room || "unknown"}.`,
-    world.parcel_carried
-      ? "Parcel: carried by the robot."
-      : `Parcel: ${world.parcel_room || "unknown"}.`,
-    world.robot_has_keycard
-      ? "Keycard: held by the robot."
-      : `Keycard: ${world.keycard_room || "unknown"}.`,
-    `Door: ${world.door_locked ? "locked" : "unlocked"}.`,
-    "Goal: make at(parcel, lab) true.",
-  ].join(" ");
+  const goalText = (planning.goal_facts || []).map((fact) => fact.text).join(" and ");
+  summaryCopy.textContent = blocksworld
+    ? [
+        `Stacks: ${stackSummary}.`,
+        world.holding ? `Hand: holding ${world.holding}.` : "Hand: empty.",
+        `Clear: ${(world.clear_blocks || []).join(", ") || "none"}.`,
+        `Goal: ${goalText || "satisfy all goal facts"}.`,
+      ].join(" ")
+    : [
+        `Robot: ${world.robot_room || "unknown"}.`,
+        world.parcel_carried
+          ? "Parcel: carried by the robot."
+          : `Parcel: ${world.parcel_room || "unknown"}.`,
+        world.robot_has_keycard
+          ? "Keycard: held by the robot."
+          : `Keycard: ${world.keycard_room || "unknown"}.`,
+        `Door: ${world.door_locked ? "locked" : "unlocked"}.`,
+        `Goal: ${goalText || "make at(parcel, lab) true"}.`,
+      ].join(" ");
   summarySection.appendChild(summaryCopy);
 
   const summaryGrid = document.createElement("div");
   summaryGrid.className = "planning-world-summary";
-  [
-    ["Robot", world.robot_room || "unknown"],
-    ["Parcel", world.parcel_carried ? "carried" : world.parcel_room || "unknown"],
-    ["Keycard", world.robot_has_keycard ? "held" : world.keycard_room || "unknown"],
-    ["Door", world.door_locked ? "locked" : "unlocked"],
-  ].forEach(([labelText, valueText]) => {
+  const summaryItems = blocksworld
+    ? [
+        ["Stacks", stackSummary],
+        ["Hand", world.holding ? `holding ${world.holding}` : "empty"],
+        ["Clear", (world.clear_blocks || []).join(", ") || "none"],
+        ["Blocks", (world.blocks || []).join(", ") || "unknown"],
+      ]
+    : [
+        ["Robot", world.robot_room || "unknown"],
+        ["Parcel", world.parcel_carried ? "carried" : world.parcel_room || "unknown"],
+        ["Keycard", world.robot_has_keycard ? "held" : world.keycard_room || "unknown"],
+        ["Door", world.door_locked ? "locked" : "unlocked"],
+      ];
+  summaryItems.forEach(([labelText, valueText]) => {
     const card = document.createElement("div");
     card.className = "planning-group-card";
     const label = document.createElement("span");
@@ -6944,6 +7124,10 @@ function renderStripsWorld(data) {
   const svg = $("problem-svg");
   svg.innerHTML = "";
   const world = data.planning?.world;
+  if (world?.domain === "blocksworld") {
+    renderBlocksWorld(svg, world);
+    return;
+  }
   if (!world?.rooms?.length) return;
 
   const roomBoxes = {
@@ -7063,6 +7247,146 @@ function renderStripsWorld(data) {
   svg.appendChild(connectors);
   svg.appendChild(rooms);
   svg.appendChild(entities);
+}
+
+function renderBlocksWorld(svg, world) {
+  const tableY = 560;
+  const blockWidth = 140;
+  const blockHeight = 58;
+  const stackGap = 86;
+  const stacks = world.stacks || [];
+  const supports = world.supports || ["table"];
+  const labelledSupports = supports.length > 1 || supports[0] !== "table";
+  const slots = labelledSupports ? supports : stacks.map((_, index) => `table_${index}`);
+  const totalWidth = slots.length * blockWidth + Math.max(0, slots.length - 1) * stackGap;
+  const startX = Math.max(90, (1000 - totalWidth) / 2);
+  const blocks = $svgNode("g");
+
+  if (labelledSupports) {
+    slots.forEach((support, index) => {
+      const centreX = startX + index * (blockWidth + stackGap) + blockWidth / 2;
+      svg.appendChild($svgNode("line", { class: "planning-table-line", x1: centreX - 68, y1: tableY + 10, x2: centreX + 68, y2: tableY + 10 }));
+      svg.appendChild($svgNode("line", { class: "planning-peg-line", x1: centreX, y1: 210, x2: centreX, y2: tableY + 8 }));
+      svg.appendChild(
+        $svgNode(
+          "text",
+          {
+            class: "planning-table-label",
+            x: centreX,
+            y: tableY + 54,
+          },
+          support.replaceAll("_", " ")
+        )
+      );
+    });
+  } else {
+    svg.appendChild(
+      $svgNode("line", {
+        class: "planning-table-line",
+        x1: 120,
+        y1: tableY + 10,
+        x2: 880,
+        y2: tableY + 10,
+      })
+    );
+    svg.appendChild(
+      $svgNode(
+        "text",
+        {
+          class: "planning-table-label",
+          x: 500,
+          y: tableY + 54,
+        },
+        "table"
+      )
+    );
+  }
+
+  stacks.forEach((stack, stackIndex) => {
+    const support = world.stack_supports?.[stackIndex];
+    const slotIndex = labelledSupports && support ? Math.max(0, slots.indexOf(support)) : stackIndex;
+    const x = startX + slotIndex * (blockWidth + stackGap);
+    stack.forEach((block, level) => {
+      const width = blockVisualWidth(world, block, blockWidth);
+      appendBlock(
+        blocks,
+        block,
+        x + (blockWidth - width) / 2,
+        tableY - blockHeight * (level + 1),
+        width,
+        blockHeight,
+        world.clear_blocks?.includes(block)
+      );
+    });
+  });
+
+  if (world.holding) {
+    const width = blockVisualWidth(world, world.holding, blockWidth);
+    appendBlock(blocks, world.holding, 500 - width / 2, 120, width, blockHeight, true, " held");
+    svg.appendChild(
+      $svgNode(
+        "text",
+        {
+          class: "planning-held-label",
+          x: 500,
+          y: 104,
+        },
+        "holding"
+      )
+    );
+  }
+
+  if (!stacks.length && !world.holding) {
+    svg.appendChild(
+      $svgNode(
+        "text",
+        {
+          class: "planning-empty-world-label",
+          x: 500,
+          y: 330,
+        },
+        "No blocks are currently on the table."
+      )
+    );
+  }
+
+  svg.appendChild(blocks);
+}
+
+function blockVisualWidth(world, block, baseWidth) {
+  const sizes = world.block_sizes || {};
+  const sizeValues = Object.values(sizes).map((value) => Number(value)).filter((value) => Number.isFinite(value));
+  const size = Number(sizes[block]);
+  if (!Number.isFinite(size) || !sizeValues.length) return baseWidth;
+  const minSize = Math.min(...sizeValues);
+  const maxSize = Math.max(...sizeValues);
+  if (maxSize === minSize) return baseWidth;
+  const scale = 0.78 + ((size - minSize) / (maxSize - minSize)) * 0.22;
+  return Math.round(baseWidth * scale);
+}
+
+function appendBlock(group, block, x, y, width, height, clear, extraClass = "") {
+  group.appendChild(
+    $svgNode("rect", {
+      class: `planning-block${clear ? " clear" : ""}${extraClass}`,
+      x,
+      y,
+      width,
+      height,
+      rx: 10,
+    })
+  );
+  group.appendChild(
+    $svgNode(
+      "text",
+      {
+        class: "planning-block-label",
+        x: x + width / 2,
+        y: y + height / 2 + 7,
+      },
+      block.toUpperCase()
+    )
+  );
 }
 
 function uncertaintyRoomBoxes() {

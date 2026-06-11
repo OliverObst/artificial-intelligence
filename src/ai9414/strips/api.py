@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from ai9414.core import BaseEducationalApp
 from ai9414.core.errors import AI9414Error
-from ai9414.strips.examples import build_examples
+from ai9414.strips.examples import build_blocksworld_examples, build_delivery_examples, build_examples
 from ai9414.strips.models import StripsConfigModel, StripsExample, StripsProblem
 from ai9414.strips.trace import build_strips_trace, build_strips_trace_from_problem
 
@@ -21,6 +21,8 @@ class StripsDemo(BaseEducationalApp):
         problem: str | StripsProblem | None = None,
         mode: str = "student",
         execution_mode: str = "precomputed",
+        app_title: str = "Planning Demo - STRIPS Delivery",
+        example_domain: Literal["delivery", "blocksworld", "all"] = "delivery",
     ) -> None:
         if execution_mode != "precomputed":
             raise AI9414Error(
@@ -29,11 +31,12 @@ class StripsDemo(BaseEducationalApp):
             )
         super().__init__(
             app_type="strips",
-            app_title="Planning Demo - STRIPS Delivery",
+            app_title=app_title,
             execution_mode="precomputed",
             mode=mode,
         )
-        self.examples = build_examples()
+        self.example_domain = example_domain
+        self.examples = self._build_example_catalogue(example_domain)
         self.example: StripsExample | None = None
         self.problem: StripsProblem | None = None
         self.options: dict[str, Any] = {"playback_speed": 1.0}
@@ -142,4 +145,31 @@ class StripsDemo(BaseEducationalApp):
             self.problem,
             title=self.problem.title,
             subtitle=self.problem.subtitle,
+        )
+
+    @staticmethod
+    def _build_example_catalogue(example_domain: Literal["delivery", "blocksworld", "all"]) -> dict[str, StripsExample]:
+        if example_domain == "delivery":
+            return build_delivery_examples()
+        if example_domain == "blocksworld":
+            return build_blocksworld_examples()
+        return build_examples()
+
+
+class BlocksworldDemo(StripsDemo):
+    """Playback-first Blocks World planning demo using the shared STRIPS engine."""
+
+    def __init__(
+        self,
+        *,
+        problem: str | StripsProblem | None = None,
+        mode: str = "student",
+        execution_mode: str = "precomputed",
+    ) -> None:
+        super().__init__(
+            problem=problem or "3_block_tower",
+            mode=mode,
+            execution_mode=execution_mode,
+            app_title="Planning Demo - Blocks World",
+            example_domain="blocksworld",
         )

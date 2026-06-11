@@ -19,6 +19,12 @@ from ai9414.strips.solver import (
 )
 
 
+def goal_label(problem: StripsProblem) -> str:
+    if problem.domain == "blocksworld":
+        return "Build the requested block tower"
+    return "Deliver the parcel to the lab"
+
+
 def build_strips_trace(example: StripsExample) -> TraceBundle:
     return build_strips_trace_from_problem(
         example.problem,
@@ -85,7 +91,7 @@ def build_strips_trace_from_result(
         "example_subtitle": subtitle or problem.subtitle,
         "algorithm_label": ALGORITHM_LABEL,
         "algorithm_note": ALGORITHM_NOTE,
-        "goal_label": "Deliver the parcel to the lab",
+        "goal_label": goal_label(problem),
         "strips_problem": problem.model_dump(),
         **start_snapshot,
     }

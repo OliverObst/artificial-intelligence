@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "app_type": "strips",
+  "title": "Blocks World: Sussman anomaly",
+  "options": {
+    "playback_speed": 1.0
+  },
+  "data": {
+    "problem": {
+      "title": "Blocks World: Sussman anomaly",
+      "subtitle": "A classic STRIPS planning problem where the goals on(a, b) and on(b, c) interfere.",
+      "domain": "blocksworld",
+      "blocks": ["a", "b", "c"],
+      "initial_stacks": [["c", "a"], ["b"]],
+      "goal": [["on", "a", "b"], ["on", "b", "c"]],
+      "metadata": {
+        "teaching_note": "Stacks are written from bottom to top. The initial state has a on c, b on the table, and c on the table.",
+        "expected_key_idea": "A planner must move a out of the way before placing b on c, then put a on b."
+      }
+    }
+  }
+}

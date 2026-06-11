@@ -34,6 +34,10 @@ ACTION_ORDER = {
     "pickup_parcel": 2,
     "drop_parcel": 3,
     "move": 4,
+    "pickup": 5,
+    "putdown": 6,
+    "unstack": 7,
+    "stack": 8,
 }
 ACTION_RE = re.compile(r"^(?P<name>[a-z_]+)\((?P<args>.*)\)$")
 
@@ -93,6 +97,9 @@ def door_other_room(problem: StripsProblem) -> str:
 
 
 def static_facts(problem: StripsProblem) -> set[Fact]:
+    if problem.domain == "blocksworld":
+        return set()
+
     facts: set[Fact] = set()
     for left, right in canonical_edges(problem):
         facts.add(("connected", left, right))
@@ -102,6 +109,9 @@ def static_facts(problem: StripsProblem) -> set[Fact]:
 
 
 def initial_state(problem: StripsProblem) -> frozenset[Fact]:
+    if problem.domain == "blocksworld":
+        return blocksworld_initial_state(problem)
+
     facts = static_facts(problem)
     facts.update(
         {
@@ -115,6 +125,21 @@ def initial_state(problem: StripsProblem) -> frozenset[Fact]:
         facts.add(("locked", DOOR_NAME))
     else:
         facts.add(("unlocked", DOOR_NAME))
+    return frozenset(facts)
+
+
+def blocksworld_initial_state(problem: StripsProblem) -> frozenset[Fact]:
+    facts: set[Fact] = {("handempty",)}
+    occupied_supports: set[str] = set()
+    for support, stack in zip(problem.initial_stack_supports, problem.initial_stacks, strict=True):
+        occupied_supports.add(support)
+        for index, block in enumerate(stack):
+            block_support = support if index == 0 else stack[index - 1]
+            facts.add(("on", block, block_support))
+        facts.add(("clear", stack[-1]))
+    if not table_is_multi_support(problem):
+        for support in set(problem.supports) - occupied_supports:
+            facts.add(("clear", support))
     return frozenset(facts)
 
 
@@ -182,6 +207,9 @@ def action_payload(action: GroundedAction) -> dict[str, Any]:
 
 
 def enumerate_applicable_actions(problem: StripsProblem, state: frozenset[Fact]) -> list[GroundedAction]:
+    if problem.domain == "blocksworld":
+        return enumerate_blocksworld_actions(problem, state)
+
     room = robot_room(state)
     applicable: list[GroundedAction] = []
 
@@ -271,6 +299,108 @@ def enumerate_applicable_actions(problem: StripsProblem, state: frozenset[Fact])
     return sorted(applicable, key=action_sort_key)
 
 
+def enumerate_blocksworld_actions(problem: StripsProblem, state: frozenset[Fact]) -> list[GroundedAction]:
+    applicable: list[GroundedAction] = []
+    handempty = contains_fact(state, "handempty")
+    holding = next((fact[1] for fact in state if fact[0] == "holding"), None)
+
+    if handempty:
+        for block in problem.blocks:
+            if not contains_fact(state, "clear", block):
+                continue
+            support = block_support(state, block)
+            if support is not None and support in problem.supports:
+                args = (block,) if support == "table" else (block, support)
+                add_effects = [("holding", block)]
+                if support_is_single(problem, support):
+                    add_effects.append(("clear", support))
+                applicable.append(
+                    GroundedAction(
+                        name="pickup",
+                        args=args,
+                        preconditions=(("on", block, support), ("clear", block), ("handempty",)),
+                        add_effects=tuple(add_effects),
+                        delete_effects=(("on", block, support), ("clear", block), ("handempty",)),
+                        category="blocks",
+                    )
+                )
+            for support in problem.blocks:
+                if support == block or not contains_fact(state, "on", block, support):
+                    continue
+                applicable.append(
+                    GroundedAction(
+                        name="unstack",
+                        args=(block, support),
+                        preconditions=(("on", block, support), ("clear", block), ("handempty",)),
+                        add_effects=(("holding", block), ("clear", support)),
+                        delete_effects=(("on", block, support), ("clear", block), ("handempty",)),
+                        category="blocks",
+                    )
+                )
+
+    if holding is not None:
+        for support in problem.supports:
+            if support_is_single(problem, support) and not contains_fact(state, "clear", support):
+                continue
+            args = (holding,) if support == "table" else (holding, support)
+            preconditions = [("holding", holding)]
+            delete_effects = [("holding", holding)]
+            if support_is_single(problem, support):
+                preconditions.append(("clear", support))
+                delete_effects.append(("clear", support))
+            applicable.append(
+                GroundedAction(
+                    name="putdown",
+                    args=args,
+                    preconditions=tuple(preconditions),
+                    add_effects=(("on", holding, support), ("clear", holding), ("handempty",)),
+                    delete_effects=tuple(delete_effects),
+                    category="blocks",
+                )
+            )
+        for target in problem.blocks:
+            if target == holding or not contains_fact(state, "clear", target):
+                continue
+            if not can_stack_on(problem, holding, target):
+                continue
+            applicable.append(
+                GroundedAction(
+                    name="stack",
+                    args=(holding, target),
+                    preconditions=(("holding", holding), ("clear", target)),
+                    add_effects=(("on", holding, target), ("clear", holding), ("handempty",)),
+                    delete_effects=(("holding", holding), ("clear", target)),
+                    category="blocks",
+                )
+            )
+
+    return sorted(applicable, key=action_sort_key)
+
+
+def table_is_multi_support(problem: StripsProblem) -> bool:
+    return problem.supports == ["table"]
+
+
+def support_is_single(problem: StripsProblem, support: str) -> bool:
+    return support != "table" or not table_is_multi_support(problem)
+
+
+def block_support(state: frozenset[Fact], block: str) -> str | None:
+    for fact in state:
+        if fact[0] == "on" and fact[1] == block:
+            return fact[2]
+    return None
+
+
+def can_stack_on(problem: StripsProblem, block: str, target: str) -> bool:
+    if not problem.metadata.get("smaller_on_larger"):
+        return True
+    sizes = problem.metadata.get("block_sizes", {})
+    if not isinstance(sizes, dict):
+        return True
+    return int(sizes.get(block, 0)) < int(sizes.get(target, 0))
+
+
 def apply_action(state: frozenset[Fact], action: GroundedAction) -> frozenset[Fact]:
     next_state = set(state)
     for fact in action.delete_effects:
@@ -313,6 +443,9 @@ def validate_action_plan(problem: StripsProblem, signatures: list[str]) -> list[
 
 
 def world_payload(problem: StripsProblem, state: frozenset[Fact]) -> dict[str, Any]:
+    if problem.domain == "blocksworld":
+        return blocksworld_payload(problem, state)
+
     room_lookup = {
         "robot": None,
         "parcel": None,
@@ -322,6 +455,7 @@ def world_payload(problem: StripsProblem, state: frozenset[Fact]) -> dict[str, A
         if fact[0] == "at" and fact[1] in room_lookup:
             room_lookup[fact[1]] = fact[2]
     return {
+        "domain": "delivery",
         "rooms": list(CANONICAL_ROOMS),
         "robot_room": room_lookup["robot"],
         "parcel_room": room_lookup["parcel"],
@@ -330,6 +464,66 @@ def world_payload(problem: StripsProblem, state: frozenset[Fact]) -> dict[str, A
         "robot_has_keycard": contains_fact(state, "has", "robot", "keycard"),
         "door_locked": contains_fact(state, "locked", DOOR_NAME),
         "door_edge": list(problem.locked_edge),
+    }
+
+
+def blocksworld_payload(problem: StripsProblem, state: frozenset[Fact]) -> dict[str, Any]:
+    above_by_support: dict[str, str] = {}
+    support_blocks: dict[str, list[str]] = {support: [] for support in problem.supports}
+    holding = None
+    for fact in state:
+        if fact[0] == "holding":
+            holding = fact[1]
+        if fact[0] != "on":
+            continue
+        block, support = fact[1], fact[2]
+        if support in problem.supports:
+            support_blocks.setdefault(support, []).append(block)
+        else:
+            above_by_support[support] = block
+
+    stacks: list[list[str]] = []
+    stack_supports: list[str] = []
+    for support in problem.supports:
+        base_blocks = sorted(support_blocks.get(support, []))
+        for base in base_blocks:
+            stack_supports.append(support)
+            stack = [base]
+            current = base
+            while current in above_by_support:
+                current = above_by_support[current]
+                stack.append(current)
+            stacks.append(stack)
+    if table_is_multi_support(problem):
+        stack_supports = []
+        stacks = []
+        for base in sorted(support_blocks.get("table", [])):
+            stack_supports.append("table")
+            stack = [base]
+            current = base
+            while current in above_by_support:
+                current = above_by_support[current]
+                stack.append(current)
+            stacks.append(stack)
+
+    for support in problem.supports:
+        if support in stack_supports:
+            continue
+        if table_is_multi_support(problem) and support == "table":
+            continue
+        stack_supports.append(support)
+        stacks.append([])
+
+    return {
+        "domain": "blocksworld",
+        "blocks": list(problem.blocks),
+        "stacks": stacks,
+        "stack_supports": stack_supports,
+        "supports": list(problem.supports),
+        "block_sizes": problem.metadata.get("block_sizes", {}),
+        "holding": holding,
+        "clear_blocks": sorted(fact[1] for fact in state if fact[0] == "clear" and fact[1] in problem.blocks),
+        "clear_supports": sorted(fact[1] for fact in state if fact[0] == "clear" and fact[1] in problem.supports),
     }
 
 

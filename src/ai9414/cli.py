@@ -302,9 +302,16 @@ def demo_specs() -> tuple[DemoSpec, ...]:
         DemoSpec(
             name="strips",
             title="STRIPS Planning",
-            description="STRIPS planning",
+            description="STRIPS delivery planning",
             default_example="canonical_delivery",
             factory=_create_strips_demo,
+        ),
+        DemoSpec(
+            name="blocksworld",
+            title="Blocks World Planning",
+            description="Blocks World STRIPS planning",
+            default_example="3_block_tower",
+            factory=_create_blocksworld_demo,
         ),
     )
 
@@ -391,6 +398,12 @@ def _create_strips_demo() -> BaseEducationalApp:
     from ai9414.strips import StripsDemo
 
     return StripsDemo()
+
+
+def _create_blocksworld_demo() -> BaseEducationalApp:
+    from ai9414.strips import BlocksworldDemo
+
+    return BlocksworldDemo()
 
 
 def _list_logic_examples() -> Sequence[str]:

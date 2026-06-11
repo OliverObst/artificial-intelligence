@@ -651,6 +651,23 @@ input[type="number"] {
   fill: #666865;
 }
 
+.maze-cell.delivery-cell.pacman-cell.wall {
+  fill: transparent;
+  stroke: none;
+}
+
+.pacman-background {
+  fill: #02030d;
+}
+
+.pacman-wall-line {
+  stroke: #284dff;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px rgba(85, 142, 255, 0.75));
+}
+
 .maze-cell.open {
   fill: #f6f2ea;
 }
@@ -658,6 +675,11 @@ input[type="number"] {
 .maze-cell.delivery-cell.open {
   fill: #050505;
   stroke: rgba(255, 255, 255, 0.25);
+}
+
+.maze-cell.delivery-cell.pacman-cell.open {
+  fill: #02030d;
+  stroke: rgba(8, 16, 60, 0.9);
 }
 
 .maze-cell.visited {
@@ -710,14 +732,26 @@ input[type="number"] {
 }
 
 .delivery-robot {
-  fill: #ff2a16;
-  stroke: rgba(255, 208, 200, 0.95);
+  fill: #ffd400;
+  stroke: rgba(44, 35, 0, 0.85);
   stroke-width: 2;
 }
 
 .delivery-goal {
-  fill: #ffd400;
+  fill: #ff5a5f;
   stroke: #ffd400;
+  stroke-width: 2;
+}
+
+.delivery-dot {
+  fill: #f8f2d2;
+  stroke: rgba(255, 212, 0, 0.9);
+  stroke-width: 2;
+}
+
+.delivery-dot.collected {
+  fill: rgba(248, 242, 210, 0.25);
+  stroke: rgba(248, 242, 210, 0.35);
 }
 
 .logic-shell {
@@ -951,6 +985,50 @@ input[type="number"] {
 .planning-world-copy {
   line-height: 1.55;
   color: var(--muted);
+}
+
+.planning-table-line {
+  stroke: rgba(74, 85, 93, 0.72);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.planning-peg-line {
+  stroke: rgba(74, 85, 93, 0.34);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.planning-table-label,
+.planning-held-label,
+.planning-empty-world-label {
+  fill: var(--muted);
+  font-size: 1rem;
+  font-weight: 700;
+  text-anchor: middle;
+  text-transform: uppercase;
+}
+
+.planning-block {
+  fill: rgba(185, 96, 44, 0.82);
+  stroke: rgba(85, 64, 48, 0.54);
+  stroke-width: 2;
+}
+
+.planning-block.clear {
+  fill: rgba(13, 110, 110, 0.78);
+}
+
+.planning-block.held {
+  filter: drop-shadow(0 12px 18px rgba(35, 31, 28, 0.22));
+}
+
+.planning-block-label {
+  fill: #fffaf1;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 1.35rem;
+  font-weight: 800;
+  text-anchor: middle;
 }
 
 .planning-group-label {

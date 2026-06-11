@@ -1,6 +1,6 @@
 """STRIPS planning demo exports."""
 
-from ai9414.strips.api import StripsDemo
+from ai9414.strips.api import BlocksworldDemo, StripsDemo
 from ai9414.strips.models import StripsProblem
 from ai9414.strips.student import (
     apply_action_signature,
@@ -12,6 +12,7 @@ from ai9414.strips.student import (
 
 __all__ = [
     "StripsDemo",
+    "BlocksworldDemo",
     "StripsProblem",
     "apply_action_signature",
     "build_unimplemented_strips_result",

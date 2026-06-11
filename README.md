@@ -4,7 +4,7 @@
 
 ![AI9414 branch-and-bound demo screenshot](https://raw.githubusercontent.com/OliverObst/artificial-intelligence/main/docs/images/bnb-demo.png)
 
-It currently includes fourteen ready-to-run demos:
+It currently includes fifteen ready-to-run demos:
 
 - labyrinth DFS search
 - office delivery DFS search
@@ -20,6 +20,7 @@ It currently includes fourteen ready-to-run demos:
 - CSP map colouring
 - CSP delivery time-slot assignment
 - STRIPS planning
+- Blocks World planning
 
 ## Available demos
 
@@ -51,6 +52,8 @@ It currently includes fourteen ready-to-run demos:
   Start with `ai9414 demo csp-delivery`
 - `STRIPS planning`
   Start with `ai9414 demo strips`
+- `Blocks World planning`
+  Start with `ai9414 demo blocksworld`
 
 ## Why use it
 
@@ -185,6 +188,12 @@ To start the STRIPS planning example directly from the repository:
 
 ```bash
 uv run python examples/strips_demo.py
+```
+
+To start the Blocks World planning example directly from the repository:
+
+```bash
+uv run python examples/blocksworld_demo.py
 ```
 
 The same install is enough for the labyrinth live-Python stub as well. The
@@ -426,6 +435,16 @@ app.load_example("canonical_delivery")
 app.show()
 ```
 
+Visual Blocks World planning example:
+
+```python
+from ai9414.strips import BlocksworldDemo
+
+app = BlocksworldDemo()
+app.load_example("sussman_anomaly")
+app.show()
+```
+
 Custom STRIPS problem:
 
 ```python
@@ -452,6 +471,12 @@ Suggested STRIPS exercises:
 - Start the robot in the mail room and explain why collecting the parcel too early is a bad idea.
 - Unlock the lab door at the start and identify which action disappears from the plan.
 - Move the locked door to the office B connection and compare the new plan structure.
+
+Suggested Blocks World exercises:
+
+- Compare the 3-, 4-, and 5-block tower examples and count how many temporary moves are needed.
+- Use the Sussman anomaly example to explain why solving one goal first can force the planner to undo work.
+- Compare the 5- and 6-disc Hanoi examples and relate the STRIPS actions to disc moves.
 
 Custom CNF with DPLL:
 
