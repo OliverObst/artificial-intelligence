@@ -10,7 +10,7 @@
     <div class="page-shell">
       <header class="header">
         <div>
-          <p class="eyebrow">ai9414 search demo</p>
+          <p class="eyebrow">ai9414 demo</p>
           <h1 id="app-title">Loading...</h1>
           <p id="app-subtitle" class="muted"></p>
         </div>
@@ -34,6 +34,7 @@
           <div id="planning-panel" class="planning-panel hidden" role="img" aria-label="Planning state"></div>
           <div id="uncertainty-panel" class="uncertainty-panel hidden" role="img" aria-label="Belief-state view"></div>
           <div id="foundation-panel" class="foundation-panel hidden" role="img" aria-label="Tokenisation state"></div>
+          <div id="resolution-proof-panel" class="logic-panel hidden" role="img" aria-label="Resolution proof steps"></div>
         </section>
 
         <section class="panel visual-panel">
@@ -195,6 +196,18 @@
             </select>
           </label>
 
+          <div id="resolution-input-panel" class="control-block hidden">
+            <span>Proof attempt</span>
+            <textarea id="resolution-clauses-input" rows="6" spellcheck="false">~A or B
+~B or C
+A
+~C</textarea>
+            <textarea id="resolution-steps-input" rows="4" spellcheck="false">1, 3, A
+2, 5, B
+4, 6, C</textarea>
+            <button id="resolution-load-button" type="button">Load proof attempt</button>
+          </div>
+
           <label id="csp-algorithm-control" class="control-block hidden" for="csp-algorithm-select">
             <span>Algorithm</span>
             <select id="csp-algorithm-select">
@@ -239,8 +252,8 @@
           <label id="delivery-order-control" class="control-block hidden" for="delivery-order-select">
             <span>Action order</span>
             <select id="delivery-order-select">
-              <option value="straight_left_right">straight, left, right</option>
-              <option value="straight_right_left">straight, right, left</option>
+              <option value="straight_left_right">forward, left turn, right turn</option>
+              <option value="straight_right_left">forward, right turn, left turn</option>
               <option value="random">random choice</option>
             </select>
           </label>

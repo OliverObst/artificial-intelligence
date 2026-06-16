@@ -17,10 +17,16 @@ def build_delivery_trace_from_definition(
     *,
     title: str,
     subtitle: str,
+    goal_type: str = "target",
     action_order: str = "straight_left_right",
     random_seed: int = 7,
 ) -> TraceBundle:
-    result = solve_delivery(labyrinth, action_order=action_order, random_seed=random_seed)
+    result = solve_delivery(
+        labyrinth,
+        goal_type=goal_type,
+        action_order=action_order,
+        random_seed=random_seed,
+    )
     all_tree_nodes = result.raw_steps[-1].snapshot["tree"]["nodes"] if result.raw_steps else result.initial_state["tree"]["nodes"]
     layout = _layout_tree(all_tree_nodes)
 
@@ -66,6 +72,7 @@ def build_delivery_trace(
         example.labyrinth,
         title=example.title,
         subtitle=example.subtitle,
+        goal_type=example.goal_type,
         action_order=action_order,
         random_seed=random_seed,
     )

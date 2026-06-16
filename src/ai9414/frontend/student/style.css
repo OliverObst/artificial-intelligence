@@ -32,7 +32,8 @@ body {
 
 button,
 select,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -382,6 +383,17 @@ input[type="number"] {
   border-radius: 12px;
   border: 1px solid var(--line);
   background: white;
+}
+
+textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  resize: vertical;
 }
 
 .tree-link {
@@ -799,6 +811,105 @@ input[type="number"] {
   line-height: 1.5;
 }
 
+.logic-wumpus-panel {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(111, 123, 131, 0.14);
+}
+
+.logic-wumpus-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.logic-wumpus-cell {
+  position: relative;
+  min-height: 74px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(111, 123, 131, 0.18);
+  background: rgba(243, 239, 230, 0.72);
+  display: grid;
+  align-content: space-between;
+}
+
+.logic-wumpus-cell.candidate {
+  border-color: rgba(180, 83, 9, 0.25);
+}
+
+.logic-wumpus-cell.safe,
+.logic-wumpus-cell.pit-false {
+  background: rgba(13, 110, 110, 0.08);
+  border-color: rgba(13, 110, 110, 0.24);
+}
+
+.logic-wumpus-cell.pit,
+.logic-wumpus-cell.pit-true {
+  background: rgba(140, 94, 75, 0.14);
+  border-color: rgba(140, 94, 75, 0.32);
+}
+
+.logic-wumpus-coord {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.logic-wumpus-markers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.logic-wumpus-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(111, 123, 131, 0.18);
+}
+
+.logic-wumpus-marker.agent {
+  color: #fff;
+  background: #24364b;
+  border-color: #24364b;
+}
+
+.logic-wumpus-marker.clear,
+.logic-wumpus-marker.safe {
+  color: #0d6e6e;
+  background: rgba(13, 110, 110, 0.12);
+  border-color: rgba(13, 110, 110, 0.26);
+}
+
+.logic-wumpus-marker.breeze,
+.logic-wumpus-marker.candidate {
+  color: #92400e;
+  background: rgba(180, 83, 9, 0.12);
+  border-color: rgba(180, 83, 9, 0.26);
+}
+
+.logic-wumpus-marker.pit {
+  color: #7f1d1d;
+  background: rgba(140, 94, 75, 0.16);
+  border-color: rgba(140, 94, 75, 0.28);
+}
+
+.logic-wumpus-notes {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .logic-section-title {
   margin: 0 0 10px;
   font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
@@ -914,6 +1025,58 @@ input[type="number"] {
   margin-top: 8px;
   color: var(--muted);
   font-size: 0.88rem;
+}
+
+.resolution-step-list {
+  display: grid;
+  gap: 10px;
+}
+
+.resolution-step-row {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(111, 123, 131, 0.18);
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.resolution-step-row.active {
+  border-color: rgba(13, 110, 110, 0.5);
+  box-shadow: 0 0 0 3px rgba(13, 110, 110, 0.12);
+}
+
+.resolution-step-row.done {
+  background: rgba(13, 110, 110, 0.08);
+}
+
+.resolution-step-row.invalid {
+  background: rgba(176, 54, 54, 0.08);
+  border-color: rgba(176, 54, 54, 0.35);
+}
+
+.resolution-step-title {
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.resolution-step-detail {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.resolution-clause.selected {
+  border-color: rgba(13, 110, 110, 0.58);
+  background: rgba(13, 110, 110, 0.08);
+}
+
+.resolution-clause.new {
+  border-color: rgba(80, 129, 74, 0.5);
+  background: rgba(80, 129, 74, 0.1);
+}
+
+.resolution-clause.empty {
+  border-color: rgba(176, 54, 54, 0.5);
+  background: rgba(176, 54, 54, 0.09);
 }
 
 .planning-panel {

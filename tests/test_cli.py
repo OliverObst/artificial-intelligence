@@ -20,6 +20,7 @@ def test_cli_lists_available_demos(capsys):
     assert "delivery" in captured.out
     assert "graph-dfs" in captured.out
     assert "logic-dpll" in captured.out
+    assert "logic-resolution" in captured.out
     assert "csp-delivery" in captured.out
 
 
@@ -38,6 +39,17 @@ def test_cli_lists_logic_examples_across_modes(capsys):
     captured = capsys.readouterr()
     assert "- simple_sat" in captured.out
     assert "- entailment_chain" in captured.out
+    assert "- wumpus_no_breeze" in captured.out
+    assert "- wumpus_forced_pit" in captured.out
+
+
+def test_cli_lists_resolution_examples(capsys):
+    assert cli.main(["list", "--examples", "logic-resolution"]) == 0
+
+    captured = capsys.readouterr()
+    assert "- chain_refutation" in captured.out
+    assert "- wumpus_no_breeze" in captured.out
+    assert "- wumpus_forced_pit" in captured.out
 
 
 def test_cli_launches_requested_demo(monkeypatch):

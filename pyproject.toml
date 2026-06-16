@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai9414"
-version = "0.1.4"
+version = "0.1.5"
 description = "Interactive teaching demos for AI search, logic, planning, CSP, uncertainty, and tokenisation."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.11"
@@ -81,3 +81,9 @@ include = [
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+    "notebook>=7.5.7",
+]

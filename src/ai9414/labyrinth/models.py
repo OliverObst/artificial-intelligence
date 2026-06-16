@@ -16,6 +16,7 @@ class LabyrinthDefinition(AI9414Model):
     grid: list[str]
     start: list[int]
     exit: list[int]
+    collectibles: list[list[int]] = Field(default_factory=list)
     seed: int | None = None
     size: str | None = None
 
@@ -37,8 +38,20 @@ class LabyrinthDefinition(AI9414Model):
             raise ValueError("Exit coordinate is outside the grid.")
         if self.grid[start[0]][start[1]] != "S":
             raise ValueError("The start coordinate must point to 'S'.")
-        if self.grid[exit_cell[0]][exit_cell[1]] != "E":
+        has_exit_marker = any("E" in row for row in self.grid)
+        if has_exit_marker and self.grid[exit_cell[0]][exit_cell[1]] != "E":
             raise ValueError("The exit coordinate must point to 'E'.")
+        for collectible in self.collectibles:
+            collectible_cell = tuple(collectible)
+            if len(collectible_cell) != 2:
+                raise ValueError("Collectible coordinates must have two integers.")
+            if not (
+                0 <= collectible_cell[0] < self.rows
+                and 0 <= collectible_cell[1] < self.cols
+            ):
+                raise ValueError("Collectible coordinate is outside the grid.")
+            if self.grid[collectible_cell[0]][collectible_cell[1]] == "#":
+                raise ValueError("Collectible coordinate must not point to a wall.")
         return self
 
 

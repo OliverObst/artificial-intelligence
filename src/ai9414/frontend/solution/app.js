@@ -21,6 +21,7 @@ const appType = () => state.trace?.app_type;
 const isStrips = () => appType() === "strips";
 const isUncertainty = () => appType() === "uncertainty";
 const isLogic = () => appType() === "logic";
+const isResolution = () => appType() === "resolution";
 const isFoundationModels = () => appType() === "foundation_models";
 const isCsp = () => appType() === "csp";
 const isDeliveryCsp = () => appType() === "delivery_csp";
@@ -226,6 +227,21 @@ function renderPanelCopy() {
     $("logic-legend").classList.remove("hidden");
     $("csp-legend").classList.add("hidden");
     $("uncertainty-legend").classList.add("hidden");
+  } else if (isResolution()) {
+    $("left-panel-title").textContent = "Proof Steps";
+    $("left-panel-subtitle").textContent = "Resolution steps selecting parent clauses and a pivot literal.";
+    $("right-panel-title").textContent = "Resolution Clauses";
+    $("right-panel-subtitle").textContent = "Given clauses, derived resolvents, and the empty clause when the refutation closes.";
+    $("search-toggle-grid").classList.add("hidden");
+    $("planning-toggle-grid").classList.add("hidden");
+    $("csp-view-control").classList.add("hidden");
+    $("csp-toggle-grid").classList.add("hidden");
+    $("search-legend").classList.add("hidden");
+    $("labyrinth-legend").classList.add("hidden");
+    $("graph-dfs-legend").classList.add("hidden");
+    $("logic-legend").classList.add("hidden");
+    $("csp-legend").classList.add("hidden");
+    $("uncertainty-legend").classList.add("hidden");
   } else if (isDelivery()) {
     $("left-panel-title").textContent = "Search Tree";
     $("left-panel-subtitle").textContent = "DFS tree for the delivery search.";
@@ -421,6 +437,17 @@ function renderMetrics(data) {
     $("metric-3-value").textContent = String(data.stats?.forced_assignments || 0);
     $("metric-4-label").textContent = "Backtracks";
     $("metric-4-value").textContent = String(data.stats?.backtracks || 0);
+    return;
+  }
+  if (isResolution()) {
+    $("metric-1-label").textContent = "Given clauses";
+    $("metric-1-value").textContent = String(data.resolution?.summary?.given || 0);
+    $("metric-2-label").textContent = "Derived clauses";
+    $("metric-2-value").textContent = String(data.resolution?.summary?.derived || 0);
+    $("metric-3-label").textContent = "Proof steps";
+    $("metric-3-value").textContent = `${data.resolution?.summary?.completed_steps || 0} / ${data.resolution?.summary?.proof_steps || 0}`;
+    $("metric-4-label").textContent = "Empty clause";
+    $("metric-4-value").textContent = data.resolution?.summary?.empty_clause_found ? "yes" : "no";
     return;
   }
   if (isGridSearch()) {
@@ -1276,6 +1303,215 @@ function renderLabyrinth(data) {
   svg.appendChild(textGroup);
 }
 
+function renderWumpusVisualisation(logic) {
+  const visualisation = logic.visualisation;
+  if (!visualisation || visualisation.kind !== "wumpus") return null;
+
+  const panel = document.createElement("div");
+  panel.className = "logic-wumpus-panel";
+
+  const heading = document.createElement("h3");
+  heading.className = "logic-section-title";
+  heading.textContent = visualisation.title || "Wumpus World";
+  panel.appendChild(heading);
+
+  const width = Number(visualisation.width || 3);
+  const height = Number(visualisation.height || 3);
+  const key = (square) => `${square?.[0]},${square?.[1]}`;
+  const agentKey = key(visualisation.agent);
+  const percepts = new Map((visualisation.percepts || []).map((percept) => [key(percept.square), percept]));
+  const candidates = new Set((visualisation.candidates || []).map(key));
+  const safe = new Set((visualisation.entailed_safe || []).map(key));
+  const pits = new Set((visualisation.entailed_pits || []).map(key));
+  const assignment = new Map((logic.assignment || []).map((entry) => [entry.variable, entry.value]));
+
+  const grid = document.createElement("div");
+  grid.className = "logic-wumpus-grid";
+  grid.style.gridTemplateColumns = `repeat(${width}, minmax(46px, 1fr))`;
+
+  for (let y = height; y >= 1; y -= 1) {
+    for (let x = 1; x <= width; x += 1) {
+      const cellKey = `${x},${y}`;
+      const cell = document.createElement("div");
+      cell.className = "logic-wumpus-cell";
+      const pitVariable = `P_${x}${y}`;
+      if (candidates.has(cellKey)) cell.classList.add("candidate");
+      if (safe.has(cellKey)) cell.classList.add("safe");
+      if (pits.has(cellKey)) cell.classList.add("pit");
+      if (assignment.has(pitVariable)) {
+        cell.classList.add(assignment.get(pitVariable) ? "pit-true" : "pit-false");
+      }
+
+      const coord = document.createElement("span");
+      coord.className = "logic-wumpus-coord";
+      coord.textContent = `[${x},${y}]`;
+      cell.appendChild(coord);
+
+      const markers = document.createElement("div");
+      markers.className = "logic-wumpus-markers";
+      if (cellKey === agentKey) {
+        const marker = document.createElement("span");
+        marker.className = "logic-wumpus-marker agent";
+        marker.textContent = "A";
+        markers.appendChild(marker);
+      }
+      if (percepts.has(cellKey)) {
+        const percept = percepts.get(cellKey);
+        const marker = document.createElement("span");
+        marker.className = `logic-wumpus-marker ${percept.kind === "breeze" ? "breeze" : "clear"}`;
+        marker.textContent = percept.kind === "breeze" ? "B" : "¬B";
+        marker.title = percept.label || "";
+        markers.appendChild(marker);
+      }
+      if (pits.has(cellKey)) {
+        const marker = document.createElement("span");
+        marker.className = "logic-wumpus-marker pit";
+        marker.textContent = "P";
+        markers.appendChild(marker);
+      } else if (safe.has(cellKey)) {
+        const marker = document.createElement("span");
+        marker.className = "logic-wumpus-marker safe";
+        marker.textContent = "safe";
+        markers.appendChild(marker);
+      } else if (candidates.has(cellKey)) {
+        const marker = document.createElement("span");
+        marker.className = "logic-wumpus-marker candidate";
+        marker.textContent = "?";
+        markers.appendChild(marker);
+      }
+      cell.appendChild(markers);
+      grid.appendChild(cell);
+    }
+  }
+  panel.appendChild(grid);
+
+  if (visualisation.notes?.length) {
+    const notes = document.createElement("ul");
+    notes.className = "logic-wumpus-notes";
+    visualisation.notes.forEach((note) => {
+      const item = document.createElement("li");
+      item.textContent = note;
+      notes.appendChild(item);
+    });
+    panel.appendChild(notes);
+  }
+
+  return panel;
+}
+
+function renderResolutionProofPanel(data) {
+  const panel = $("resolution-proof-panel");
+  panel.innerHTML = "";
+  const resolution = data.resolution;
+  if (!resolution) return;
+
+  const shell = document.createElement("div");
+  shell.className = "logic-shell";
+  const heading = document.createElement("h3");
+  heading.className = "logic-section-title";
+  heading.textContent = "Proof attempt";
+  shell.appendChild(heading);
+  const steps = document.createElement("div");
+  steps.className = "resolution-step-list";
+  (resolution.proof_steps || []).forEach((item) => {
+    const row = document.createElement("div");
+    row.className = `resolution-step-row ${item.status || "pending"} ${resolution.active_step === item.step ? "active" : ""}`;
+    const title = document.createElement("div");
+    title.className = "resolution-step-title";
+    title.textContent = `${item.step}. C${item.left}, C${item.right} on ${item.pivot}`;
+    const detail = document.createElement("div");
+    detail.className = "resolution-step-detail";
+    detail.textContent = item.resolvent_id
+      ? `C${item.resolvent_id}: ${item.resolvent}`
+      : item.explanation || "Waiting to resolve these clauses.";
+    row.append(title, detail);
+    steps.appendChild(row);
+  });
+  shell.appendChild(steps);
+  panel.appendChild(shell);
+}
+
+function renderResolutionProblem(data) {
+  const panel = $("logic-problem-panel");
+  panel.innerHTML = "";
+  const resolution = data.resolution;
+  if (!resolution) return;
+
+  const shell = document.createElement("div");
+  shell.className = "logic-shell";
+  const callout = document.createElement("div");
+  callout.className = "logic-callout";
+  callout.textContent =
+    resolution.entailment_target
+      ? `Refutation target: ${resolution.entailment_target}`
+      : "A refutation succeeds when resolution derives the empty clause □.";
+  shell.appendChild(callout);
+
+  const wumpusPanel = renderWumpusVisualisation({
+    visualisation: resolution.visualisation,
+    assignment: [],
+  });
+  if (wumpusPanel) shell.appendChild(wumpusPanel);
+
+  const summaryGrid = document.createElement("div");
+  summaryGrid.className = "logic-summary-grid";
+  [
+    ["Given", resolution.summary?.given ?? 0],
+    ["Derived", resolution.summary?.derived ?? 0],
+    ["Steps", `${resolution.summary?.completed_steps ?? 0} / ${resolution.summary?.proof_steps ?? 0}`],
+    ["Clauses", resolution.summary?.total_clauses ?? 0],
+    ["Empty", resolution.summary?.empty_clause_found ? "yes" : "no"],
+  ].forEach(([label, value]) => {
+    const card = document.createElement("div");
+    card.className = "logic-summary-card";
+    const title = document.createElement("span");
+    title.className = "logic-summary-label";
+    title.textContent = label;
+    const body = document.createElement("strong");
+    body.className = "logic-summary-value";
+    body.textContent = String(value);
+    card.append(title, body);
+    summaryGrid.appendChild(card);
+  });
+  shell.appendChild(summaryGrid);
+
+  const clausePanel = document.createElement("div");
+  const clauseHeading = document.createElement("h3");
+  clauseHeading.className = "logic-section-title";
+  clauseHeading.textContent = "Clauses";
+  clausePanel.appendChild(clauseHeading);
+  const clauseList = document.createElement("div");
+  clauseList.className = "logic-clause-list resolution-clause-list";
+  (resolution.clauses || []).forEach((clause) => {
+    const row = document.createElement("div");
+    row.className = `logic-clause-row resolution-clause ${clause.status || "available"} ${clause.kind || "given"}`;
+    const header = document.createElement("div");
+    header.className = "logic-clause-header";
+    const label = document.createElement("span");
+    label.className = "logic-clause-label";
+    label.textContent = `${clause.label} ${clause.expression}`;
+    const stateLabel = document.createElement("span");
+    stateLabel.className = "logic-clause-state";
+    stateLabel.textContent = clause.kind === "derived" && clause.parents?.length
+      ? `from C${clause.parents[0]}, C${clause.parents[1]}`
+      : clause.kind || "given";
+    header.append(label, stateLabel);
+    const literalRow = document.createElement("div");
+    literalRow.className = "logic-literal-row";
+    (clause.literals?.length ? clause.literals : ["□"]).forEach((literal) => {
+      const chip = document.createElement("span");
+      chip.className = `logic-literal-chip ${literal === "□" ? "false" : "unassigned"}`;
+      chip.textContent = literal;
+      literalRow.appendChild(chip);
+    });
+    row.append(header, literalRow);
+    clauseList.appendChild(row);
+  });
+  clausePanel.appendChild(clauseList);
+  shell.appendChild(clausePanel);
+  panel.appendChild(shell);
+}
+
 function renderLogicProblem(data) {
   const panel = $("logic-problem-panel");
   panel.innerHTML = "";
@@ -1292,6 +1528,9 @@ function renderLogicProblem(data) {
       "To test entailment, the app checks whether the knowledge base together with not query is unsatisfiable.";
     shell.appendChild(callout);
   }
+
+  const wumpusPanel = renderWumpusVisualisation(logic);
+  if (wumpusPanel) shell.appendChild(wumpusPanel);
 
   const summaryGrid = document.createElement("div");
   summaryGrid.className = "logic-summary-grid";
@@ -2558,10 +2797,11 @@ function render() {
   $("step-range").max = String(max);
   $("step-range").value = String(state.stepIndex);
   $("message-banner").classList.add("hidden");
-  $("search-tree-svg").classList.toggle("hidden", isStrips() || isUncertainty() || isCspFamily() || isFoundationModels());
+  $("search-tree-svg").classList.toggle("hidden", isStrips() || isUncertainty() || isCspFamily() || isFoundationModels() || isResolution());
   $("csp-panel").classList.toggle("hidden", !isCspFamily());
   $("planning-panel").classList.toggle("hidden", !isStrips());
   $("uncertainty-panel").classList.toggle("hidden", !isUncertainty());
+  $("resolution-proof-panel").classList.toggle("hidden", !isResolution());
   $("planning-world-panel").classList.toggle("hidden", !isStrips());
   $("uncertainty-world-panel").classList.toggle("hidden", !isUncertainty());
   $("foundation-panel").classList.toggle("hidden", !isFoundationModels());
@@ -2577,18 +2817,22 @@ function render() {
     renderPlanningWorldPanel(data);
   } else if (isFoundationModels()) {
     renderFoundationInternal(data);
+  } else if (isResolution()) {
+    renderResolutionProofPanel(data);
   } else {
     renderTree(data);
   }
-  $("problem-svg").classList.toggle("hidden", isLogic() || isFoundationModels());
+  $("problem-svg").classList.toggle("hidden", isLogic() || isResolution() || isFoundationModels());
   $("problem-svg").classList.toggle("delivery-world-canvas", isDeliveryCsp());
   if (!isDeliveryCsp()) {
     $("problem-svg").setAttribute("viewBox", "0 0 1000 700");
   }
-  $("logic-problem-panel").classList.toggle("hidden", !isLogic());
+  $("logic-problem-panel").classList.toggle("hidden", !isLogic() && !isResolution());
   $("foundation-text-panel").classList.toggle("hidden", !isFoundationModels());
   if (isLogic()) {
     renderLogicProblem(data);
+  } else if (isResolution()) {
+    renderResolutionProblem(data);
   } else if (isFoundationModels()) {
     renderFoundationTextPanel(data);
   } else if (isCsp()) {

@@ -139,6 +139,7 @@ class DeliveryDemo(BaseEducationalApp):
                 self.labyrinth,
                 title="Instructor-supplied delivery office",
                 subtitle="A fixed office layout for DFS reachability.",
+                goal_type="target",
                 action_order=self.options["action_order"],
                 random_seed=self.options["random_seed"],
             )

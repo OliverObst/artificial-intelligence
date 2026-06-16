@@ -14,6 +14,7 @@ from ai9414.graph_gbfs import GraphGbfsDemo
 from ai9414.graph_ucs import GraphUcsDemo
 from ai9414.labyrinth import LabyrinthDemo
 from ai9414.logic import DpllDemo
+from ai9414.resolution import ResolutionDemo
 from ai9414.search import SearchDemo
 from ai9414.strips import StripsDemo
 
@@ -32,6 +33,7 @@ __all__ = [
     "GraphUcsDemo",
     "LabyrinthDemo",
     "PlaceholderDemo",
+    "ResolutionDemo",
     "SearchDemo",
     "StripsDemo",
     "launch_app",

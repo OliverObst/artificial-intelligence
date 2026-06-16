@@ -4,7 +4,7 @@
 
 ![AI9414 branch-and-bound demo screenshot](https://raw.githubusercontent.com/OliverObst/artificial-intelligence/main/docs/images/bnb-demo.png)
 
-It currently includes fifteen ready-to-run demos:
+It currently includes sixteen ready-to-run demos:
 
 - labyrinth DFS search
 - office delivery DFS search
@@ -15,6 +15,7 @@ It currently includes fifteen ready-to-run demos:
 - spatial graph uniform-cost search
 - spatial graph branch-and-bound search
 - propositional logic DPLL
+- propositional resolution/refutation
 - reasoning with uncertainty belief-state explorer
 - foundation models tokenisation explorer
 - CSP map colouring
@@ -42,6 +43,8 @@ It currently includes fifteen ready-to-run demos:
   Start with `ai9414 demo graph-bnb`
 - `propositional logic DPLL`
   Start with `ai9414 demo logic-dpll`
+- `propositional resolution/refutation`
+  Start with `ai9414 demo logic-resolution`
 - `reasoning with uncertainty belief-state explorer`
   Start with `ai9414 demo uncertainty`
 - `foundation models tokenisation explorer`
@@ -158,6 +161,12 @@ To start the DPLL logic example directly from the repository:
 
 ```bash
 uv run python examples/logic_dpll_demo.py
+```
+
+To start the resolution/refutation example directly from the repository:
+
+```bash
+uv run python examples/resolution_demo.py
 ```
 
 To start the reasoning-with-uncertainty example directly from the repository:
@@ -501,6 +510,34 @@ app = DpllDemo(mode="entailment")
 app.load_kb(
     formulas=["A -> B", "B -> C", "A"],
     query="C",
+)
+app.show()
+```
+
+Curated Wumpus entailment examples:
+
+```python
+from ai9414.logic import DpllDemo
+
+app = DpllDemo(mode="entailment", example="wumpus_no_breeze")
+app.show()
+
+app = DpllDemo(mode="entailment", example="wumpus_forced_pit")
+app.show()
+```
+
+Resolution/refutation proof attempts:
+
+```python
+from ai9414.resolution import ResolutionDemo
+
+app = ResolutionDemo(example="chain_refutation")
+app.load_proof_attempt(
+    clauses=[["~A", "B"], ["A"], ["~B"]],
+    steps=[
+        {"left": 1, "right": 2, "pivot": "A"},
+        {"left": 4, "right": 3, "pivot": "B"},
+    ],
 )
 app.show()
 ```

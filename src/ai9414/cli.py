@@ -269,6 +269,15 @@ def demo_specs() -> tuple[DemoSpec, ...]:
             example_names=_list_logic_examples,
         ),
         DemoSpec(
+            name="logic-resolution",
+            title="Resolution Refutation",
+            description="Propositional resolution and refutation proofs",
+            default_example="chain_refutation",
+            factory=_create_resolution_demo,
+            aliases=("logic_resolution", "resolution"),
+            example_names=_list_resolution_examples,
+        ),
+        DemoSpec(
             name="uncertainty",
             title="Belief-State Explorer",
             description="Reasoning with uncertainty belief-state explorer",
@@ -370,6 +379,12 @@ def _create_logic_demo() -> BaseEducationalApp:
     return DpllDemo()
 
 
+def _create_resolution_demo() -> BaseEducationalApp:
+    from ai9414.resolution import ResolutionDemo
+
+    return ResolutionDemo()
+
+
 def _create_uncertainty_demo() -> BaseEducationalApp:
     from ai9414.uncertainty import BeliefStateExplorer
 
@@ -408,5 +423,11 @@ def _create_blocksworld_demo() -> BaseEducationalApp:
 
 def _list_logic_examples() -> Sequence[str]:
     from ai9414.logic.examples import build_examples
+
+    return list(build_examples())
+
+
+def _list_resolution_examples() -> Sequence[str]:
+    from ai9414.resolution.examples import build_examples
 
     return list(build_examples())

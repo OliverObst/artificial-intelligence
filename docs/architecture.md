@@ -101,7 +101,7 @@ src/ai9414/logic/
 
 The labyrinth package follows the same shape, but swaps the weighted-graph world for a grid maze, plain DFS reachability, built-in playback examples, and a live-Python `/solve` workflow.
 
-The delivery package reuses the grid-search trace shape for first-lecture DFS examples in simple office layouts. It has two fixed configurations, no generator, an action-order option for neighbour expansion, and office-specific copy in the replay UI.
+The delivery package reuses the grid-search trace shape for first-lecture DFS examples in simple office layouts. It has three fixed scenarios, no generator, an action-order option for neighbour expansion, and office-specific copy in the replay UI. Two scenarios search for a coloured delivery target; the Pac-Man scenario searches through a classic-style corridor maze until every dot has been collected.
 
 The logic package follows the same overall contract, but its right-hand panel renders CNF clauses and literal states while the left-hand tree shows DPLL partial assignments, forced literals, contradictions, and backtracking.
 

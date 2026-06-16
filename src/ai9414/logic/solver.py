@@ -158,6 +158,7 @@ class _TraceRecorder:
                 "query": self.problem.query,
                 "entailment_target": self.problem.entailment_target,
                 "original_input": list(self.problem.original_input),
+                "visualisation": copy.deepcopy(self.problem.visualisation),
             },
             "stats": copy.deepcopy(self.stats),
         }

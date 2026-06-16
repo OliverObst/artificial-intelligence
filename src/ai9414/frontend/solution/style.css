@@ -65,6 +65,57 @@ body {
   color: var(--muted);
 }
 
+.logic-wumpus-panel {
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid rgba(86, 96, 103, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.logic-wumpus-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.logic-wumpus-cell {
+  min-height: 64px;
+  padding: 8px;
+  border: 1px solid rgba(86, 96, 103, 0.18);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.logic-wumpus-cell.safe,
+.logic-wumpus-cell.pit-false {
+  background: #ecfdf5;
+}
+
+.logic-wumpus-cell.pit,
+.logic-wumpus-cell.pit-true {
+  background: #fef2f2;
+}
+
+.logic-wumpus-markers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.logic-wumpus-marker {
+  display: inline-flex;
+  min-width: 22px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: white;
+  border: 1px solid rgba(86, 96, 103, 0.18);
+  font-weight: 700;
+}
+
+.logic-wumpus-notes {
+  color: var(--muted);
+}
+
 button {
   border: 0;
   border-radius: 999px;

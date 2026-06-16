@@ -6,14 +6,56 @@ from ai9414.delivery.models import DeliveryExample
 from ai9414.labyrinth.models import LabyrinthDefinition
 
 
+PACMAN_MAZE_TEMPLATE = [
+    "############################",
+    "#............##............#",
+    "#.####.#####.##.#####.####.#",
+    "#.####.#####.##.#####.####.#",
+    "#.####.#####.##.#####.####.#",
+    "#..........................#",
+    "#.####.##.########.##.####.#",
+    "#.####.##.########.##.####.#",
+    "#......##....##....##......#",
+    "######.##### ## #####.######",
+    "     #.##### ## #####.#     ",
+    "     #.##          ##.#     ",
+    "     #.## ###  ### ##.#     ",
+    "######.## #      # ##.######",
+    "      .   #      #   .      ",
+    "######.## #      # ##.######",
+    "     #.## ######## ##.#     ",
+    "     #.##          ##.#     ",
+    "     #.## ######## ##.#     ",
+    "######.## ######## ##.######",
+    "#............##............#",
+    "#.####.#####.##.#####.####.#",
+    "#.####.#####.##.#####.####.#",
+    "#...##.......S........##...#",
+    "###.##.##.########.##.##.###",
+    "###.##.##.########.##.##.###",
+    "#......##....##....##......#",
+    "#.##########.##.##########.#",
+    "#.##########.##.##########.#",
+    "#..........................#",
+    "############################",
+]
+
+PACMAN_MAZE_DOTS = [
+    [row_index, col_index]
+    for row_index, row in enumerate(PACMAN_MAZE_TEMPLATE)
+    for col_index, value in enumerate(row)
+    if value == "."
+]
+
+
 def build_examples() -> dict[str, DeliveryExample]:
     return {
         "four_rooms": DeliveryExample(
             name="four_rooms",
-            title="Four-room office delivery",
+            title="Four-room target delivery",
             subtitle=(
                 "A small office floor with four rooms. The robot starts in the top-left room "
-                "and searches for a delivery location in the bottom-right room."
+                "and searches for the coloured delivery target in the bottom-right room."
             ),
             labyrinth=LabyrinthDefinition(
                 rows=17,
@@ -41,39 +83,54 @@ def build_examples() -> dict[str, DeliveryExample]:
                 exit=[12, 12],
                 size="four_rooms",
             ),
+            goal_type="target",
             metadata={"layout": "four-room office"},
         ),
-        "corridor": DeliveryExample(
-            name="corridor",
-            title="Corridor office delivery",
+        "single_room": DeliveryExample(
+            name="single_room",
+            title="Single-room target delivery",
             subtitle=(
-                "A central corridor connects four offices. DFS explores the corridor and "
-                "side rooms while searching for the delivery location."
+                "A compact 7 by 7 room with surrounding walls. The robot searches for the "
+                "coloured delivery target in the same room."
             ),
             labyrinth=LabyrinthDefinition(
-                rows=15,
-                cols=21,
+                rows=9,
+                cols=9,
                 grid=[
-                    "#####################",
-                    "#S    ##       ##   #",
-                    "#     ##       ##   #",
-                    "#     ##       ##   #",
-                    "#     ##       ##   #",
-                    "### ##### ### ##### #",
-                    "###       # #       #",
-                    "#########   #########",
-                    "###       # #       #",
-                    "### ##### ### ##### #",
-                    "#     ##       ##   #",
-                    "#     ##       ##   #",
-                    "#     ##       ## E #",
-                    "#     ##       ##   #",
-                    "#####################",
+                    "#########",
+                    "#S      #",
+                    "#       #",
+                    "#       #",
+                    "#   E   #",
+                    "#       #",
+                    "#       #",
+                    "#       #",
+                    "#########",
                 ],
                 start=[1, 1],
-                exit=[12, 18],
-                size="corridor",
+                exit=[4, 4],
+                size="single_room",
             ),
-            metadata={"layout": "corridor office"},
+            goal_type="target",
+            metadata={"layout": "single-room office"},
+        ),
+        "pacman": DeliveryExample(
+            name="pacman",
+            title="Pac-Man dot maze",
+            subtitle=(
+                "A larger Pac-Man-style corridor maze with collectible dots, thin internal walls, and no ghosts. "
+                "The goal is to collect every dot."
+            ),
+            labyrinth=LabyrinthDefinition(
+                rows=len(PACMAN_MAZE_TEMPLATE),
+                cols=len(PACMAN_MAZE_TEMPLATE[0]),
+                grid=PACMAN_MAZE_TEMPLATE,
+                start=[23, 13],
+                exit=[23, 13],
+                collectibles=PACMAN_MAZE_DOTS,
+                size="pacman",
+            ),
+            goal_type="collect_all",
+            metadata={"layout": "pacman maze", "collectible_count": len(PACMAN_MAZE_DOTS)},
         ),
     }

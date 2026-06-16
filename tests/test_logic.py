@@ -24,7 +24,11 @@ def test_dpll_demo_lists_sat_examples_by_default():
 
 def test_dpll_demo_lists_entailment_examples_in_entailment_mode():
     app = DpllDemo(mode="entailment")
-    assert app.list_examples() == ["entailment_chain"]
+    assert app.list_examples() == [
+        "entailment_chain",
+        "wumpus_no_breeze",
+        "wumpus_forced_pit",
+    ]
 
 
 def test_dpll_trace_reaches_finished_state():
@@ -41,6 +45,36 @@ def test_entailment_example_reports_entailed():
     trace = app.get_trace_payload()
     assert trace["summary"]["result"] == "entailed"
     assert trace["initial_state"]["logic"]["query"] == "C"
+
+
+def test_wumpus_no_breeze_example_reports_safe_square():
+    app = DpllDemo(mode="entailment")
+    app.load_example("wumpus_no_breeze")
+    state = app.build_state_payload()
+    trace = app.get_trace_payload()
+    assert trace["summary"]["result"] == "entailed"
+    assert trace["initial_state"]["logic"]["query"] == "not P_12"
+    assert ["P_12"] in state["data"]["logic_problem"]["clauses"]
+    visualisation = trace["initial_state"]["logic"]["visualisation"]
+    assert visualisation["kind"] == "wumpus"
+    assert visualisation["agent"] == [1, 1]
+    assert [1, 2] in visualisation["entailed_safe"]
+
+
+def test_wumpus_forced_pit_example_reports_forced_location():
+    app = DpllDemo(mode="entailment")
+    app.load_example("wumpus_forced_pit")
+    state = app.build_state_payload()
+    trace = app.get_trace_payload()
+    assert trace["summary"]["result"] == "entailed"
+    assert trace["initial_state"]["logic"]["query"] == "P_31"
+    assert ["~P_31"] in state["data"]["logic_problem"]["clauses"]
+    assert trace["initial_state"]["logic"]["entailment_target"] == "KB and not P_31"
+    visualisation = trace["initial_state"]["logic"]["visualisation"]
+    assert visualisation["kind"] == "wumpus"
+    assert visualisation["width"] == 3
+    assert visualisation["height"] == 3
+    assert [3, 1] in visualisation["entailed_pits"]
 
 
 def test_load_cnf_accepts_custom_clauses():

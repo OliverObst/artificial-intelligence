@@ -37,6 +37,7 @@ class LogicProblem(AI9414Model):
     query: str | None = None
     entailment_target: str | None = None
     original_input: list[str] = Field(default_factory=list)
+    visualisation: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("clauses")
     @classmethod
