@@ -13,6 +13,7 @@ const state = {
     showCspDomains: true,
     cspViewMode: "trace",
     planningSelectedAction: "",
+    uncertaintySelectedCell: 0,
   },
   player: {
     stepIndex: 0,
@@ -1790,103 +1791,204 @@ Your solver returns:
 - optional stats
 `;
 
-const UNCERTAINTY_PYTHON_STUB = `from __future__ import annotations
+const UNCERTAINTY_PYTHON_STUB = `"""
+Week 7: Reasoning with uncertainty
+Bayes filter corridor exercise
 
-from ai9414.uncertainty import run_uncertainty_solver
+This file asks you to implement the two main operations used by a simple
+Bayes filter:
+
+1. sensor_update:
+   Use noisy evidence to update a belief distribution.
+
+2. motion_update:
+   Use an uncertain action model to predict the next belief distribution.
+
+The belief is a list of probabilities, one per corridor cell.
+The probabilities should always sum to 1.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
 
 
-def predict_belief(
-    belief: dict[str, float],
-    transition_model: dict[str, dict[str, float]],
-) -> dict[str, float]:
+@dataclass
+class Corridor:
+    cells: int
+    door_cells: set[int]
+
+
+@dataclass
+class SensorModel:
+    hit: float = 0.8
+    false_alarm: float = 0.2
+
+
+@dataclass
+class MotionModel:
+    success: float = 0.8
+    stay: float = 0.1
+    overshoot: float = 0.1
+
+
+def normalise(values: list[float]) -> list[float]:
     """
-    Apply the transition model for the chosen action.
+    Return a new list whose values sum to 1.
 
-    Input:
-        belief: the current probability distribution over rooms
-        transition_model: for each source room, a distribution over next rooms
-
-    Output:
-        A new normalised probability distribution over rooms.
+    TODO:
+    - compute the total
+    - raise ValueError if the total is zero
+    - divide each value by the total
     """
-    raise NotImplementedError("Implement predict_belief.")
+    raise NotImplementedError
 
 
-def update_belief(
-    predicted_belief: dict[str, float],
-    observation: str,
-    observation_model: dict[str, dict[str, float]],
-) -> dict[str, float]:
+def sensor_update(
+    belief: list[float],
+    corridor: Corridor,
+    sensor: SensorModel,
+    sees_door: bool,
+) -> list[float]:
     """
-    Apply the observation likelihoods and normalise the posterior.
+    Update belief after observing whether the robot sees a door.
 
-    Input:
-        predicted_belief: the belief after the action step
-        observation: the current noisy sensor reading
-        observation_model: for each room, likelihoods for each observation
+    If the robot is at a door cell:
+        P(sees_door=True) = sensor.hit
 
-    Output:
-        A new normalised posterior belief distribution.
+    If the robot is not at a door cell:
+        P(sees_door=True) = sensor.false_alarm
+
+    TODO:
+    - for each cell, compute the likelihood of the observation
+    - multiply the old belief by that likelihood
+    - normalise the result
     """
-    raise NotImplementedError("Implement update_belief.")
+    raise NotImplementedError
 
 
-def bayes_filter_step(
-    belief: dict[str, float],
-    transition_model: dict[str, dict[str, float]],
-    observation: str,
-    observation_model: dict[str, dict[str, float]],
-) -> dict[str, float]:
+def motion_update_right(
+    belief: list[float],
+    motion: MotionModel,
+) -> list[float]:
     """
-    Perform one Bayes-filter update.
+    Predict the next belief after the robot tries to move right.
 
-    This function should call predict_belief(...) and update_belief(...).
+    The motion model is:
+
+    - success:   move one cell right
+    - stay:      remain in the same cell
+    - overshoot: move two cells right
+
+    At the end of the corridor, clamp movement to the last cell.
+
+    TODO:
+    - create a new belief list filled with zeros
+    - distribute probability mass from each old cell
+    - return the new belief
     """
-    predicted = predict_belief(belief, transition_model)
-    return update_belief(predicted, observation, observation_model)
+    raise NotImplementedError
+
+
+def most_likely_cell(belief: list[float]) -> int:
+    """
+    Return the 1-based index of the most likely cell.
+    """
+    return max(range(len(belief)), key=lambda i: belief[i]) + 1
+
+
+def assert_close(a: float, b: float, eps: float = 1e-6) -> None:
+    assert abs(a - b) < eps, f"{a} != {b}"
+
+
+def run_checks() -> None:
+    corridor = Corridor(cells=5, door_cells={1, 3})
+    sensor = SensorModel(hit=0.8, false_alarm=0.2)
+    motion = MotionModel(success=0.8, stay=0.1, overshoot=0.1)
+
+    belief = [0.2] * 5
+    updated = sensor_update(belief, corridor, sensor, sees_door=True)
+
+    assert_close(sum(updated), 1.0)
+
+    expected = [
+        0.04 / 0.44,
+        0.16 / 0.44,
+        0.04 / 0.44,
+        0.16 / 0.44,
+        0.04 / 0.44,
+    ]
+
+    for got, exp in zip(updated, expected):
+        assert_close(got, exp)
+
+    moved = motion_update_right(updated, motion)
+    assert_close(sum(moved), 1.0)
+
+    print("All checks passed.")
+
+
+def run_demo() -> None:
+    corridor = Corridor(cells=5, door_cells={1, 3})  # cells 2 and 4
+    sensor = SensorModel(hit=0.8, false_alarm=0.2)
+    motion = MotionModel(success=0.8, stay=0.1, overshoot=0.1)
+
+    belief = [1 / corridor.cells] * corridor.cells
+
+    print("Initial belief:")
+    print(belief)
+
+    belief = sensor_update(belief, corridor, sensor, sees_door=True)
+    print("\\nAfter sensing a door:")
+    print(belief)
+    print("Most likely cell:", most_likely_cell(belief))
+
+    belief = motion_update_right(belief, motion)
+    print("\\nAfter moving right:")
+    print(belief)
+    print("Most likely cell:", most_likely_cell(belief))
+
+    belief = sensor_update(belief, corridor, sensor, sees_door=False)
+    print("\\nAfter sensing no door:")
+    print(belief)
+    print("Most likely cell:", most_likely_cell(belief))
 
 
 if __name__ == "__main__":
-    run_uncertainty_solver(predict_belief, update_belief, bayes_filter_step)
+    run_demo()
+    # Uncomment once you have implemented the TODO functions:
+    # run_checks()
 `;
 
-const UNCERTAINTY_PYTHON_REQUIREMENTS = `ai9414
-`;
+const UNCERTAINTY_PYTHON_REQUIREMENTS = ``;
 
-const UNCERTAINTY_PYTHON_README = `# reasoning with uncertainty Bayes filter
+const UNCERTAINTY_PYTHON_README = `# Week 7 Bayes filter corridor
 
-This folder runs a tiny local Python backend for the belief-state explorer.
-The browser connection and replay formatting are handled by ai9414.
-Your job is to implement the Bayes-filter belief update.
+This folder contains the Week 7 reasoning-with-uncertainty exercise stub.
+Your job is to implement the Bayes-filter update rules directly.
 
 ## install
 
-Install the dependency with:
+No external dependency is required for the core exercise. The requirements file
+is included only so the folder matches the other ai9414 downloads.
 
     pip install -r requirements.txt
 
 ## run
 
-Start the local backend with:
+Run the exercise script with:
 
-    python solve_uncertainty.py
+    python week7_bayes_filter_stub.py
 
 ## what to implement
 
-Open solve_uncertainty.py and implement:
+Open week7_bayes_filter_stub.py and implement:
 
-- predict_belief(...)
-- update_belief(...)
-- bayes_filter_step(...)
+- normalise(...)
+- sensor_update(...)
+- motion_update_right(...)
 
-The browser sends the current office localisation problem, including:
-
-- the room list
-- the action-specific transition models
-- the observation model
-- the scripted action and observation sequence
-
-Your functions should always return a normalised belief distribution.
+Once those are complete, uncomment run_checks() at the bottom of the file.
 `;
 
 const CSP_PYTHON_STUB = `from __future__ import annotations
@@ -2272,6 +2374,9 @@ async function loadApp() {
   state.serverTrace = trace;
   state.serverSnapshots = buildSnapshots(trace);
   state.view.playbackSpeed = Number(session.options.playback_speed || 1);
+  if (manifest.app_type === "uncertainty") {
+    state.view.showTrueLocation = session.data.uncertainty?.show_true_position !== false;
+  }
   state.player.mode = "playback";
   if (session.data.live_python) {
     state.player.size = session.data.live_python.size;
@@ -2326,9 +2431,52 @@ function populateFoundationCorpora() {
   });
 }
 
+function populateUncertaintyObservationButtons() {
+  const container = $("uncertainty-observation-buttons");
+  if (!container) return;
+  container.innerHTML = "";
+  const landmarks = state.session?.data?.uncertainty?.landmark_types || [];
+  landmarks.forEach((landmark) => {
+    const label = humaniseUncertaintyText(landmark);
+    [
+      { present: true, label: `Sense ${label}` },
+      { present: false, label: `Sense no ${label}` },
+    ].forEach((item) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.uncertaintySense = landmark;
+      button.dataset.present = String(item.present);
+      if (!item.present) button.className = "secondary-button";
+      button.textContent = item.label;
+      container.appendChild(button);
+    });
+  });
+}
+
+function syncUncertaintyControls() {
+  const uncertainty = state.session?.data?.uncertainty;
+  if (!uncertainty) return;
+  populateUncertaintyObservationButtons();
+  const sensor = uncertainty.sensor_model || {};
+  const motion = uncertainty.motion_model || {};
+  $("uncertainty-sensor-hit").value = String(sensor.hit ?? 0.8);
+  $("uncertainty-sensor-false").value = String(sensor.false_alarm ?? 0.2);
+  $("uncertainty-motion-success").value = String(motion.success ?? 0.8);
+  $("uncertainty-motion-stay").value = String(motion.stay ?? 0.1);
+  $("uncertainty-motion-overshoot").value = String(motion.overshoot ?? 0.1);
+  $("uncertainty-sensor-hit-value").textContent = formatProbability(sensor.hit ?? 0.8, 2);
+  $("uncertainty-sensor-false-value").textContent = formatProbability(sensor.false_alarm ?? 0.2, 2);
+  $("uncertainty-motion-success-value").textContent = formatProbability(motion.success ?? 0.8, 2);
+  $("uncertainty-motion-stay-value").textContent = formatProbability(motion.stay ?? 0.1, 2);
+  $("uncertainty-motion-overshoot-value").textContent = formatProbability(motion.overshoot ?? 0.1, 2);
+}
+
 function syncControls() {
   populateSizeOptions();
   populateFoundationCorpora();
+  if (isUncertainty()) {
+    syncUncertaintyControls();
+  }
   $("speed-select").value = String(state.view.playbackSpeed);
   $("show-explored").checked = state.view.showExploredEdges;
   $("show-pruned").checked = state.view.showPrunedBranches;
@@ -5251,12 +5399,12 @@ function renderPanelCopy(data) {
     $("right-panel-subtitle").textContent =
       "Each cell represents a room and time slot. Assigned deliveries fill a cell, and candidate badges show remaining options.";
   } else if (isUncertainty()) {
-    $("left-panel-title").textContent = "Belief State";
+    $("left-panel-title").textContent = "Update Explanation";
     $("left-panel-subtitle").textContent =
-      "Prior, prediction, likelihoods, and posterior are shown together for each Bayes-filter update.";
-    $("right-panel-title").textContent = "Office World";
+      "Belief values, likelihoods, normalisation, and transition details are shown for each update.";
+    $("right-panel-title").textContent = "Bayes Filter Corridor";
     $("right-panel-subtitle").textContent =
-      "The office map shows the current belief distribution, sensor reading, and true location when enabled.";
+      "The corridor shows landmark cells, posterior belief bars, the most likely cell, and the hidden true position when enabled.";
   } else if (isStrips()) {
     const blocksworld = data.planning?.world?.domain === "blocksworld" || data.strips_problem?.domain === "blocksworld";
     $("left-panel-title").textContent = "Planning State";
@@ -5369,14 +5517,14 @@ function renderMetrics(data) {
   }
   if (isUncertainty()) {
     const uncertainty = data.uncertainty || {};
-    $("metric-1-label").textContent = "Most likely room";
-    $("metric-1-value").textContent = uncertainty.most_likely_label || "none";
+    $("metric-1-label").textContent = "Most likely cell";
+    $("metric-1-value").textContent = uncertainty.most_likely_cell ? `cell ${uncertainty.most_likely_cell}` : "none";
     $("metric-2-label").textContent = "Confidence";
     $("metric-2-value").textContent = `${Math.round((uncertainty.most_likely_probability || 0) * 100)}%`;
     $("metric-3-label").textContent = "Entropy";
     $("metric-3-value").textContent = formatNumber(data.stats?.entropy, 2);
-    $("metric-4-label").textContent = "Normaliser";
-    $("metric-4-value").textContent = formatNumber(data.stats?.normalisation_constant, 3);
+    $("metric-4-label").textContent = "Total probability";
+    $("metric-4-value").textContent = formatNumber(data.stats?.total_probability, 3);
     return;
   }
   if (isStrips()) {
@@ -7680,35 +7828,35 @@ function appendBlock(group, block, x, y, width, height, clear, extraClass = "") 
   );
 }
 
-function uncertaintyRoomBoxes() {
-  return {
-    mail_room: { x: 90, y: 90, width: 220, height: 110 },
-    office_a: { x: 690, y: 90, width: 220, height: 110 },
-    corridor: { x: 390, y: 280, width: 220, height: 110 },
-    office_b: { x: 90, y: 500, width: 220, height: 110 },
-    lab: { x: 690, y: 500, width: 220, height: 110 },
-  };
-}
-
-function uncertaintyFeatureTokens(room) {
-  const tokens = [];
-  if (room.charger) tokens.push("charger");
-  if (room.window) tokens.push("window");
-  if (room.door_nearby) tokens.push("door");
-  if (room.marker && room.marker !== "none") tokens.push(`${room.marker} marker`);
-  return tokens.length ? tokens : ["no strong cue"];
-}
-
 function humaniseUncertaintyText(value) {
   if (!value) return "none";
-  return String(value).replace(/^move_to_/, "move to ").replace(/_/g, " ");
+  return String(value).replace(/^move_/, "move ").replace(/^no_/, "no ").replace(/_/g, " ");
+}
+
+function formatProbability(value, digits = 3) {
+  return Number(value || 0).toFixed(digits);
+}
+
+function uncertaintyLandmarkText(cell) {
+  return (cell.landmarks || []).length ? cell.landmarks.join(", ").replace(/_/g, " ") : "none";
+}
+
+function uncertaintyWarningText(uncertainty) {
+  if (uncertainty.warning) return uncertainty.warning;
+  if (uncertainty.weak_maximum) return "Most likely does not mean certain.";
+  return "";
 }
 
 function renderUncertaintyInternal(data) {
   const panel = $("uncertainty-panel");
   panel.innerHTML = "";
   const uncertainty = data.uncertainty;
-  if (!uncertainty) return;
+  if (!uncertainty?.cells?.length) return;
+  const selectedIndex = Math.max(
+    0,
+    Math.min(Number(state.view.uncertaintySelectedCell || 0), uncertainty.cells.length - 1)
+  );
+  state.view.uncertaintySelectedCell = selectedIndex;
 
   const shell = document.createElement("div");
   shell.className = "uncertainty-shell";
@@ -7717,47 +7865,58 @@ function renderUncertaintyInternal(data) {
   beliefSection.className = "uncertainty-section";
   const beliefHeading = document.createElement("h3");
   beliefHeading.className = "uncertainty-section-title";
-  beliefHeading.textContent = "Current belief distribution";
+  beliefHeading.textContent = "Belief distribution";
   beliefSection.appendChild(beliefHeading);
   const beliefGrid = document.createElement("div");
-  beliefGrid.className = "uncertainty-belief-grid";
-  (uncertainty.belief_rows || []).forEach((row) => {
-    const card = document.createElement("div");
-    card.className = `uncertainty-belief-card${uncertainty.most_likely_location === row.location ? " active" : ""}`;
+  beliefGrid.className = "uncertainty-corridor-grid";
+  uncertainty.cells.forEach((cell) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.dataset.cellIndex = String(cell.index);
+    card.className = `uncertainty-cell-card${cell.is_most_likely ? " active" : ""}${selectedIndex === cell.index ? " selected" : ""}`;
+    card.title = `P(location = cell ${cell.cell}) = ${formatProbability(cell.posterior)}`;
     const heading = document.createElement("div");
-    heading.className = "uncertainty-belief-heading";
-    const label = document.createElement("strong");
-    label.textContent = row.label;
+    heading.className = "uncertainty-cell-heading";
+    const cellLabel = document.createElement("strong");
+    cellLabel.textContent = String(cell.cell);
     const probability = document.createElement("span");
-    probability.textContent = `${Math.round(row.posterior * 100)}%`;
-    heading.append(label, probability);
+    probability.textContent = `${Math.round(cell.posterior * 100)}%`;
+    heading.append(cellLabel, probability);
+    const landmark = document.createElement("span");
+    landmark.className = "uncertainty-cell-landmark";
+    landmark.textContent = uncertaintyLandmarkText(cell);
     const bar = document.createElement("div");
-    bar.className = "uncertainty-belief-bar";
+    bar.className = "uncertainty-belief-bar vertical";
     const fill = document.createElement("span");
-    fill.style.width = `${Math.max(6, row.posterior * 100)}%`;
+    fill.style.height = `${Math.max(4, cell.posterior * 100)}%`;
     bar.appendChild(fill);
     const meta = document.createElement("div");
-    meta.className = "uncertainty-belief-meta";
-    meta.textContent = `prior ${row.prior.toFixed(2)}  posterior ${row.posterior.toFixed(2)}`;
-    card.append(heading, bar, meta);
+    meta.className = "uncertainty-cell-meta";
+    meta.textContent = `${cell.is_true_position && state.view.showTrueLocation ? "true position" : cell.is_most_likely ? "most likely" : "belief"}`;
+    card.append(heading, landmark, bar, meta);
     beliefGrid.appendChild(card);
   });
   beliefSection.appendChild(beliefGrid);
+  const total = document.createElement("p");
+  total.className = "uncertainty-note";
+  total.textContent = `Total probability: ${formatProbability(uncertainty.total_probability, 3)}. Most likely position: cell ${uncertainty.most_likely_cell}, P = ${formatProbability(uncertainty.most_likely_probability, 2)}.`;
+  beliefSection.appendChild(total);
   shell.appendChild(beliefSection);
 
   const updateSection = document.createElement("section");
   updateSection.className = "uncertainty-section";
   const updateHeading = document.createElement("h3");
   updateHeading.className = "uncertainty-section-title";
-  updateHeading.textContent = "Bayes update trace";
+  updateHeading.textContent = "Before and after values";
   updateSection.appendChild(updateHeading);
   const table = document.createElement("div");
   table.className = "uncertainty-update-table";
   [
-    "Room",
+    "Cell",
+    "Landmark",
     "Prior",
-    "Predicted",
     "Likelihood",
+    "Unnormalised",
     "Posterior",
   ].forEach((text) => {
     const cell = document.createElement("span");
@@ -7765,22 +7924,26 @@ function renderUncertaintyInternal(data) {
     cell.textContent = text;
     table.appendChild(cell);
   });
-  (uncertainty.belief_rows || []).forEach((row) => {
+  (uncertainty.operation_table || []).forEach((row) => {
     const label = document.createElement("span");
     label.className = "uncertainty-update-label";
-    label.textContent = row.label;
+    label.textContent = String(row.cell);
     table.appendChild(label);
-    [row.prior, row.predicted, row.likelihood, row.posterior].forEach((value) => {
+    const landmark = document.createElement("span");
+    landmark.className = "uncertainty-update-value";
+    landmark.textContent = uncertaintyLandmarkText(row);
+    table.appendChild(landmark);
+    [row.prior, row.likelihood, row.unnormalised, row.posterior].forEach((value) => {
       const cell = document.createElement("span");
       cell.className = "uncertainty-update-value";
-      cell.textContent = Number(value).toFixed(2);
+      cell.textContent = formatProbability(value, 3);
       table.appendChild(cell);
     });
   });
   updateSection.appendChild(table);
   const normaliser = document.createElement("p");
   normaliser.className = "uncertainty-note";
-  normaliser.textContent = `Normalisation constant: ${Number(uncertainty.normalisation_constant || 0).toFixed(3)}`;
+  normaliser.textContent = `Normalisation constant: ${formatProbability(uncertainty.normalisation_constant, 3)}`;
   updateSection.appendChild(normaliser);
   shell.appendChild(updateSection);
 
@@ -7788,39 +7951,31 @@ function renderUncertaintyInternal(data) {
   transitionSection.className = "uncertainty-section";
   const transitionHeading = document.createElement("h3");
   transitionHeading.className = "uncertainty-section-title";
-  transitionHeading.textContent = "Transition model";
+  transitionHeading.textContent = "Selected cell transition";
   transitionSection.appendChild(transitionHeading);
   const transitionCopy = document.createElement("p");
   transitionCopy.className = "uncertainty-copy";
   transitionCopy.textContent = uncertainty.current_action
-    ? `Current action: ${humaniseUncertaintyText(uncertainty.current_action)}. Each row shows how that action redistributes belief mass from one source room.`
-    : "No action has been applied yet. Step the replay to see the prediction phase.";
+    ? `If the robot was at cell ${selectedIndex + 1}, this action distributes its probability mass as follows.`
+    : "Click a cell. Motion transition details appear after Move left or Move right.";
   transitionSection.appendChild(transitionCopy);
-  const transitionGrid = document.createElement("div");
-  transitionGrid.className = "uncertainty-transition-grid";
-  (uncertainty.transition_rows || []).forEach((row) => {
-    const card = document.createElement("div");
-    card.className = "uncertainty-transition-card";
-    const label = document.createElement("strong");
-    label.className = "uncertainty-transition-label";
-    label.textContent = row.label;
-    const entries = document.createElement("div");
-    entries.className = "uncertainty-transition-list";
-    row.entries.forEach((entry) => {
-      const line = document.createElement("span");
-      line.textContent = `${entry.label} ${Number(entry.probability).toFixed(2)}`;
-      entries.appendChild(line);
-    });
-    card.append(label, entries);
-    transitionGrid.appendChild(card);
-  });
-  if (!(uncertainty.transition_rows || []).length) {
+  const selectedTransition = (uncertainty.transition_rows || []).find(
+    (row) => Number(row.source_index) === selectedIndex
+  );
+  if (!selectedTransition) {
     const empty = document.createElement("p");
     empty.className = "planning-empty";
-    empty.textContent = "Transition rows appear after the first action.";
+    empty.textContent = "No motion transition has been applied at this step.";
     transitionSection.appendChild(empty);
   } else {
-    transitionSection.appendChild(transitionGrid);
+    const entries = document.createElement("div");
+    entries.className = "uncertainty-transition-list large";
+    selectedTransition.entries.forEach((entry) => {
+      const line = document.createElement("span");
+      line.textContent = `${entry.label}: cell ${entry.destination_cell}, P = ${formatProbability(entry.probability, 2)}`;
+      entries.appendChild(line);
+    });
+    transitionSection.appendChild(entries);
   }
   shell.appendChild(transitionSection);
 
@@ -7828,7 +7983,7 @@ function renderUncertaintyInternal(data) {
   historySection.className = "uncertainty-section";
   const historyHeading = document.createElement("h3");
   historyHeading.className = "uncertainty-section-title";
-  historyHeading.textContent = "Filtering history";
+  historyHeading.textContent = "Event log";
   historySection.appendChild(historyHeading);
   const historyList = document.createElement("div");
   historyList.className = "uncertainty-history-list";
@@ -7838,17 +7993,16 @@ function renderUncertaintyInternal(data) {
     button.className = `uncertainty-history-button${entry.step_index === uncertainty.step_index ? " current" : ""}`;
     button.dataset.stepIndex = String(entry.step_index);
     const label = document.createElement("strong");
-    label.textContent = `Step ${entry.step_index}`;
+    label.textContent = `${entry.step_index}. ${entry.label}`;
     const meta = document.createElement("span");
-    meta.textContent =
-      `${humaniseUncertaintyText(entry.action)}  |  ${humaniseUncertaintyText(entry.observation)}  |  peak ${humaniseUncertaintyText(entry.most_likely_location)}`;
+    meta.textContent = `${entry.summary} | peak cell ${entry.most_likely_cell}, P = ${formatProbability(entry.most_likely_probability, 2)}`;
     button.append(label, meta);
     historyList.appendChild(button);
   });
   if (!(uncertainty.history || []).length) {
     const empty = document.createElement("p");
     empty.className = "planning-empty";
-    empty.textContent = "The history will appear once the first Bayes-filter step has been replayed.";
+    empty.textContent = "The event log will appear after the first update.";
     historySection.appendChild(empty);
   } else {
     historySection.appendChild(historyList);
@@ -7863,7 +8017,6 @@ function renderUncertaintyWorldPanel(data) {
   panel.innerHTML = "";
   const uncertainty = data.uncertainty;
   if (!uncertainty) return;
-  const problem = state.session?.data?.uncertainty_problem || data.uncertainty_problem || {};
 
   const shell = document.createElement("div");
   shell.className = "uncertainty-shell";
@@ -7872,22 +8025,28 @@ function renderUncertaintyWorldPanel(data) {
   currentSection.className = "uncertainty-section";
   const currentHeading = document.createElement("h3");
   currentHeading.className = "uncertainty-section-title";
-  currentHeading.textContent = "Current action and observation";
+  currentHeading.textContent = "Current state";
   const summaryGrid = document.createElement("div");
   summaryGrid.className = "uncertainty-world-summary";
   [
     {
-      label: "Action",
-      value: uncertainty.current_action ? humaniseUncertaintyText(uncertainty.current_action) : "none yet",
+      label: "Operation",
+      value: humaniseUncertaintyText(uncertainty.current_operation || "initialise"),
     },
     {
-      label: "Observation",
-      value: uncertainty.current_observation ? humaniseUncertaintyText(uncertainty.current_observation) : "none yet",
+      label: "Most likely",
+      value: `cell ${uncertainty.most_likely_cell}`,
     },
     {
-      label: "True location",
+      label: "Confidence",
+      value: `${Math.round((uncertainty.most_likely_probability || 0) * 100)}%`,
+    },
+    {
+      label: "True position",
       value: state.view.showTrueLocation
-        ? humaniseUncertaintyText(uncertainty.current_true_location)
+        ? uncertainty.current_true_position === null || uncertainty.current_true_position === undefined
+          ? "not set"
+          : `cell ${Number(uncertainty.current_true_position) + 1}`
         : "hidden",
     },
   ].forEach((item) => {
@@ -7904,60 +8063,53 @@ function renderUncertaintyWorldPanel(data) {
   currentSection.append(currentHeading, summaryGrid);
   shell.appendChild(currentSection);
 
-  const cuesSection = document.createElement("section");
-  cuesSection.className = "uncertainty-section";
-  const cuesHeading = document.createElement("h3");
-  cuesHeading.className = "uncertainty-section-title";
-  cuesHeading.textContent = "Room cues";
-  const cuesGrid = document.createElement("div");
-  cuesGrid.className = "uncertainty-cue-grid";
-  (uncertainty.rooms || []).forEach((room) => {
-    const card = document.createElement("div");
-    card.className = "uncertainty-cue-card";
-    const label = document.createElement("strong");
-    label.textContent = room.label;
-    const features = document.createElement("div");
-    features.className = "uncertainty-cue-list";
-    uncertaintyFeatureTokens(room).forEach((token) => {
-      const chip = document.createElement("span");
-      chip.className = "uncertainty-cue-chip";
-      chip.textContent = token;
-      features.appendChild(chip);
-    });
-    card.append(label, features);
-    cuesGrid.appendChild(card);
-  });
-  cuesSection.append(cuesHeading, cuesGrid);
-  shell.appendChild(cuesSection);
+  const explanationSection = document.createElement("section");
+  explanationSection.className = "uncertainty-section";
+  const explanationHeading = document.createElement("h3");
+  explanationHeading.className = "uncertainty-section-title";
+  explanationHeading.textContent = uncertainty.explanation?.title || "Explanation";
+  const formula = document.createElement("p");
+  formula.className = "uncertainty-formula";
+  formula.textContent = uncertainty.explanation?.formula || "P(location = x)";
+  const body = document.createElement("p");
+  body.className = "uncertainty-copy";
+  body.textContent = uncertainty.explanation?.body || "The belief distribution is ready.";
+  explanationSection.append(explanationHeading, formula, body);
+  const warning = uncertaintyWarningText(uncertainty);
+  if (warning) {
+    const warningNode = document.createElement("p");
+    warningNode.className = "uncertainty-warning";
+    warningNode.textContent = warning;
+    explanationSection.appendChild(warningNode);
+  }
+  shell.appendChild(explanationSection);
 
-  const scenarioSection = document.createElement("section");
-  scenarioSection.className = "uncertainty-section";
-  const scenarioHeading = document.createElement("h3");
-  scenarioHeading.className = "uncertainty-section-title";
-  scenarioHeading.textContent = "Scenario sequence";
-  const scenarioList = document.createElement("div");
-  scenarioList.className = "uncertainty-history-list";
-  (problem.scripted_steps || []).forEach((step, index) => {
-    const replayIndex = index + 1;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.stepIndex = String(replayIndex);
-    const stateClass =
-      replayIndex === uncertainty.step_index
-        ? " current"
-        : replayIndex < uncertainty.step_index
-        ? " completed"
-        : "";
-    button.className = `uncertainty-history-button${stateClass}`;
-    const label = document.createElement("strong");
-    label.textContent = `Step ${replayIndex}`;
-    const meta = document.createElement("span");
-    meta.textContent = `${humaniseUncertaintyText(step.action)}  |  ${humaniseUncertaintyText(step.observation)}`;
-    button.append(label, meta);
-    scenarioList.appendChild(button);
+  const modelSection = document.createElement("section");
+  modelSection.className = "uncertainty-section";
+  const modelHeading = document.createElement("h3");
+  modelHeading.className = "uncertainty-section-title";
+  modelHeading.textContent = "Models";
+  const modelGrid = document.createElement("div");
+  modelGrid.className = "uncertainty-world-summary";
+  [
+    { label: "Hit rate", value: formatProbability(uncertainty.sensor_model?.hit, 2) },
+    { label: "False alarm", value: formatProbability(uncertainty.sensor_model?.false_alarm, 2) },
+    { label: "Move succeeds", value: formatProbability(uncertainty.motion_model?.success, 2) },
+    { label: "Stays", value: formatProbability(uncertainty.motion_model?.stay, 2) },
+    { label: "Overshoots", value: formatProbability(uncertainty.motion_model?.overshoot, 2) },
+  ].forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "uncertainty-world-card";
+    const label = document.createElement("span");
+    label.className = "uncertainty-world-label";
+    label.textContent = item.label;
+    const value = document.createElement("strong");
+    value.textContent = item.value;
+    card.append(label, value);
+    modelGrid.appendChild(card);
   });
-  scenarioSection.append(scenarioHeading, scenarioList);
-  shell.appendChild(scenarioSection);
+  modelSection.append(modelHeading, modelGrid);
+  shell.appendChild(modelSection);
 
   panel.appendChild(shell);
 }
@@ -7966,118 +8118,147 @@ function renderUncertaintyWorld(data) {
   const svg = $("problem-svg");
   svg.innerHTML = "";
   const uncertainty = data.uncertainty;
-  if (!uncertainty?.rooms?.length) return;
+  if (!uncertainty?.cells?.length) return;
 
-  const roomBoxes = uncertaintyRoomBoxes();
-  const roomCentres = Object.fromEntries(
-    Object.entries(roomBoxes).map(([room, box]) => [
-      room,
-      { x: box.x + box.width / 2, y: box.y + box.height / 2 },
-    ])
+  const cells = uncertainty.cells;
+  const count = cells.length;
+  const usableWidth = 860;
+  const gap = Math.max(4, Math.min(12, 80 / count));
+  const cellWidth = (usableWidth - gap * (count - 1)) / count;
+  const startX = (1000 - usableWidth) / 2;
+  const barBase = 452;
+  const maxBarHeight = 245;
+  const cellTop = 476;
+  const cellHeight = 105;
+  const maxProbability = Math.max(0.01, ...cells.map((cell) => Number(cell.posterior || 0)));
+
+  svg.appendChild(
+    $svgNode(
+      "text",
+      {
+        class: "uncertainty-world-title",
+        x: 500,
+        y: 72,
+      },
+      "Bayes Filter Corridor"
+    )
   );
-  const connectors = $svgNode("g");
-  const roomBases = $svgNode("g");
-  const overlays = $svgNode("g");
-  const roomLabels = $svgNode("g");
-  const entities = $svgNode("g");
+  svg.appendChild(
+    $svgNode(
+      "text",
+      {
+        class: "uncertainty-world-subtitle",
+        x: 500,
+        y: 105,
+      },
+      `Total probability ${formatProbability(uncertainty.total_probability, 3)} | most likely cell ${uncertainty.most_likely_cell}`
+    )
+  );
 
-  (uncertainty.connections || []).forEach(([left, right]) => {
-    const from = roomCentres[left];
-    const to = roomCentres[right];
-    connectors.appendChild(
-      $svgNode("line", {
-        class: "uncertainty-connector",
-        x1: from.x,
-        y1: from.y,
-        x2: to.x,
-        y2: to.y,
-      })
-    );
-  });
+  const bars = $svgNode("g");
+  const cellsGroup = $svgNode("g");
+  const labels = $svgNode("g");
+  const markers = $svgNode("g");
 
-  (uncertainty.rooms || []).forEach((room) => {
-    const box = roomBoxes[room.id];
-    const probability = Number(uncertainty.posterior_belief?.[room.id] || 0);
-    roomBases.appendChild(
+  cells.forEach((cell, index) => {
+    const x = startX + index * (cellWidth + gap);
+    const probability = Number(cell.posterior || 0);
+    const barHeight = Math.max(5, (probability / maxProbability) * maxBarHeight);
+    cellsGroup.appendChild(
       $svgNode("rect", {
-        class: `uncertainty-room${uncertainty.most_likely_location === room.id ? " active" : ""}`,
-        x: box.x,
-        y: box.y,
-        width: box.width,
-        height: box.height,
-        rx: 22,
+        class: `uncertainty-corridor-cell${cell.is_most_likely ? " active" : ""}`,
+        x,
+        y: cellTop,
+        width: cellWidth,
+        height: cellHeight,
+        rx: 10,
       })
     );
-    overlays.appendChild(
+    bars.appendChild(
       $svgNode("rect", {
-        class: "uncertainty-room-overlay",
-        x: box.x + 6,
-        y: box.y + 6,
-        width: box.width - 12,
-        height: box.height - 12,
-        rx: 18,
-        style: `opacity: ${0.08 + probability * 0.72};`,
+        class: "uncertainty-belief-column",
+        x: x + cellWidth * 0.22,
+        y: barBase - barHeight,
+        width: cellWidth * 0.56,
+        height: barHeight,
+        rx: 6,
       })
     );
-    roomLabels.appendChild(
+    labels.appendChild(
       $svgNode(
         "text",
         {
-          class: "uncertainty-room-label",
-          x: box.x + box.width / 2,
-          y: box.y + 38,
+          class: "uncertainty-cell-number",
+          x: x + cellWidth / 2,
+          y: cellTop + 30,
         },
-        room.label
+        String(cell.cell)
       )
     );
-    roomLabels.appendChild(
+    labels.appendChild(
       $svgNode(
         "text",
         {
-          class: "uncertainty-room-probability",
-          x: box.x + box.width / 2,
-          y: box.y + 64,
+          class: "uncertainty-cell-landmark-svg",
+          x: x + cellWidth / 2,
+          y: cellTop + 56,
         },
-        `${Math.round(probability * 100)}% belief`
+        uncertaintyLandmarkText(cell)
       )
     );
-    const features = uncertaintyFeatureTokens(room);
-    features.slice(0, 2).forEach((token, index) => {
-      roomLabels.appendChild(
+    labels.appendChild(
+      $svgNode(
+        "text",
+        {
+          class: "uncertainty-cell-probability-svg",
+          x: x + cellWidth / 2,
+          y: cellTop + 84,
+        },
+        `${Math.round(probability * 100)}%`
+      )
+    );
+
+    if (cell.is_most_likely) {
+      markers.appendChild(
+        $svgNode("path", {
+          class: "uncertainty-peak-marker",
+          d: `M ${x + cellWidth / 2 - 9} ${cellTop - 18} L ${x + cellWidth / 2 + 9} ${cellTop - 18} L ${x + cellWidth / 2} ${cellTop - 5} Z`,
+        })
+      );
+    }
+    if (state.view.showTrueLocation && cell.is_true_position) {
+      markers.appendChild(
+        $svgNode("circle", {
+          class: "uncertainty-robot",
+          cx: x + cellWidth / 2,
+          cy: cellTop + cellHeight - 18,
+          r: 15,
+        })
+      );
+      markers.appendChild(
         $svgNode(
           "text",
           {
-            class: "uncertainty-room-feature",
-            x: box.x + box.width / 2,
-            y: box.y + 86 + index * 18,
+            class: "uncertainty-robot-label",
+            x: x + cellWidth / 2,
+            y: cellTop + cellHeight - 17,
           },
-          token
+          "R"
         )
       );
-    });
-    roomLabels.appendChild(
-      $svgNode("rect", {
-        class: "uncertainty-room-bar",
-        x: box.x + 20,
-        y: box.y + box.height - 18,
-        width: (box.width - 40) * probability,
-        height: 8,
-        rx: 4,
-      })
-    );
+    }
   });
 
-  if (state.view.showTrueLocation && uncertainty.current_true_location) {
-    const centre = roomCentres[uncertainty.current_true_location];
-    const group = $svgNode("g", {
-      transform: `translate(${centre.x}, ${centre.y - 6})`,
-    });
-    group.appendChild($svgNode("circle", { class: "uncertainty-robot", r: 24 }));
-    group.appendChild($svgNode("text", { class: "uncertainty-robot-label" }, "R"));
-    entities.appendChild(group);
-  }
-
-  svg.append(connectors, roomBases, overlays, roomLabels, entities);
+  svg.appendChild(
+    $svgNode("line", {
+      class: "uncertainty-axis",
+      x1: startX,
+      y1: barBase,
+      x2: startX + usableWidth,
+      y2: barBase,
+    })
+  );
+  svg.append(bars, cellsGroup, labels, markers);
 }
 
 function renderControls() {
@@ -8103,6 +8284,9 @@ function renderControls() {
   $("delivery-order-control").classList.toggle("hidden", !isDelivery());
   $("planning-toggle-grid").classList.toggle("hidden", !isStrips());
   $("uncertainty-toggle-grid").classList.toggle("hidden", !isUncertainty());
+  $("uncertainty-action-panel").classList.toggle("hidden", !isUncertainty());
+  $("quick-player").classList.toggle("hidden", isUncertainty());
+  $("uncertainty-quick-actions").classList.toggle("hidden", !isUncertainty());
   $("csp-toggle-grid").classList.toggle("hidden", !isCspFamily());
   $("size-control").classList.toggle("hidden", !generatedProblemApp);
   $("seed-control").classList.toggle("hidden", !generatedProblemApp);
@@ -8269,6 +8453,13 @@ async function refreshFromServer(response) {
   state.player.liveTrace = null;
   state.player.liveSnapshots = [];
   state.view.planningSelectedAction = "";
+  if (state.manifest?.app_type === "uncertainty") {
+    state.view.showTrueLocation = state.session.data.uncertainty?.show_true_position !== false;
+    state.view.uncertaintySelectedCell = Math.min(
+      state.view.uncertaintySelectedCell || 0,
+      Math.max(0, (state.session.data.uncertainty?.cells || []).length - 1)
+    );
+  }
   if (state.session.data.live_python) {
     state.player.size = state.session.data.live_python.size;
     state.player.seed = state.session.data.live_python.seed;
@@ -8499,7 +8690,7 @@ function downloadPythonStub() {
         ]
       : isUncertainty()
       ? [
-          { name: "ai9414/solve_uncertainty.py", content: UNCERTAINTY_PYTHON_STUB },
+          { name: "ai9414/week7_bayes_filter_stub.py", content: UNCERTAINTY_PYTHON_STUB },
           { name: "ai9414/requirements.txt", content: UNCERTAINTY_PYTHON_REQUIREMENTS },
           { name: "ai9414/README.md", content: UNCERTAINTY_PYTHON_README },
         ]
@@ -8659,6 +8850,57 @@ async function updateDeliveryOptions(patch) {
   const trace = await requestJson("/api/trace");
   response.trace = trace;
   await refreshFromServer(response);
+}
+
+async function runUncertaintyCommand(command, payload = {}) {
+  stopPlay();
+  setMessage("");
+  const response = await postAction("app_command", {
+    command,
+    ...payload,
+  });
+  const trace = await requestJson("/api/trace");
+  response.trace = trace;
+  await refreshFromServer(response);
+  state.player.mode = "playback";
+  state.player.stepIndex = maxStepCount();
+  if (response.message) {
+    setMessage(response.message);
+  }
+  syncControls();
+  render();
+}
+
+async function updateUncertaintySensorModel() {
+  await runUncertaintyCommand("set_sensor_model", {
+    hit: Number($("uncertainty-sensor-hit").value),
+    false_alarm: Number($("uncertainty-sensor-false").value),
+  });
+}
+
+async function updateUncertaintyMotionModel() {
+  await runUncertaintyCommand("set_motion_model", {
+    success: Number($("uncertainty-motion-success").value),
+    stay: Number($("uncertainty-motion-stay").value),
+    overshoot: Number($("uncertainty-motion-overshoot").value),
+  });
+}
+
+function exportUncertaintyTraceJson() {
+  const trace = currentTrace();
+  const blob = new Blob([JSON.stringify(trace, null, 2)], {
+    type: "application/json",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "belief_trace.json";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+  setMessage("Downloaded belief_trace.json.");
+  render();
 }
 
 async function applyFoundationText() {
@@ -8830,6 +9072,54 @@ function bindEvents() {
     state.view.showTrueLocation = event.target.checked;
     render();
   });
+  $("uncertainty-quick-actions").addEventListener("click", async (event) => {
+    const target = event.target.closest("button");
+    if (target?.dataset.uncertaintyQuickSense) {
+      await runUncertaintyCommand("sense", {
+        landmark: target.dataset.uncertaintyQuickSense,
+        present: target.dataset.present === "true",
+      });
+      return;
+    }
+    if (target?.dataset.uncertaintyQuickMoveSense) {
+      await runUncertaintyCommand("move_and_sense", {
+        direction: target.dataset.uncertaintyQuickMoveSense,
+        landmark: "door",
+      });
+      return;
+    }
+    if (target?.dataset.uncertaintyQuickMove) {
+      await runUncertaintyCommand("move", {
+        direction: target.dataset.uncertaintyQuickMove,
+      });
+    }
+  });
+  $("uncertainty-observation-buttons").addEventListener("click", async (event) => {
+    const target = event.target.closest("button");
+    if (!target?.dataset.uncertaintySense) return;
+    await runUncertaintyCommand("sense", {
+      landmark: target.dataset.uncertaintySense,
+      present: target.dataset.present === "true",
+    });
+  });
+  $("uncertainty-motion-buttons").addEventListener("click", async (event) => {
+    const target = event.target.closest("button");
+    if (!target?.dataset.uncertaintyMove) return;
+    await runUncertaintyCommand("move", {
+      direction: target.dataset.uncertaintyMove,
+    });
+  });
+  $("uncertainty-action-panel").addEventListener("click", async (event) => {
+    const target = event.target.closest("button");
+    if (!target?.dataset.uncertaintyCommand) return;
+    await runUncertaintyCommand(target.dataset.uncertaintyCommand);
+  });
+  $("uncertainty-sensor-hit").addEventListener("change", updateUncertaintySensorModel);
+  $("uncertainty-sensor-false").addEventListener("change", updateUncertaintySensorModel);
+  $("uncertainty-motion-success").addEventListener("change", updateUncertaintyMotionModel);
+  $("uncertainty-motion-stay").addEventListener("change", updateUncertaintyMotionModel);
+  $("uncertainty-motion-overshoot").addEventListener("change", updateUncertaintyMotionModel);
+  $("uncertainty-export-trace").addEventListener("click", exportUncertaintyTraceJson);
   $("show-csp-domains").addEventListener("change", (event) => {
     state.view.showCspDomains = event.target.checked;
     render();
@@ -8874,10 +9164,14 @@ function bindEvents() {
   $("uncertainty-panel").addEventListener("click", (event) => {
     const target = event.target.closest("button");
     if (!target) return;
-    const { stepIndex } = target.dataset;
-    if (!stepIndex) return;
-    stopPlay();
-    state.player.stepIndex = Math.max(0, Math.min(Number(stepIndex), maxStepCount()));
+    const { stepIndex, cellIndex } = target.dataset;
+    if (cellIndex !== undefined) {
+      state.view.uncertaintySelectedCell = Number(cellIndex);
+    }
+    if (stepIndex) {
+      stopPlay();
+      state.player.stepIndex = Math.max(0, Math.min(Number(stepIndex), maxStepCount()));
+    }
     render();
   });
   $("uncertainty-world-panel").addEventListener("click", (event) => {

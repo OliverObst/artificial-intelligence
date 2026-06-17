@@ -1,7 +1,8 @@
-"""Domain models for the reasoning-with-uncertainty demo."""
+"""Domain models for the Week 7 Bayes-filter corridor demo."""
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from pydantic import Field, field_validator, model_validator
@@ -9,136 +10,129 @@ from pydantic import Field, field_validator, model_validator
 from ai9414.core.config import BaseConfigModel
 from ai9414.core.models import AI9414Model
 
-CANONICAL_ROOMS: tuple[str, ...] = ("mail_room", "office_a", "corridor", "office_b", "lab")
-CANONICAL_CONNECTIONS: tuple[tuple[str, str], ...] = (
-    ("corridor", "mail_room"),
-    ("corridor", "office_a"),
-    ("corridor", "office_b"),
-    ("corridor", "lab"),
-)
 
+class SensorModel(AI9414Model):
+    """Binary landmark sensor model."""
 
-class UncertaintyRoom(AI9414Model):
-    id: str
-    label: str
-    charger: bool = False
-    window: bool = False
-    door_nearby: bool = False
-    marker: str = "none"
-    description: str = ""
-
-
-class UncertaintyScenarioStep(AI9414Model):
-    action: str
-    observation: str
-    true_location: str
-    note: str = ""
-
-
-class UncertaintyProblem(AI9414Model):
-    title: str = "Office localisation"
-    subtitle: str = "Track the robot with a Bayes filter while motion and sensing remain noisy."
-    rooms: list[UncertaintyRoom]
-    connections: list[tuple[str, str]] = Field(default_factory=lambda: list(CANONICAL_CONNECTIONS))
-    initial_belief: dict[str, float]
-    initial_true_location: str = "corridor"
-    available_actions: list[str]
-    observations: list[str]
-    transition_models: dict[str, dict[str, dict[str, float]]]
-    observation_model: dict[str, dict[str, float]]
-    scripted_steps: list[UncertaintyScenarioStep]
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-    @field_validator("rooms")
-    @classmethod
-    def validate_rooms(cls, value: list[UncertaintyRoom]) -> list[UncertaintyRoom]:
-        room_ids = [room.id for room in value]
-        if len(set(room_ids)) != len(room_ids):
-            raise ValueError("Room ids must be unique.")
-        if set(room_ids) != set(CANONICAL_ROOMS):
-            raise ValueError(
-                "This teaching demo expects exactly these five rooms: mail_room, office_a, corridor, office_b, lab."
-            )
-        return value
-
-    @field_validator("connections")
-    @classmethod
-    def validate_connections(cls, value: list[tuple[str, str]]) -> list[tuple[str, str]]:
-        normalised = [tuple(str(part).strip() for part in edge) for edge in value]
-        if len({tuple(sorted(edge)) for edge in normalised}) != len(normalised):
-            raise ValueError("Connections must be unique.")
-        return normalised
-
-    @field_validator("available_actions")
-    @classmethod
-    def validate_available_actions(cls, value: list[str]) -> list[str]:
-        actions = [str(action).strip() for action in value]
-        if len(set(actions)) != len(actions):
-            raise ValueError("Action names must be unique.")
-        if not actions:
-            raise ValueError("At least one action is required.")
-        return actions
-
-    @field_validator("observations")
-    @classmethod
-    def validate_observations(cls, value: list[str]) -> list[str]:
-        observations = [str(observation).strip() for observation in value]
-        if len(set(observations)) != len(observations):
-            raise ValueError("Observation names must be unique.")
-        if not observations:
-            raise ValueError("At least one observation is required.")
-        return observations
+    hit: float = 0.8
+    false_alarm: float = 0.2
 
     @model_validator(mode="after")
-    def validate_problem(self) -> "UncertaintyProblem":
-        room_ids = {room.id for room in self.rooms}
-        action_ids = set(self.available_actions)
-        observation_ids = set(self.observations)
+    def validate_probabilities(self) -> "SensorModel":
+        for name, value in (("hit", self.hit), ("false_alarm", self.false_alarm)):
+            if not 0.0 <= float(value) <= 1.0:
+                raise ValueError(f"Sensor {name} probability must be between 0 and 1.")
+        return self
 
-        if self.initial_true_location not in room_ids:
-            raise ValueError("initial_true_location must reference a known room.")
+    @property
+    def informative(self) -> bool:
+        return self.hit > self.false_alarm
 
-        if set(self.initial_belief) != room_ids:
-            raise ValueError("initial_belief must assign every room exactly once.")
 
-        for action_name, transition_model in self.transition_models.items():
-            if action_name not in action_ids:
-                raise ValueError(f"Transition model '{action_name}' is not listed in available_actions.")
-            if set(transition_model) != room_ids:
-                raise ValueError(f"Transition model '{action_name}' must define every source room exactly once.")
-            for source, destination_weights in transition_model.items():
-                if set(destination_weights) != room_ids:
+class MotionModel(AI9414Model):
+    """Simple uncertain motion model for left/right movement."""
+
+    success: float = 0.8
+    stay: float = 0.1
+    overshoot: float = 0.1
+
+    @model_validator(mode="after")
+    def validate_probabilities(self) -> "MotionModel":
+        values = [float(self.success), float(self.stay), float(self.overshoot)]
+        if any(value < 0.0 for value in values):
+            raise ValueError("Motion probabilities must not be negative.")
+        total = sum(values)
+        if total <= 0.0:
+            raise ValueError("At least one motion probability must be positive.")
+        if not math.isclose(total, 1.0, rel_tol=1e-6, abs_tol=1e-6):
+            raise ValueError("Motion probabilities must sum to 1.")
+        return self
+
+
+class CorridorProblem(AI9414Model):
+    """One-dimensional corridor localisation problem.
+
+    Positions and landmark lists are stored internally as zero-based indices.
+    The browser payload also includes one-based labels for students.
+    """
+
+    title: str = "Bayes Filter Corridor"
+    subtitle: str = "Track a robot by updating a belief distribution with noisy sensing and uncertain motion."
+    cells: int = 10
+    landmarks: dict[str, list[int]] = Field(default_factory=lambda: {"door": [1, 5]})
+    initial_belief: list[float] = Field(default_factory=list)
+    initial_true_position: int | None = 5
+    sensor_model: SensorModel = Field(default_factory=SensorModel)
+    motion_model: MotionModel = Field(default_factory=MotionModel)
+    show_true_position: bool = True
+    scripted_events: list[dict[str, Any]] = Field(default_factory=list)
+    random_seed: int = 7
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("cells")
+    @classmethod
+    def validate_cell_count(cls, value: int) -> int:
+        cells = int(value)
+        if not 2 <= cells <= 30:
+            raise ValueError("The corridor must contain between 2 and 30 cells.")
+        return cells
+
+    @model_validator(mode="after")
+    def validate_problem(self) -> "CorridorProblem":
+        normalised_landmarks: dict[str, list[int]] = {}
+        for raw_name, raw_indices in self.landmarks.items():
+            name = str(raw_name).strip().lower().replace(" ", "_")
+            if not name:
+                raise ValueError("Landmark names must not be empty.")
+            indices = [int(index) for index in raw_indices]
+            if len(set(indices)) != len(indices):
+                raise ValueError(f"Landmark '{name}' contains duplicate cells.")
+            for index in indices:
+                if not 0 <= index < self.cells:
                     raise ValueError(
-                        f"Transition model '{action_name}' for source '{source}' must define every destination room."
+                        f"Landmark '{name}' index {index} is outside the zero-based corridor range."
                     )
+            normalised_landmarks[name] = sorted(indices)
+        self.landmarks = normalised_landmarks
 
-        if set(self.observation_model) != room_ids:
-            raise ValueError("observation_model must define every room exactly once.")
-        for room_id, likelihoods in self.observation_model.items():
-            if set(likelihoods) != observation_ids:
-                raise ValueError(f"observation_model for '{room_id}' must define every observation exactly once.")
+        if self.initial_belief:
+            if len(self.initial_belief) != self.cells:
+                raise ValueError("initial_belief must contain one probability per cell.")
+            cleaned = [float(value) for value in self.initial_belief]
+            if any(value < -1e-9 for value in cleaned):
+                raise ValueError("initial_belief must not contain negative probabilities.")
+            total = sum(cleaned)
+            if total <= 0:
+                raise ValueError("initial_belief must assign positive mass.")
+            if not math.isclose(total, 1.0, rel_tol=1e-6, abs_tol=1e-6):
+                raise ValueError("initial_belief must sum to 1.")
+            self.initial_belief = [0.0 if abs(value) < 1e-12 else value for value in cleaned]
+        else:
+            self.initial_belief = [1.0 / self.cells for _ in range(self.cells)]
 
-        for step in self.scripted_steps:
-            if step.action not in action_ids:
-                raise ValueError(f"Scenario step action '{step.action}' is not listed in available_actions.")
-            if step.observation not in observation_ids:
-                raise ValueError(f"Scenario step observation '{step.observation}' is not listed in observations.")
-            if step.true_location not in room_ids:
-                raise ValueError(f"Scenario step true_location '{step.true_location}' is not a known room.")
+        if self.initial_true_position is not None:
+            position = int(self.initial_true_position)
+            if not 0 <= position < self.cells:
+                raise ValueError("initial_true_position is outside the zero-based corridor range.")
+            self.initial_true_position = position
 
         return self
+
+    @property
+    def landmark_types(self) -> list[str]:
+        return sorted(self.landmarks.keys())
 
 
 class UncertaintyExample(AI9414Model):
     name: str
     title: str
     subtitle: str
-    problem: UncertaintyProblem
+    problem: CorridorProblem
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class UncertaintyConfigData(AI9414Model):
-    problem: UncertaintyProblem
+    problem: CorridorProblem
 
 
 class UncertaintyConfigModel(BaseConfigModel):
@@ -148,8 +142,17 @@ class UncertaintyConfigModel(BaseConfigModel):
     @field_validator("options")
     @classmethod
     def validate_options(cls, value: dict[str, Any]) -> dict[str, Any]:
-        allowed = {"playback_speed"}
+        allowed = {
+            "playback_speed",
+            "sensor_hit",
+            "sensor_false_alarm",
+            "motion_success",
+            "motion_stay",
+            "motion_overshoot",
+            "show_true_position",
+        }
         unknown = sorted(set(value) - allowed)
         if unknown:
             raise ValueError(f"Unknown option(s): {', '.join(unknown)}.")
         return value
+

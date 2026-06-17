@@ -14,7 +14,7 @@ This repository contains the Phase 1 reference infrastructure for the `ai9414` p
 - `ai9414.labyrinth.LabyrinthDemo` with built-in labyrinth playback examples and live-Python handoff
 - `ai9414.delivery.DeliveryDemo` with fixed office-grid DFS examples and live-Python handoff
 - `ai9414.logic.DpllDemo` with built-in SAT and entailment playback examples plus live-Python DPLL handoff
-- `ai9414.uncertainty.BeliefStateExplorer` with discrete office-localisation scenarios, Bayes-filter traces, and live-Python belief updates
+- `ai9414.uncertainty.BayesFilterDemo` with one-dimensional corridor localisation, interactive sensor and motion updates, and Bayes-filter trace export
 - `ai9414.foundation_models.TokenisationExplorer` with curated text scenarios, token comparisons, and toy BPE merge replay
 - Depth-first branch-and-bound trace generation in Python
 - Synchronised two-panel replay UI for the search tree and geometric graph

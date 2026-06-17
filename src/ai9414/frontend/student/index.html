@@ -43,11 +43,37 @@
               <h2 id="right-panel-title">Problem View</h2>
               <p id="right-panel-subtitle" class="muted">The problem world stays fixed while the replay highlights what DFS is doing.</p>
             </div>
-            <div class="quick-player" aria-label="Replay controls">
+            <div id="quick-player" class="quick-player" aria-label="Replay controls">
               <button class="quick-player-button" type="button" data-player-action="previous" title="Previous step" aria-label="Previous step" disabled>&#10074;&#9664;</button>
               <button class="quick-player-button" type="button" data-player-action="next" title="Play one step" aria-label="Play one step">&#9654;&#10074;</button>
               <button class="quick-player-button" type="button" data-player-action="play" title="Play" aria-label="Play">&#9654;</button>
               <button class="quick-player-button secondary-button" type="button" data-player-action="pause" title="Pause" aria-label="Pause" disabled>&#10074;&#10074;</button>
+            </div>
+            <div id="uncertainty-quick-actions" class="uncertainty-quick-actions hidden" aria-label="Bayes filter shortcuts">
+              <div class="uncertainty-quick-row">
+                <span class="uncertainty-quick-label">Motion only</span>
+                <div class="uncertainty-quick-group">
+                  <button class="uncertainty-quick-button motion" type="button" data-uncertainty-quick-move="left">Move left</button>
+                  <button class="uncertainty-quick-button motion" type="button" data-uncertainty-quick-move="right">Move right</button>
+                </div>
+                <span class="uncertainty-quick-help">Prediction update. No sensor reading.</span>
+              </div>
+              <div class="uncertainty-quick-row">
+                <span class="uncertainty-quick-label">Sensing only</span>
+                <div class="uncertainty-quick-group">
+                  <button class="uncertainty-quick-button sense" type="button" data-uncertainty-quick-sense="door" data-present="true">Sense door</button>
+                  <button class="uncertainty-quick-button sense no-sense" type="button" data-uncertainty-quick-sense="door" data-present="false">Sense no door</button>
+                </div>
+                <span class="uncertainty-quick-help">Correction update. Robot stays put.</span>
+              </div>
+              <div class="uncertainty-quick-row">
+                <span class="uncertainty-quick-label">Move + sense</span>
+                <div class="uncertainty-quick-group">
+                  <button class="uncertainty-quick-button combined" type="button" data-uncertainty-quick-move-sense="left">Move left + sense</button>
+                  <button class="uncertainty-quick-button combined" type="button" data-uncertainty-quick-move-sense="right">Move right + sense</button>
+                </div>
+                <span class="uncertainty-quick-help">Moves first, then samples door/no door using the sensor model.</span>
+              </div>
             </div>
           </div>
           <svg id="problem-svg" class="visual-canvas" viewBox="0 0 1000 700" role="img" aria-label="Problem view"></svg>
@@ -294,6 +320,50 @@ A
             </label>
           </div>
 
+          <div id="uncertainty-action-panel" class="uncertainty-control-panel hidden">
+            <div class="control-block">
+              <span>Observations</span>
+              <div id="uncertainty-observation-buttons" class="uncertainty-button-grid"></div>
+            </div>
+            <div class="control-block">
+              <span>Actions</span>
+              <div id="uncertainty-motion-buttons" class="uncertainty-button-grid">
+                <button type="button" data-uncertainty-move="left">Move left</button>
+                <button type="button" data-uncertainty-move="right">Move right</button>
+              </div>
+            </div>
+            <div class="uncertainty-slider-grid">
+              <label class="control-block" for="uncertainty-sensor-hit">
+                <span>Sensor hit rate <strong id="uncertainty-sensor-hit-value">0.80</strong></span>
+                <input id="uncertainty-sensor-hit" type="range" min="0.5" max="1" step="0.01" />
+              </label>
+              <label class="control-block" for="uncertainty-sensor-false">
+                <span>False alarm rate <strong id="uncertainty-sensor-false-value">0.20</strong></span>
+                <input id="uncertainty-sensor-false" type="range" min="0" max="0.5" step="0.01" />
+              </label>
+              <label class="control-block" for="uncertainty-motion-success">
+                <span>Motion success <strong id="uncertainty-motion-success-value">0.80</strong></span>
+                <input id="uncertainty-motion-success" type="range" min="0" max="1" step="0.01" />
+              </label>
+              <label class="control-block" for="uncertainty-motion-stay">
+                <span>Stay probability <strong id="uncertainty-motion-stay-value">0.10</strong></span>
+                <input id="uncertainty-motion-stay" type="range" min="0" max="1" step="0.01" />
+              </label>
+              <label class="control-block" for="uncertainty-motion-overshoot">
+                <span>Overshoot probability <strong id="uncertainty-motion-overshoot-value">0.10</strong></span>
+                <input id="uncertainty-motion-overshoot" type="range" min="0" max="1" step="0.01" />
+              </label>
+            </div>
+            <div class="uncertainty-button-grid">
+              <button type="button" data-uncertainty-command="reset_belief" class="secondary-button">Reset belief</button>
+              <button type="button" data-uncertainty-command="reset_true_position" class="secondary-button">Reset true position</button>
+              <button type="button" data-uncertainty-command="randomise_true_position" class="secondary-button">Randomise true position</button>
+              <button type="button" data-uncertainty-command="randomise_corridor" class="secondary-button">Randomise corridor</button>
+              <button type="button" data-uncertainty-command="reset_all" class="secondary-button">Reset all</button>
+              <button type="button" id="uncertainty-export-trace" class="secondary-button">Export trace JSON</button>
+            </div>
+          </div>
+
           <div id="csp-toggle-grid" class="toggle-grid hidden">
             <label class="toggle-row" for="show-csp-domains">
               <input id="show-csp-domains" type="checkbox" checked />
@@ -343,9 +413,9 @@ A
           </div>
 
           <div id="uncertainty-legend" class="legend-grid hidden">
-            <div class="legend-item"><span class="legend-swatch legend-current"></span>Most likely room</div>
+            <div class="legend-item"><span class="legend-swatch legend-current"></span>Most likely cell</div>
             <div class="legend-item"><span class="legend-swatch legend-best"></span>Belief mass</div>
-            <div class="legend-item"><span class="legend-swatch legend-final"></span>True location</div>
+            <div class="legend-item"><span class="legend-swatch legend-final"></span>True position</div>
             <div class="legend-item"><span class="legend-swatch legend-pruned"></span>Noisy cue</div>
           </div>
         </aside>

@@ -1,5 +1,6 @@
-from ai9414.uncertainty import BeliefStateExplorer
+from ai9414.uncertainty import BayesFilterDemo
 
 
-app = BeliefStateExplorer()
+app = BayesFilterDemo()
 app.show()
+

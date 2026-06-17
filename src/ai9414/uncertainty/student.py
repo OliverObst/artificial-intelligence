@@ -1,4 +1,4 @@
-"""Student-facing helpers for the live Bayes-filter workflow."""
+"""Student-facing helpers for the live Bayes-filter corridor workflow."""
 
 from __future__ import annotations
 
@@ -10,29 +10,27 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from ai9414.uncertainty.models import UncertaintyProblem
+from ai9414.uncertainty.models import CorridorProblem, MotionModel, SensorModel
 from ai9414.uncertainty.trace import (
     build_uncertainty_trace_from_problem,
-    reference_bayes_filter_step,
-    reference_predict_belief,
-    reference_update_belief,
+    reference_motion_update_right,
+    reference_normalise,
+    reference_sensor_update,
 )
 
-Belief: TypeAlias = dict[str, float]
-TransitionModel: TypeAlias = dict[str, dict[str, float]]
-ObservationModel: TypeAlias = dict[str, dict[str, float]]
+Belief: TypeAlias = list[float]
 
 
 def validate_uncertainty_payload(problem: dict[str, object]) -> dict[str, object]:
     """Validate and normalise an uncertainty problem payload from the browser."""
 
-    return UncertaintyProblem.model_validate(problem).model_dump()
+    return CorridorProblem.model_validate(problem).model_dump()
 
 
 def run_uncertainty_solver(
-    predict_fn: Callable[[Belief, TransitionModel], Belief],
-    update_fn: Callable[[Belief, str, ObservationModel], Belief],
-    bayes_step_fn: Callable[[Belief, TransitionModel, str, ObservationModel], Belief],
+    normalise_fn: Callable[[list[float]], list[float]] = reference_normalise,
+    sensor_update_fn: Callable[[list[float], CorridorProblem, SensorModel, bool, str], list[float]] = reference_sensor_update,
+    motion_update_right_fn: Callable[[list[float], MotionModel], list[float]] = reference_motion_update_right,
     *,
     port: int = 9414,
     debug: bool = True,
@@ -58,7 +56,7 @@ def run_uncertainty_solver(
 
         try:
             validated_problem = validate_uncertainty_payload(problem)
-            problem_model = UncertaintyProblem.model_validate(validated_problem)
+            problem_model = CorridorProblem.model_validate(validated_problem)
         except Exception as exc:
             return JSONResponse(
                 {"message": f"Invalid uncertainty payload: {exc}"},
@@ -70,9 +68,9 @@ def run_uncertainty_solver(
                 problem_model,
                 title=problem_model.title or "Live Python Bayes filter",
                 subtitle="Trace returned by your local Python Bayes filter.",
-                predict_fn=predict_fn,
-                update_fn=update_fn,
-                bayes_step_fn=bayes_step_fn,
+                normalise_fn=normalise_fn,
+                sensor_update_fn=sensor_update_fn,
+                motion_update_right_fn=motion_update_right_fn,
                 trace_id="uncertainty-live",
             )
         except NotImplementedError as exc:
@@ -104,11 +102,10 @@ def run_uncertainty_solver(
 
 __all__ = [
     "Belief",
-    "ObservationModel",
-    "TransitionModel",
-    "reference_bayes_filter_step",
-    "reference_predict_belief",
-    "reference_update_belief",
+    "reference_motion_update_right",
+    "reference_normalise",
+    "reference_sensor_update",
     "run_uncertainty_solver",
     "validate_uncertainty_payload",
 ]
+

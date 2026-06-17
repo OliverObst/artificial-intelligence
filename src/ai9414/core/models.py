@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 SCHEMA_VERSION = "1.0"
 
-ModeLiteral = Literal["student", "solution"]
+ModeLiteral = Literal["student", "solution", "demo", "exercise", "free"]
 ExecutionModeLiteral = Literal["precomputed", "incremental"]
 
 

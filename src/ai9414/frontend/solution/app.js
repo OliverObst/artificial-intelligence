@@ -12,6 +12,7 @@ const state = {
     showCspDomains: true,
     cspViewMode: "trace",
     planningSelectedAction: "",
+    uncertaintySelectedCell: 0,
   },
 };
 
@@ -104,6 +105,9 @@ async function loadTrace() {
   const response = await fetch("./trace.json");
   state.trace = await response.json();
   state.snapshots = buildSnapshots(state.trace);
+  if (state.trace.app_type === "uncertainty") {
+    state.view.showTrueLocation = state.trace.initial_state?.uncertainty?.show_true_position !== false;
+  }
   $("solution-title").textContent = state.trace.initial_state.example_title || "Solution replay";
   $("solution-subtitle").textContent = state.trace.initial_state.example_subtitle || "";
   $("solution-algorithm").textContent = state.trace.initial_state.algorithm_label || "search replay";
@@ -173,10 +177,10 @@ function renderPanelCopy() {
     $("csp-legend").classList.remove("hidden");
     $("uncertainty-legend").classList.add("hidden");
   } else if (isUncertainty()) {
-    $("left-panel-title").textContent = "Belief State";
-    $("left-panel-subtitle").textContent = "Prior, prediction, likelihoods, and posterior for each Bayes-filter step.";
-    $("right-panel-title").textContent = "Office World";
-    $("right-panel-subtitle").textContent = "Office map with the belief overlay and current sensor reading.";
+    $("left-panel-title").textContent = "Update Explanation";
+    $("left-panel-subtitle").textContent = "Belief values, likelihoods, normalisation, and transition details.";
+    $("right-panel-title").textContent = "Bayes Filter Corridor";
+    $("right-panel-subtitle").textContent = "Corridor cells, landmarks, posterior belief bars, and the hidden true position when enabled.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("uncertainty-toggle-grid").classList.remove("hidden");
@@ -406,14 +410,14 @@ function renderMetrics(data) {
   }
   if (isUncertainty()) {
     const uncertainty = data.uncertainty || {};
-    $("metric-1-label").textContent = "Most likely room";
-    $("metric-1-value").textContent = uncertainty.most_likely_label || "none";
+    $("metric-1-label").textContent = "Most likely cell";
+    $("metric-1-value").textContent = uncertainty.most_likely_cell ? `cell ${uncertainty.most_likely_cell}` : "none";
     $("metric-2-label").textContent = "Confidence";
     $("metric-2-value").textContent = `${Math.round((uncertainty.most_likely_probability || 0) * 100)}%`;
     $("metric-3-label").textContent = "Entropy";
     $("metric-3-value").textContent = formatNumber(data.stats?.entropy, 2);
-    $("metric-4-label").textContent = "Normaliser";
-    $("metric-4-value").textContent = formatNumber(data.stats?.normalisation_constant, 3);
+    $("metric-4-label").textContent = "Total probability";
+    $("metric-4-value").textContent = formatNumber(data.stats?.total_probability, 3);
     return;
   }
   if (isStrips()) {
@@ -2409,35 +2413,35 @@ function appendBlock(group, block, x, y, width, height, clear, extraClass = "") 
   );
 }
 
-function uncertaintyRoomBoxes() {
-  return {
-    mail_room: { x: 90, y: 90, width: 220, height: 110 },
-    office_a: { x: 690, y: 90, width: 220, height: 110 },
-    corridor: { x: 390, y: 280, width: 220, height: 110 },
-    office_b: { x: 90, y: 500, width: 220, height: 110 },
-    lab: { x: 690, y: 500, width: 220, height: 110 },
-  };
-}
-
-function uncertaintyFeatureTokens(room) {
-  const tokens = [];
-  if (room.charger) tokens.push("charger");
-  if (room.window) tokens.push("window");
-  if (room.door_nearby) tokens.push("door");
-  if (room.marker && room.marker !== "none") tokens.push(`${room.marker} marker`);
-  return tokens.length ? tokens : ["no strong cue"];
-}
-
 function humaniseUncertaintyText(value) {
   if (!value) return "none";
-  return String(value).replace(/^move_to_/, "move to ").replace(/_/g, " ");
+  return String(value).replace(/^move_/, "move ").replace(/^no_/, "no ").replace(/_/g, " ");
+}
+
+function formatProbability(value, digits = 3) {
+  return Number(value || 0).toFixed(digits);
+}
+
+function uncertaintyLandmarkText(cell) {
+  return (cell.landmarks || []).length ? cell.landmarks.join(", ").replace(/_/g, " ") : "none";
+}
+
+function uncertaintyWarningText(uncertainty) {
+  if (uncertainty.warning) return uncertainty.warning;
+  if (uncertainty.weak_maximum) return "Most likely does not mean certain.";
+  return "";
 }
 
 function renderUncertaintyInternal(data) {
   const panel = $("uncertainty-panel");
   panel.innerHTML = "";
   const uncertainty = data.uncertainty;
-  if (!uncertainty) return;
+  if (!uncertainty?.cells?.length) return;
+  const selectedIndex = Math.max(
+    0,
+    Math.min(Number(state.view.uncertaintySelectedCell || 0), uncertainty.cells.length - 1)
+  );
+  state.view.uncertaintySelectedCell = selectedIndex;
 
   const shell = document.createElement("div");
   shell.className = "uncertainty-shell";
@@ -2446,57 +2450,70 @@ function renderUncertaintyInternal(data) {
   beliefSection.className = "uncertainty-section";
   const beliefHeading = document.createElement("h3");
   beliefHeading.className = "uncertainty-section-title";
-  beliefHeading.textContent = "Current belief distribution";
+  beliefHeading.textContent = "Belief distribution";
   beliefSection.appendChild(beliefHeading);
   const beliefGrid = document.createElement("div");
-  beliefGrid.className = "uncertainty-belief-grid";
-  (uncertainty.belief_rows || []).forEach((row) => {
-    const card = document.createElement("div");
-    card.className = `uncertainty-belief-card${uncertainty.most_likely_location === row.location ? " active" : ""}`;
+  beliefGrid.className = "uncertainty-corridor-grid";
+  uncertainty.cells.forEach((cell) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.dataset.cellIndex = String(cell.index);
+    card.className = `uncertainty-cell-card${cell.is_most_likely ? " active" : ""}${selectedIndex === cell.index ? " selected" : ""}`;
     const heading = document.createElement("div");
-    heading.className = "uncertainty-belief-heading";
-    const label = document.createElement("strong");
-    label.textContent = row.label;
+    heading.className = "uncertainty-cell-heading";
+    const cellLabel = document.createElement("strong");
+    cellLabel.textContent = String(cell.cell);
     const probability = document.createElement("span");
-    probability.textContent = `${Math.round(row.posterior * 100)}%`;
-    heading.append(label, probability);
+    probability.textContent = `${Math.round(cell.posterior * 100)}%`;
+    heading.append(cellLabel, probability);
+    const landmark = document.createElement("span");
+    landmark.className = "uncertainty-cell-landmark";
+    landmark.textContent = uncertaintyLandmarkText(cell);
     const bar = document.createElement("div");
-    bar.className = "uncertainty-belief-bar";
+    bar.className = "uncertainty-belief-bar vertical";
     const fill = document.createElement("span");
-    fill.style.width = `${Math.max(6, row.posterior * 100)}%`;
+    fill.style.height = `${Math.max(4, cell.posterior * 100)}%`;
     bar.appendChild(fill);
     const meta = document.createElement("div");
-    meta.className = "uncertainty-belief-meta";
-    meta.textContent = `prior ${row.prior.toFixed(2)}  posterior ${row.posterior.toFixed(2)}`;
-    card.append(heading, bar, meta);
+    meta.className = "uncertainty-cell-meta";
+    meta.textContent = `${cell.is_true_position && state.view.showTrueLocation ? "true position" : cell.is_most_likely ? "most likely" : "belief"}`;
+    card.append(heading, landmark, bar, meta);
     beliefGrid.appendChild(card);
   });
   beliefSection.appendChild(beliefGrid);
+  const total = document.createElement("p");
+  total.className = "uncertainty-note";
+  total.textContent = `Total probability: ${formatProbability(uncertainty.total_probability, 3)}. Most likely position: cell ${uncertainty.most_likely_cell}, P = ${formatProbability(uncertainty.most_likely_probability, 2)}.`;
+  beliefSection.appendChild(total);
   shell.appendChild(beliefSection);
 
   const updateSection = document.createElement("section");
   updateSection.className = "uncertainty-section";
   const updateHeading = document.createElement("h3");
   updateHeading.className = "uncertainty-section-title";
-  updateHeading.textContent = "Bayes update trace";
+  updateHeading.textContent = "Before and after values";
   updateSection.appendChild(updateHeading);
   const table = document.createElement("div");
   table.className = "uncertainty-update-table";
-  ["Room", "Prior", "Predicted", "Likelihood", "Posterior"].forEach((text) => {
+  ["Cell", "Landmark", "Prior", "Likelihood", "Unnormalised", "Posterior"].forEach((text) => {
     const cell = document.createElement("span");
     cell.className = "uncertainty-update-header";
     cell.textContent = text;
     table.appendChild(cell);
   });
-  (uncertainty.belief_rows || []).forEach((row) => {
+  (uncertainty.operation_table || []).forEach((row) => {
     const label = document.createElement("span");
     label.className = "uncertainty-update-label";
-    label.textContent = row.label;
+    label.textContent = String(row.cell);
     table.appendChild(label);
-    [row.prior, row.predicted, row.likelihood, row.posterior].forEach((value) => {
+    const landmark = document.createElement("span");
+    landmark.className = "uncertainty-update-value";
+    landmark.textContent = uncertaintyLandmarkText(row);
+    table.appendChild(landmark);
+    [row.prior, row.likelihood, row.unnormalised, row.posterior].forEach((value) => {
       const cell = document.createElement("span");
       cell.className = "uncertainty-update-value";
-      cell.textContent = Number(value).toFixed(2);
+      cell.textContent = formatProbability(value, 3);
       table.appendChild(cell);
     });
   });
@@ -2511,34 +2528,33 @@ function renderUncertaintyInternal(data) {
   transitionSection.className = "uncertainty-section";
   const transitionHeading = document.createElement("h3");
   transitionHeading.className = "uncertainty-section-title";
-  transitionHeading.textContent = "Transition model";
+  transitionHeading.textContent = "Selected cell transition";
   transitionSection.appendChild(transitionHeading);
-  const transitionGrid = document.createElement("div");
-  transitionGrid.className = "uncertainty-transition-grid";
-  (uncertainty.transition_rows || []).forEach((row) => {
-    const card = document.createElement("div");
-    card.className = "uncertainty-transition-card";
-    const label = document.createElement("strong");
-    label.className = "uncertainty-transition-label";
-    label.textContent = row.label;
+  const selectedTransition = (uncertainty.transition_rows || []).find(
+    (row) => Number(row.source_index) === selectedIndex
+  );
+  if (!selectedTransition) {
+    const empty = document.createElement("p");
+    empty.className = "planning-empty";
+    empty.textContent = "No motion transition has been applied at this step.";
+    transitionSection.appendChild(empty);
+  } else {
     const entries = document.createElement("div");
-    entries.className = "uncertainty-transition-list";
-    row.entries.forEach((entry) => {
+    entries.className = "uncertainty-transition-list large";
+    selectedTransition.entries.forEach((entry) => {
       const line = document.createElement("span");
-      line.textContent = `${entry.label} ${Number(entry.probability).toFixed(2)}`;
+      line.textContent = `${entry.label}: cell ${entry.destination_cell}, P = ${formatProbability(entry.probability, 2)}`;
       entries.appendChild(line);
     });
-    card.append(label, entries);
-    transitionGrid.appendChild(card);
-  });
-  transitionSection.appendChild(transitionGrid);
+    transitionSection.appendChild(entries);
+  }
   shell.appendChild(transitionSection);
 
   const historySection = document.createElement("section");
   historySection.className = "uncertainty-section";
   const historyHeading = document.createElement("h3");
   historyHeading.className = "uncertainty-section-title";
-  historyHeading.textContent = "Filtering history";
+  historyHeading.textContent = "Event log";
   historySection.appendChild(historyHeading);
   const historyList = document.createElement("div");
   historyList.className = "uncertainty-history-list";
@@ -2548,10 +2564,9 @@ function renderUncertaintyInternal(data) {
     button.className = `uncertainty-history-button${entry.step_index === uncertainty.step_index ? " current" : ""}`;
     button.dataset.stepIndex = String(entry.step_index);
     const label = document.createElement("strong");
-    label.textContent = `Step ${entry.step_index}`;
+    label.textContent = `${entry.step_index}. ${entry.label}`;
     const meta = document.createElement("span");
-    meta.textContent =
-      `${humaniseUncertaintyText(entry.action)}  |  ${humaniseUncertaintyText(entry.observation)}  |  peak ${humaniseUncertaintyText(entry.most_likely_location)}`;
+    meta.textContent = `${entry.summary} | peak cell ${entry.most_likely_cell}, P = ${formatProbability(entry.most_likely_probability, 2)}`;
     button.append(label, meta);
     historyList.appendChild(button);
   });
@@ -2566,7 +2581,6 @@ function renderUncertaintyWorldPanel(data) {
   panel.innerHTML = "";
   const uncertainty = data.uncertainty;
   if (!uncertainty) return;
-  const problem = state.trace?.initial_state?.uncertainty_problem || {};
 
   const shell = document.createElement("div");
   shell.className = "uncertainty-shell";
@@ -2575,22 +2589,28 @@ function renderUncertaintyWorldPanel(data) {
   currentSection.className = "uncertainty-section";
   const currentHeading = document.createElement("h3");
   currentHeading.className = "uncertainty-section-title";
-  currentHeading.textContent = "Current action and observation";
+  currentHeading.textContent = "Current state";
   const summaryGrid = document.createElement("div");
   summaryGrid.className = "uncertainty-world-summary";
   [
     {
-      label: "Action",
-      value: uncertainty.current_action ? humaniseUncertaintyText(uncertainty.current_action) : "none yet",
+      label: "Operation",
+      value: humaniseUncertaintyText(uncertainty.current_operation || "initialise"),
     },
     {
-      label: "Observation",
-      value: uncertainty.current_observation ? humaniseUncertaintyText(uncertainty.current_observation) : "none yet",
+      label: "Most likely",
+      value: `cell ${uncertainty.most_likely_cell}`,
     },
     {
-      label: "True location",
+      label: "Confidence",
+      value: `${Math.round((uncertainty.most_likely_probability || 0) * 100)}%`,
+    },
+    {
+      label: "True position",
       value: state.view.showTrueLocation
-        ? humaniseUncertaintyText(uncertainty.current_true_location)
+        ? uncertainty.current_true_position === null || uncertainty.current_true_position === undefined
+          ? "not set"
+          : `cell ${Number(uncertainty.current_true_position) + 1}`
         : "hidden",
     },
   ].forEach((item) => {
@@ -2607,60 +2627,26 @@ function renderUncertaintyWorldPanel(data) {
   currentSection.append(currentHeading, summaryGrid);
   shell.appendChild(currentSection);
 
-  const cuesSection = document.createElement("section");
-  cuesSection.className = "uncertainty-section";
-  const cuesHeading = document.createElement("h3");
-  cuesHeading.className = "uncertainty-section-title";
-  cuesHeading.textContent = "Room cues";
-  const cuesGrid = document.createElement("div");
-  cuesGrid.className = "uncertainty-cue-grid";
-  (uncertainty.rooms || []).forEach((room) => {
-    const card = document.createElement("div");
-    card.className = "uncertainty-cue-card";
-    const label = document.createElement("strong");
-    label.textContent = room.label;
-    const features = document.createElement("div");
-    features.className = "uncertainty-cue-list";
-    uncertaintyFeatureTokens(room).forEach((token) => {
-      const chip = document.createElement("span");
-      chip.className = "uncertainty-cue-chip";
-      chip.textContent = token;
-      features.appendChild(chip);
-    });
-    card.append(label, features);
-    cuesGrid.appendChild(card);
-  });
-  cuesSection.append(cuesHeading, cuesGrid);
-  shell.appendChild(cuesSection);
-
-  const scenarioSection = document.createElement("section");
-  scenarioSection.className = "uncertainty-section";
-  const scenarioHeading = document.createElement("h3");
-  scenarioHeading.className = "uncertainty-section-title";
-  scenarioHeading.textContent = "Scenario sequence";
-  const scenarioList = document.createElement("div");
-  scenarioList.className = "uncertainty-history-list";
-  (problem.scripted_steps || []).forEach((step, index) => {
-    const replayIndex = index + 1;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.stepIndex = String(replayIndex);
-    const stateClass =
-      replayIndex === uncertainty.step_index
-        ? " current"
-        : replayIndex < uncertainty.step_index
-        ? " completed"
-        : "";
-    button.className = `uncertainty-history-button${stateClass}`;
-    const label = document.createElement("strong");
-    label.textContent = `Step ${replayIndex}`;
-    const meta = document.createElement("span");
-    meta.textContent = `${humaniseUncertaintyText(step.action)}  |  ${humaniseUncertaintyText(step.observation)}`;
-    button.append(label, meta);
-    scenarioList.appendChild(button);
-  });
-  scenarioSection.append(scenarioHeading, scenarioList);
-  shell.appendChild(scenarioSection);
+  const explanationSection = document.createElement("section");
+  explanationSection.className = "uncertainty-section";
+  const explanationHeading = document.createElement("h3");
+  explanationHeading.className = "uncertainty-section-title";
+  explanationHeading.textContent = uncertainty.explanation?.title || "Explanation";
+  const formula = document.createElement("p");
+  formula.className = "uncertainty-formula";
+  formula.textContent = uncertainty.explanation?.formula || "P(location = x)";
+  const body = document.createElement("p");
+  body.className = "uncertainty-copy";
+  body.textContent = uncertainty.explanation?.body || "The belief distribution is ready.";
+  explanationSection.append(explanationHeading, formula, body);
+  const warning = uncertaintyWarningText(uncertainty);
+  if (warning) {
+    const warningNode = document.createElement("p");
+    warningNode.className = "uncertainty-warning";
+    warningNode.textContent = warning;
+    explanationSection.appendChild(warningNode);
+  }
+  shell.appendChild(explanationSection);
 
   panel.appendChild(shell);
 }
@@ -2669,118 +2655,77 @@ function renderUncertaintyWorld(data) {
   const svg = $("problem-svg");
   svg.innerHTML = "";
   const uncertainty = data.uncertainty;
-  if (!uncertainty?.rooms?.length) return;
+  if (!uncertainty?.cells?.length) return;
 
-  const roomBoxes = uncertaintyRoomBoxes();
-  const roomCentres = Object.fromEntries(
-    Object.entries(roomBoxes).map(([room, box]) => [
-      room,
-      { x: box.x + box.width / 2, y: box.y + box.height / 2 },
-    ])
+  const cells = uncertainty.cells;
+  const count = cells.length;
+  const usableWidth = 860;
+  const gap = Math.max(4, Math.min(12, 80 / count));
+  const cellWidth = (usableWidth - gap * (count - 1)) / count;
+  const startX = (1000 - usableWidth) / 2;
+  const barBase = 452;
+  const maxBarHeight = 245;
+  const cellTop = 476;
+  const cellHeight = 105;
+  const maxProbability = Math.max(0.01, ...cells.map((cell) => Number(cell.posterior || 0)));
+
+  svg.appendChild(svgNode("text", { class: "uncertainty-world-title", x: 500, y: 72 }, "Bayes Filter Corridor"));
+  svg.appendChild(
+    svgNode(
+      "text",
+      { class: "uncertainty-world-subtitle", x: 500, y: 105 },
+      `Total probability ${formatProbability(uncertainty.total_probability, 3)} | most likely cell ${uncertainty.most_likely_cell}`
+    )
   );
-  const connectors = svgNode("g");
-  const roomBases = svgNode("g");
-  const overlays = svgNode("g");
-  const roomLabels = svgNode("g");
-  const entities = svgNode("g");
 
-  (uncertainty.connections || []).forEach(([left, right]) => {
-    const from = roomCentres[left];
-    const to = roomCentres[right];
-    connectors.appendChild(
-      svgNode("line", {
-        class: "uncertainty-connector",
-        x1: from.x,
-        y1: from.y,
-        x2: to.x,
-        y2: to.y,
-      })
-    );
-  });
+  const bars = svgNode("g");
+  const cellsGroup = svgNode("g");
+  const labels = svgNode("g");
+  const markers = svgNode("g");
 
-  (uncertainty.rooms || []).forEach((room) => {
-    const box = roomBoxes[room.id];
-    const probability = Number(uncertainty.posterior_belief?.[room.id] || 0);
-    roomBases.appendChild(
+  cells.forEach((cell, index) => {
+    const x = startX + index * (cellWidth + gap);
+    const probability = Number(cell.posterior || 0);
+    const barHeight = Math.max(5, (probability / maxProbability) * maxBarHeight);
+    cellsGroup.appendChild(
       svgNode("rect", {
-        class: `uncertainty-room${uncertainty.most_likely_location === room.id ? " active" : ""}`,
-        x: box.x,
-        y: box.y,
-        width: box.width,
-        height: box.height,
-        rx: 22,
+        class: `uncertainty-corridor-cell${cell.is_most_likely ? " active" : ""}`,
+        x,
+        y: cellTop,
+        width: cellWidth,
+        height: cellHeight,
+        rx: 10,
       })
     );
-    overlays.appendChild(
+    bars.appendChild(
       svgNode("rect", {
-        class: "uncertainty-room-overlay",
-        x: box.x + 6,
-        y: box.y + 6,
-        width: box.width - 12,
-        height: box.height - 12,
-        rx: 18,
-        style: `opacity: ${0.08 + probability * 0.72};`,
+        class: "uncertainty-belief-column",
+        x: x + cellWidth * 0.22,
+        y: barBase - barHeight,
+        width: cellWidth * 0.56,
+        height: barHeight,
+        rx: 6,
       })
     );
-    roomLabels.appendChild(
-      svgNode(
-        "text",
-        {
-          class: "uncertainty-room-label",
-          x: box.x + box.width / 2,
-          y: box.y + 38,
-        },
-        room.label
-      )
-    );
-    roomLabels.appendChild(
-      svgNode(
-        "text",
-        {
-          class: "uncertainty-room-probability",
-          x: box.x + box.width / 2,
-          y: box.y + 64,
-        },
-        `${Math.round(probability * 100)}% belief`
-      )
-    );
-    const features = uncertaintyFeatureTokens(room);
-    features.slice(0, 2).forEach((token, index) => {
-      roomLabels.appendChild(
-        svgNode(
-          "text",
-          {
-            class: "uncertainty-room-feature",
-            x: box.x + box.width / 2,
-            y: box.y + 86 + index * 18,
-          },
-          token
-        )
+    labels.appendChild(svgNode("text", { class: "uncertainty-cell-number", x: x + cellWidth / 2, y: cellTop + 30 }, String(cell.cell)));
+    labels.appendChild(svgNode("text", { class: "uncertainty-cell-landmark-svg", x: x + cellWidth / 2, y: cellTop + 56 }, uncertaintyLandmarkText(cell)));
+    labels.appendChild(svgNode("text", { class: "uncertainty-cell-probability-svg", x: x + cellWidth / 2, y: cellTop + 84 }, `${Math.round(probability * 100)}%`));
+    if (cell.is_most_likely) {
+      markers.appendChild(
+        svgNode("path", {
+          class: "uncertainty-peak-marker",
+          d: `M ${x + cellWidth / 2 - 9} ${cellTop - 18} L ${x + cellWidth / 2 + 9} ${cellTop - 18} L ${x + cellWidth / 2} ${cellTop - 5} Z`,
+        })
       );
-    });
-    roomLabels.appendChild(
-      svgNode("rect", {
-        class: "uncertainty-room-bar",
-        x: box.x + 20,
-        y: box.y + box.height - 18,
-        width: (box.width - 40) * probability,
-        height: 8,
-        rx: 4,
-      })
-    );
+    }
+    if (state.view.showTrueLocation && cell.is_true_position) {
+      markers.appendChild(svgNode("circle", { class: "uncertainty-robot", cx: x + cellWidth / 2, cy: cellTop + cellHeight - 18, r: 15 }));
+      markers.appendChild(svgNode("text", { class: "uncertainty-robot-label", x: x + cellWidth / 2, y: cellTop + cellHeight - 17 }, "R"));
+    }
   });
 
-  if (state.view.showTrueLocation && uncertainty.current_true_location) {
-    const centre = roomCentres[uncertainty.current_true_location];
-    const group = svgNode("g", {
-      transform: `translate(${centre.x}, ${centre.y - 6})`,
-    });
-    group.appendChild(svgNode("circle", { class: "uncertainty-robot", r: 24 }));
-    group.appendChild(svgNode("text", { class: "uncertainty-robot-label" }, "R"));
-    entities.appendChild(group);
-  }
-
-  svg.append(connectors, roomBases, overlays, roomLabels, entities);
+  svg.appendChild(svgNode("line", { class: "uncertainty-axis", x1: startX, y1: barBase, x2: startX + usableWidth, y2: barBase }));
+  svg.append(bars, cellsGroup, labels, markers);
 }
 
 function render() {
@@ -2963,10 +2908,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("uncertainty-panel").addEventListener("click", (event) => {
     const target = event.target.closest("button");
     if (!target) return;
-    const { stepIndex } = target.dataset;
-    if (!stepIndex) return;
-    stopPlay();
-    state.stepIndex = Math.max(0, Math.min(Number(stepIndex), state.trace.steps.length));
+    const { stepIndex, cellIndex } = target.dataset;
+    if (cellIndex !== undefined) {
+      state.view.uncertaintySelectedCell = Number(cellIndex);
+    }
+    if (stepIndex) {
+      stopPlay();
+      state.stepIndex = Math.max(0, Math.min(Number(stepIndex), state.trace.steps.length));
+    }
     render();
   });
   $("uncertainty-world-panel").addEventListener("click", (event) => {

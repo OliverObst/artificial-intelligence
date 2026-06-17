@@ -308,27 +308,22 @@ app.show()
 Reasoning with uncertainty example:
 
 ```python
-from ai9414.uncertainty import BeliefStateExplorer
+from ai9414.uncertainty import BayesFilterDemo
 
-app = BeliefStateExplorer()
-app.load_example("office_localisation_basic")
+app = BayesFilterDemo.example("two_doors")
 app.show()
 ```
 
-Set a custom initial belief:
+Set up a custom corridor:
 
 ```python
-from ai9414.uncertainty import BeliefStateExplorer
+from ai9414.uncertainty import BayesFilterDemo
 
-app = BeliefStateExplorer()
-app.load_example("office_localisation_basic")
-app.set_belief({
-    "mail_room": 0.1,
-    "office_a": 0.4,
-    "corridor": 0.2,
-    "office_b": 0.2,
-    "lab": 0.1,
-})
+app = BayesFilterDemo(
+    cells=10,
+    landmarks={"door": [2, 6]},
+    initial_belief="uniform",
+)
 app.show()
 ```
 

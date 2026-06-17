@@ -279,9 +279,9 @@ def demo_specs() -> tuple[DemoSpec, ...]:
         ),
         DemoSpec(
             name="uncertainty",
-            title="Belief-State Explorer",
-            description="Reasoning with uncertainty belief-state explorer",
-            default_example="office_localisation_basic",
+            title="Bayes Filter Corridor",
+            description="Bayes-filter corridor localisation",
+            default_example="two_doors",
             factory=_create_uncertainty_demo,
         ),
         DemoSpec(
@@ -386,9 +386,9 @@ def _create_resolution_demo() -> BaseEducationalApp:
 
 
 def _create_uncertainty_demo() -> BaseEducationalApp:
-    from ai9414.uncertainty import BeliefStateExplorer
+    from ai9414.uncertainty import BayesFilterDemo
 
-    return BeliefStateExplorer()
+    return BayesFilterDemo.example("two_doors")
 
 
 def _create_foundation_models_demo() -> BaseEducationalApp:
