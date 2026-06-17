@@ -59,6 +59,17 @@ def test_move_and_sense_adds_motion_then_sampled_sensor_update():
     assert round(sum(uncertainty["posterior_belief"]), 6) == 1.0
 
 
+def test_reset_all_keeps_trace_payload_available():
+    app = BayesFilterDemo()
+    app.handle_app_command("move_and_sense", {"direction": "right", "landmark": "door"})
+    response = app.handle_app_command("reset_all", {})
+    trace = app.get_trace_payload()
+
+    assert response["state"]["view"]["current_step"] == 0
+    assert trace["steps"] == []
+    assert trace["initial_state"]["uncertainty"]["posterior_belief"] == [0.1] * 10
+
+
 def test_bayes_filter_exercise_factory_hides_true_position():
     app = BayesFilterDemo.exercise("sensor_update")
     payload = app.build_state_payload()

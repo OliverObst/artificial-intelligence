@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import copy
 import random
 from pathlib import Path
 from typing import Any
 
 from ai9414.core import BaseEducationalApp
 from ai9414.core.errors import AI9414Error
+from ai9414.core.models import TraceBundle, TraceSummary
 from ai9414.uncertainty.examples import build_examples, build_exercises, make_problem, to_zero_based_landmarks
 from ai9414.uncertainty.models import CorridorProblem, MotionModel, SensorModel, UncertaintyConfigModel, UncertaintyExample
 from ai9414.uncertainty.trace import (
@@ -261,6 +263,9 @@ class BayesFilterDemo(BaseEducationalApp):
         }
 
     def build_trace(self) -> dict[str, Any]:
+        return self._build_trace_bundle().model_dump()
+
+    def _build_trace_bundle(self) -> TraceBundle:
         if self.problem is None:
             raise AI9414Error(code="trace_generation_failed", message="No corridor problem is loaded.")
         return build_uncertainty_trace_from_problem(
@@ -269,7 +274,7 @@ class BayesFilterDemo(BaseEducationalApp):
             subtitle=self._subtitle(),
             events=self.events,
             trace_id="uncertainty-custom",
-        ).model_dump()
+        )
 
     def handle_app_command(self, command: str, payload: dict[str, Any]) -> dict[str, Any]:
         if self.problem is None:
@@ -415,12 +420,17 @@ class BayesFilterDemo(BaseEducationalApp):
         return output_path
 
     def reset_runtime(self) -> None:
-        self.current_step = len(self.events)
-        self._base_state_data = {}
-        self._current_state_data = {}
-        self._trace_bundle = None
-        self._trace_cache_complete = False
-        self.ensure_runtime_ready()
+        next_step = len(self.events)
+        trace_bundle = self._build_trace_bundle()
+        trace_bundle.summary = TraceSummary(
+            step_count=len(trace_bundle.steps),
+            result=trace_bundle.summary.result or "success",
+        )
+        self._base_state_data = copy.deepcopy(trace_bundle.initial_state)
+        self._trace_bundle = trace_bundle
+        self._trace_cache_complete = True
+        self.current_step = next_step
+        self._current_state_data = self._state_at_index(self.current_step)
 
     def _append_event(self, event: dict[str, Any]) -> None:
         self.events.append(event)
