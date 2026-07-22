@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from ai9414 import cli
+from ai9414.core import AI9414Error
 
 
 def test_cli_without_arguments_prints_overview(capsys):
@@ -24,6 +27,15 @@ def test_cli_lists_available_demos(capsys):
     assert "csp-delivery" in captured.out
     assert "foundation-models-tokenisation" in captured.out
     assert "foundation-models-decoding" in captured.out
+    foundation_demo_lines = [
+        line
+        for line in captured.out.splitlines()
+        if line.startswith("- foundation-models")
+    ]
+    assert len(foundation_demo_lines) == 2
+    assert not any(
+        line.startswith("- foundation-models:") for line in foundation_demo_lines
+    )
 
 
 def test_cli_lists_examples_for_one_demo(capsys):
@@ -62,12 +74,16 @@ def test_cli_exposes_explicit_foundation_model_explorers(capsys):
     assert "- lecture_activity" in captured.out
     assert "- peaked_distribution" in captured.out
 
-    backwards_compatible = cli.resolve_demo_spec("foundation-models").factory()
     tokenisation = cli.resolve_demo_spec("foundation-models-tokenisation").factory()
     decoding = cli.resolve_demo_spec("foundation-models-decoding").factory()
-    assert backwards_compatible.app_title.endswith("Tokenisation Explorer")
     assert tokenisation.app_title.endswith("Tokenisation Explorer")
     assert decoding.app_title.endswith("Decoding Explorer")
+
+    for removed_name in ("foundation-models", "foundation_models"):
+        with pytest.raises(AI9414Error) as exc_info:
+            cli.resolve_demo_spec(removed_name)
+        assert exc_info.value.code == "demo_not_found"
+        assert "Unknown demo" in exc_info.value.message
 
 
 def test_cli_launches_requested_demo(monkeypatch):

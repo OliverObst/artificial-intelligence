@@ -287,14 +287,6 @@ def demo_specs() -> tuple[DemoSpec, ...]:
             factory=_create_uncertainty_demo,
         ),
         DemoSpec(
-            name="foundation-models",
-            title="Tokenisation Explorer",
-            description="Foundation models tokenisation explorer",
-            default_example="simple_sentence",
-            factory=_create_foundation_models_demo,
-            aliases=("foundation_models",),
-        ),
-        DemoSpec(
             name="foundation-models-tokenisation",
             title="Tokenisation Explorer",
             description="Foundation models tokenisation explorer",
