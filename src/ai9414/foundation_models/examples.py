@@ -8,6 +8,8 @@ from ai9414.foundation_models.models import (
     DecodingCandidate,
     DecodingExample,
     DecodingOptions,
+    SequenceSearchExample,
+    SequenceSearchNode,
     TokenisationCorpus,
     TokenisationExample,
 )
@@ -21,6 +23,22 @@ def build_examples() -> dict[str, TokenisationExample]:
             subtitle="A clean baseline for comparing character, word, and subword token counts.",
             text="Deliver parcel to Office A before 10:30.",
             default_corpus="office_messages",
+        ),
+        TokenisationExample(
+            name="decoding_context",
+            title="Decoding activity context",
+            subtitle="Tokenise the exact fixed context used by the decoding lecture activity.",
+            text="The robot picked up the",
+            default_corpus="office_messages",
+            metadata={"related_decoding_example": "lecture_activity"},
+        ),
+        TokenisationExample(
+            name="capital_context",
+            title="Capital question context",
+            subtitle="Tokenise the exact fixed context used by the peaked decoding example.",
+            text="The capital of France is",
+            default_corpus="office_messages",
+            metadata={"related_decoding_example": "peaked_distribution"},
         ),
         TokenisationExample(
             name="typo_sentence",
@@ -148,9 +166,61 @@ def build_decoding_examples() -> dict[str, DecodingExample]:
                 top_p=0.7,
                 seed=9414,
             ),
+            sequence_search=SequenceSearchExample(
+                title="When the locally best token loses",
+                subtitle=(
+                    "This two-step teaching tree narrows the first choice to mug and cup, "
+                    "then compares complete continuations by cumulative log-probability."
+                ),
+                beam_width=2,
+                nodes=[
+                    SequenceSearchNode(node_id="context"),
+                    SequenceSearchNode(
+                        node_id="mug",
+                        parent_id="context",
+                        token=" mug",
+                        conditional_probability=35 / 57,
+                    ),
+                    SequenceSearchNode(
+                        node_id="cup",
+                        parent_id="context",
+                        token=" cup",
+                        conditional_probability=22 / 57,
+                    ),
+                    SequenceSearchNode(
+                        node_id="mug_carefully",
+                        parent_id="mug",
+                        token=" carefully",
+                        conditional_probability=0.55,
+                        terminal=True,
+                    ),
+                    SequenceSearchNode(
+                        node_id="mug_quickly",
+                        parent_id="mug",
+                        token=" quickly",
+                        conditional_probability=0.45,
+                        terminal=True,
+                    ),
+                    SequenceSearchNode(
+                        node_id="cup_safely",
+                        parent_id="cup",
+                        token=" safely",
+                        conditional_probability=0.95,
+                        terminal=True,
+                    ),
+                    SequenceSearchNode(
+                        node_id="cup_slowly",
+                        parent_id="cup",
+                        token=" slowly",
+                        conditional_probability=0.05,
+                        terminal=True,
+                    ),
+                ],
+            ),
             metadata={
                 "source": "Foundation Models lecture mini-activity: Decoding Choices",
                 "scores_are_precomputed": True,
+                "related_tokenisation_example": "decoding_context",
             },
         ),
         DecodingExample(
@@ -177,7 +247,10 @@ def build_decoding_examples() -> dict[str, DecodingExample]:
                 top_p=0.9,
                 seed=9414,
             ),
-            metadata={"scores_are_precomputed": True},
+            metadata={
+                "scores_are_precomputed": True,
+                "related_tokenisation_example": "capital_context",
+            },
         ),
         DecodingExample(
             name="flat_distribution",

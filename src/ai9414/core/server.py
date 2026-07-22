@@ -77,6 +77,14 @@ def create_fastapi_app(app_instance: Any) -> FastAPI:
     def errors() -> dict[str, Any]:
         return app_instance.get_recent_errors()
 
+    @api.get("/api/instructor-notes")
+    def instructor_notes() -> dict[str, Any]:
+        return app_instance.get_instructor_notes()
+
+    @api.get("/api/exercises")
+    def exercises() -> dict[str, Any]:
+        return app_instance.get_student_exercises()
+
     @api.post("/api/action")
     def action(request: dict[str, Any]) -> JSONResponse:
         payload = app_instance.handle_action(request)

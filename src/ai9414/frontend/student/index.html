@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ai9414</title>
-    <link rel="stylesheet" href="/assets/style.css?v=20260722-2" />
+    <link rel="stylesheet" href="/assets/style.css?v=20260722-3" />
   </head>
   <body>
     <div class="page-shell">
@@ -194,6 +194,14 @@
               <input id="foundation-seed-input" type="number" min="0" max="4294967295" step="1" value="9414" />
               <button id="foundation-resample-button" type="button" class="secondary-button">Use next seed</button>
             </div>
+
+            <label id="foundation-sampling-histogram-control" class="foundation-checkbox-control hidden" for="foundation-sampling-histogram-input">
+              <input id="foundation-sampling-histogram-input" type="checkbox" />
+              <span>
+                Show repeated-sampling histogram
+                <small>Run 200 reproducible draws with the current seed.</small>
+              </span>
+            </label>
           </fieldset>
 
           <label id="foundation-mode-control" class="control-block hidden" for="foundation-mode-select">
@@ -487,6 +495,6 @@ A
       <p class="page-credit">Copyright 2026 UNSW. Author: Oliver Obst &lt;o.obst@unsw.edu.au&gt;. Released under GNU GPL v3.</p>
     </div>
 
-    <script src="/assets/app.js?v=20260722-2" defer></script>
+    <script src="/assets/app.js?v=20260722-3" defer></script>
   </body>
 </html>

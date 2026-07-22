@@ -4,6 +4,7 @@ from ai9414.foundation_models.api import DecodingExplorer, TokenisationExplorer
 from ai9414.foundation_models.decoding import (
     apply_temperature,
     greedy_select,
+    repeated_sample_counts,
     renormalise,
     sample_from_draw,
     seeded_sample,
@@ -25,6 +26,7 @@ __all__ = [
     "apply_temperature",
     "greedy_select",
     "learn_bpe_merges",
+    "repeated_sample_counts",
     "renormalise",
     "sample_from_draw",
     "seeded_sample",

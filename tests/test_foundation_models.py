@@ -20,6 +20,8 @@ def test_tokenisation_explorer_lists_curated_examples():
     app = TokenisationExplorer()
     assert app.list_examples() == [
         "simple_sentence",
+        "decoding_context",
+        "capital_context",
         "typo_sentence",
         "rare_names",
         "code_example",
@@ -166,8 +168,33 @@ def test_foundation_models_fastapi_routes_work():
         assert 'foundation.mode !== "bpe"' in script.text
         assert 'foundation-workbench-active' in script.text
         assert 'isUncertainty() || isFoundationModels()' in script.text
+        assert "function appendFoundationTeachingExtensions" in script.text
 
         stylesheet = client.get("/assets/style.css")
         assert stylesheet.status_code == 200
         assert "body.foundation-workbench-active .layout" in stylesheet.text
         assert "body.foundation-workbench-active .foundation-token-list" in stylesheet.text
+
+        exercises = client.get("/api/exercises")
+        assert exercises.status_code == 200
+        assert exercises.json()["explorer_kind"] == "tokenisation"
+        assert exercises.json()["exercises"][0]["id"] == "predict-token-boundaries"
+
+        notes = client.get("/api/instructor-notes")
+        assert notes.status_code == 200
+        assert len(notes.json()["notes"]) == 2
+
+
+def test_matching_tokenisation_example_links_to_curated_decoding_context_only():
+    app = TokenisationExplorer(example="decoding_context")
+    foundation = app.build_state_payload()["data"]["foundation_models"]
+
+    assert foundation["related_example"]["target_explorer"] == "decoding"
+    assert foundation["related_example"]["target_example"] == "lecture_activity"
+    assert "--example lecture_activity" in foundation["related_example"][
+        "launch_command"
+    ]
+
+    app.set_text("Arbitrary replacement text")
+    custom_foundation = app.build_state_payload()["data"]["foundation_models"]
+    assert "related_example" not in custom_foundation

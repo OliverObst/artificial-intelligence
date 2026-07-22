@@ -88,6 +88,16 @@ class BaseEducationalApp(ABC):
     def list_examples(self) -> list[str]:
         return []
 
+    def get_instructor_notes(self) -> dict[str, Any]:
+        """Return optional structured teaching notes for the current app."""
+
+        return {"ok": True, "app_type": self.app_type, "notes": []}
+
+    def get_student_exercises(self) -> dict[str, Any]:
+        """Return optional short exercises without solution material."""
+
+        return {"ok": True, "app_type": self.app_type, "exercises": []}
+
     def show(self) -> None:
         from ai9414.core.server import launch_app
 

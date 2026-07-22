@@ -16,6 +16,7 @@ This repository contains the Phase 1 reference infrastructure for the `ai9414` p
 - `ai9414.logic.DpllDemo` with built-in SAT and entailment playback examples plus live-Python DPLL handoff
 - `ai9414.uncertainty.BayesFilterDemo` with one-dimensional corridor localisation, interactive sensor and motion updates, and Bayes-filter trace export
 - `ai9414.foundation_models.TokenisationExplorer` with curated text scenarios, explicit whitespace semantics, token comparisons, and simplified BPE merge replay
+- `ai9414.foundation_models.DecodingExplorer` with fixed candidate logits, transparent next-token selection, repeated seeded sampling, and a curated greedy-versus-beam sequence-search comparison
 - Depth-first branch-and-bound trace generation in Python
 - Synchronised two-panel replay UI for the search tree and geometric graph
 
@@ -42,6 +43,8 @@ The student shell uses the standard routes:
 - `POST /api/action`
 - `GET /api/examples`
 - `GET /api/errors`
+- `GET /api/instructor-notes`
+- `GET /api/exercises`
 
 The solution bundle uses static `index.html` plus `trace.json` and performs no backend calls. To support this, the shared `TraceBundle` now carries an `initial_state` snapshot alongside the step patches.
 
@@ -52,6 +55,13 @@ same student and solution assets: input and contextual controls appear first, th
 dominant teaching representation spans the available width, and the explanation
 and replay state follow it. Character and word tokenisation are static views;
 only learned BPE exposes corpus, merge, and replay controls.
+The decoding explorer adds a separate, static Sequence Search view backed by a
+small validated continuation tree. Greedy decoding and beam search are compared
+using cumulative log-probabilities without calling a model. An optional repeated-
+sampling histogram uses the current seeded distribution and remains hidden by
+default. Curated examples may expose a command cross-reference to a matching
+example in the other explorer, but custom tokenisation text never produces
+decoding scores.
 
 ## Packaging Notes
 
@@ -102,8 +112,11 @@ src/ai9414/logic/
 src/ai9414/foundation_models/
   __init__.py
   api.py
+  decoding.py
+  decoding_trace.py
   examples.py
   models.py
+  sequence_search.py
   student.py
   trace.py
 ```
@@ -129,4 +142,9 @@ character, rule-based word, and simplified BPE representations locally. The
 character tokeniser preserves every input character, including whitespace; BPE
 uses visible word-start markers and deterministic tie-breaking. Token-budget
 figures are explicitly illustrative. No pretrained model is bundled or called,
-and the current package does not generate model scores for arbitrary input.
+and the package does not generate model scores for arbitrary input.
+`DecodingExplorer` applies numerically stable probability transformations and
+seeded selection to curated logits. Its optional continuation tree and sampling
+histogram are also deterministic teaching data. Both explorers expose structured
+instructor notes and solution-free student exercise prompts through the common
+HTTP contract and retain those extensions in static solution exports.

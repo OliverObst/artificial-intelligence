@@ -13,6 +13,7 @@ const state = {
     cspViewMode: "trace",
     planningSelectedAction: "",
     uncertaintySelectedCell: 0,
+    foundationDecodingView: "next_token",
   },
 };
 
@@ -118,7 +119,25 @@ function currentData() {
   return state.snapshots[state.stepIndex] || {};
 }
 
+function foundationSequenceSearchActive(data = currentData()) {
+  return Boolean(
+    isFoundationModels()
+    && data.foundation_models?.explorer_kind === "decoding"
+    && data.foundation_models?.sequence_search
+    && state.view.foundationDecodingView === "sequence_search"
+  );
+}
+
 function currentStep() {
+  if (foundationSequenceSearchActive()) {
+    const sequence = currentData().foundation_models.sequence_search;
+    return {
+      event_type: "sequence_search",
+      label: "Greedy versus beam search",
+      annotation: sequence.teaching_point,
+      teaching_note: "The continuation tree and all edge probabilities are curated, precomputed teaching data.",
+    };
+  }
   if (!state.trace.steps?.length || state.stepIndex === 0) {
     return {
       event_type: "initialise",
@@ -136,8 +155,15 @@ function currentStep() {
 function renderPanelCopy() {
   if (isFoundationModels()) {
     const foundationIsDecoding = currentData().foundation_models?.explorer_kind === "decoding";
-    $("left-panel-title").textContent = foundationIsDecoding ? "Next-token Distribution" : "Tokenisation State";
-    $("left-panel-subtitle").textContent = foundationIsDecoding
+    const sequenceSearch = foundationSequenceSearchActive();
+    $("left-panel-title").textContent = sequenceSearch
+      ? "Sequence Search"
+      : foundationIsDecoding
+      ? "Next-token Distribution"
+      : "Tokenisation State";
+    $("left-panel-subtitle").textContent = sequenceSearch
+      ? "Greedy decoding and beam search over a fixed continuation tree."
+      : foundationIsDecoding
       ? "Fixed model scores through temperature, filtering, renormalisation, and selection."
       : "Token sequence, token counts, comparisons, and BPE merge steps.";
     $("right-panel-title").textContent = foundationIsDecoding ? "Context and Assumptions" : "Text View";
@@ -379,6 +405,19 @@ function renderMetrics(data) {
   if (isFoundationModels()) {
     const foundation = data.foundation_models || {};
     if (foundation.explorer_kind === "decoding") {
+      if (foundationSequenceSearchActive(data)) {
+        const sequence = foundation.sequence_search;
+        const advantage = sequence.beam_result.cumulative_log_probability - sequence.greedy_result.cumulative_log_probability;
+        $("metric-1-label").textContent = "Greedy result";
+        $("metric-1-value").textContent = sequence.greedy_result.sequence;
+        $("metric-2-label").textContent = "Beam result";
+        $("metric-2-value").textContent = sequence.beam_result.sequence;
+        $("metric-3-label").textContent = "Beam width";
+        $("metric-3-value").textContent = String(sequence.beam_width);
+        $("metric-4-label").textContent = "Beam log-score gain";
+        $("metric-4-value").textContent = advantage.toFixed(3);
+        return;
+      }
       const candidates = foundation.candidate_scores || [];
       $("metric-1-label").textContent = "Candidate tokens";
       $("metric-1-value").textContent = String(candidates.length);
@@ -2001,7 +2040,9 @@ function makeDecodingElement(tagName, className, textContent) {
 function renderFoundationPipeline(foundation) {
   if (!foundation) return;
   const currentStage = foundation.explorer_kind === "decoding"
-    ? foundation.stage === "model_scores" ? "scores" : "decoding"
+    ? state.view.foundationDecodingView === "sequence_search" && foundation.sequence_search
+      ? "decoding"
+      : foundation.stage === "model_scores" ? "scores" : "decoding"
     : "tokenisation";
   const stages = ["input", "tokenisation", "scores", "decoding"];
   const currentIndex = stages.indexOf(currentStage);
@@ -2015,6 +2056,240 @@ function renderFoundationPipeline(foundation) {
   });
 }
 
+function renderDecodingViewNavigation(container, foundation) {
+  if (!foundation.sequence_search) return;
+  const navigation = makeDecodingElement("nav", "decoding-view-navigation");
+  navigation.setAttribute("aria-label", "Decoding teaching view");
+  [
+    ["next_token", "Next-token choice"],
+    ["sequence_search", "Sequence search"],
+  ].forEach(([value, label]) => {
+    const button = makeDecodingElement("button", "decoding-view-button", label);
+    button.type = "button";
+    button.dataset.decodingView = value;
+    const active = state.view.foundationDecodingView === value;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+    navigation.appendChild(button);
+  });
+  container.appendChild(navigation);
+}
+
+function renderSamplingHistogram(foundation) {
+  const histogram = foundation.sampling_histogram;
+  if (!histogram) return null;
+  const section = makeDecodingElement("section", "foundation-section decoding-histogram-section");
+  section.appendChild(makeDecodingElement("h3", "foundation-section-title", `Repeated sampling (${histogram.sample_count} draws)`));
+  section.appendChild(makeDecodingElement("p", "foundation-copy", histogram.teaching_note));
+  const chart = makeDecodingElement("div", "decoding-histogram-chart");
+  chart.setAttribute("aria-hidden", "true");
+  const maximum = Math.max(1, ...(histogram.rows || []).map((row) => row.count));
+  (histogram.rows || []).forEach((rowData) => {
+    const row = makeDecodingElement("div", "decoding-histogram-row");
+    const token = makeDecodingElement("span", "decoding-token-label", rowData.display_text || rowData.token);
+    const track = makeDecodingElement("span", "decoding-bar-track");
+    const fill = makeDecodingElement("span", "decoding-histogram-fill");
+    fill.style.width = `${(rowData.count / maximum) * 100}%`;
+    track.appendChild(fill);
+    row.append(token, track, makeDecodingElement("span", "decoding-bar-value", String(rowData.count)));
+    chart.appendChild(row);
+  });
+  section.appendChild(chart);
+  const table = makeDecodingElement("table", "decoding-table decoding-histogram-table");
+  const caption = document.createElement("caption");
+  caption.textContent = `Expected probabilities and observed counts from seed ${histogram.seed}.`;
+  table.appendChild(caption);
+  const headings = ["Token", "Expected", "Count", "Observed"];
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  headings.forEach((heading) => {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = heading;
+    headRow.appendChild(cell);
+  });
+  head.appendChild(headRow);
+  table.appendChild(head);
+  const body = document.createElement("tbody");
+  (histogram.rows || []).forEach((rowData) => {
+    const row = document.createElement("tr");
+    [
+      rowData.display_text || rowData.token,
+      formatDecodingProbability(rowData.expected_probability),
+      String(rowData.count),
+      formatDecodingProbability(rowData.observed_frequency),
+    ].forEach((value, index) => {
+      const cell = document.createElement(index === 0 ? "th" : "td");
+      if (index === 0) cell.scope = "row";
+      cell.dataset.label = headings[index];
+      cell.textContent = value;
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
+  table.appendChild(body);
+  const tableWrap = makeDecodingElement("div", "decoding-table-wrap");
+  tableWrap.appendChild(table);
+  section.appendChild(tableWrap);
+  return section;
+}
+
+function renderSequenceTreeItem(node, childrenByParent, foundation) {
+  const item = makeDecodingElement("li", "sequence-tree-item");
+  item.setAttribute("role", "treeitem");
+  const children = childrenByParent.get(node.node_id) || [];
+  if (children.length) item.setAttribute("aria-expanded", "true");
+  const card = makeDecodingElement("div", "sequence-node-card");
+  if (node.node_id === foundation.sequence_search.root_id) card.classList.add("root");
+  if (node.on_greedy_path) card.classList.add("greedy-path");
+  if (node.on_beam_path) card.classList.add("beam-path");
+  const title = makeDecodingElement("strong", "sequence-node-token", node.depth === 0 ? foundation.context_text : node.display_text || node.token);
+  const detail = makeDecodingElement(
+    "span",
+    "sequence-node-score",
+    node.depth === 0
+      ? "Fixed context"
+      : `edge ${formatDecodingProbability(node.conditional_probability)} · cumulative log P ${formatDecodingNumber(node.cumulative_log_probability)}`
+  );
+  card.append(title, detail);
+  if (node.depth > 0) {
+    const badges = makeDecodingElement("span", "sequence-node-badges");
+    if (node.on_greedy_path) badges.appendChild(makeDecodingElement("span", "sequence-badge greedy", "Greedy path"));
+    if (node.on_beam_path) badges.appendChild(makeDecodingElement("span", "sequence-badge beam", "Beam winner"));
+    if (!node.on_beam_path) badges.appendChild(makeDecodingElement("span", "sequence-badge status", node.beam_status));
+    card.appendChild(badges);
+  }
+  item.setAttribute(
+    "aria-label",
+    node.depth === 0
+      ? `Fixed context: ${foundation.context_text}`
+      : `${node.accessible_label}; edge probability ${formatDecodingProbability(node.conditional_probability)}; cumulative log probability ${formatDecodingNumber(node.cumulative_log_probability)}; ${node.beam_status}`
+  );
+  item.appendChild(card);
+  if (children.length) {
+    const group = makeDecodingElement("ul", "sequence-tree-group");
+    group.setAttribute("role", "group");
+    children.forEach((child) => group.appendChild(renderSequenceTreeItem(child, childrenByParent, foundation)));
+    item.appendChild(group);
+  }
+  return item;
+}
+
+function renderSequenceSearch(data) {
+  const panel = $("foundation-panel");
+  panel.innerHTML = "";
+  const foundation = data.foundation_models;
+  const sequence = foundation?.sequence_search;
+  if (!foundation || !sequence) return;
+  const shell = makeDecodingElement("div", "sequence-search-shell");
+  renderDecodingViewNavigation(shell, foundation);
+  const intro = makeDecodingElement("section", "decoding-stage-strip sequence-search-intro");
+  const copy = makeDecodingElement("div", "decoding-stage-copy");
+  copy.append(
+    makeDecodingElement("span", "decoding-stage-kicker", "Precomputed continuation tree"),
+    makeDecodingElement("h3", "decoding-stage-title", sequence.title),
+    makeDecodingElement("p", "foundation-copy", sequence.subtitle)
+  );
+  intro.append(copy, makeDecodingElement("span", "decoding-rule-chip", `Beam width ${sequence.beam_width}`));
+  shell.appendChild(intro);
+  const results = makeDecodingElement("section", "sequence-results-grid");
+  [
+    ["Greedy decoding", sequence.greedy_result, "Commits to the locally best edge", "greedy"],
+    [`Beam search (width ${sequence.beam_width})`, sequence.beam_result, "Keeps competing partial sequences", "beam winner"],
+  ].forEach(([label, result, description, className]) => {
+    const card = makeDecodingElement("article", `sequence-result-card ${className}`);
+    card.append(
+      makeDecodingElement("span", "decoding-stage-kicker", label),
+      makeDecodingElement("strong", "sequence-result-text", result.sequence),
+      makeDecodingElement("span", "sequence-result-score", `cumulative log P ${formatDecodingNumber(result.cumulative_log_probability)} · P ${formatDecodingProbability(result.cumulative_probability)}`),
+      makeDecodingElement("p", "foundation-copy", description)
+    );
+    results.appendChild(card);
+  });
+  shell.appendChild(results);
+  shell.appendChild(makeDecodingElement("aside", "sequence-teaching-point", sequence.teaching_point));
+  const treeSection = makeDecodingElement("section", "foundation-section sequence-tree-section");
+  treeSection.appendChild(makeDecodingElement("h3", "foundation-section-title", "Continuation tree"));
+  treeSection.appendChild(makeDecodingElement("p", "foundation-copy", "Each edge shows a conditional probability. Complete paths are compared using the sum of their edge log-probabilities."));
+  const childrenByParent = new Map();
+  (sequence.nodes || []).forEach((node) => {
+    if (node.parent_id === null) return;
+    if (!childrenByParent.has(node.parent_id)) childrenByParent.set(node.parent_id, []);
+    childrenByParent.get(node.parent_id).push(node);
+  });
+  const root = sequence.nodes.find((node) => node.node_id === sequence.root_id);
+  const tree = makeDecodingElement("ul", "sequence-tree");
+  tree.setAttribute("role", "tree");
+  tree.setAttribute("aria-label", "Precomputed continuation tree comparing greedy and beam search");
+  if (root) tree.appendChild(renderSequenceTreeItem(root, childrenByParent, foundation));
+  treeSection.appendChild(tree);
+  shell.appendChild(treeSection);
+  const ledgerSection = makeDecodingElement("section", "foundation-section sequence-ledger-section");
+  ledgerSection.appendChild(makeDecodingElement("h3", "foundation-section-title", "Beam-search ledger"));
+  (sequence.beam_steps || []).forEach((beamStep) => {
+    const stepCard = makeDecodingElement("article", "sequence-ledger-step");
+    stepCard.appendChild(makeDecodingElement("h4", "sequence-ledger-title", `Expansion ${beamStep.step}`));
+    const list = makeDecodingElement("ol", "sequence-ledger-list");
+    (beamStep.candidates || []).forEach((candidate) => {
+      const item = makeDecodingElement("li", "sequence-ledger-row");
+      item.append(
+        makeDecodingElement("strong", "sequence-ledger-sequence", candidate.sequence),
+        makeDecodingElement("span", "sequence-ledger-score", `log P ${formatDecodingNumber(candidate.cumulative_log_probability)}`),
+        makeDecodingElement("span", `sequence-badge ${candidate.retained ? "beam" : "status"}`, candidate.retained ? "Retained" : "Pruned")
+      );
+      list.appendChild(item);
+    });
+    stepCard.appendChild(list);
+    ledgerSection.appendChild(stepCard);
+  });
+  shell.appendChild(ledgerSection);
+  panel.appendChild(shell);
+}
+
+function appendFoundationTeachingExtensions(container, foundation) {
+  const teaching = foundation.teaching_extensions || {};
+  const exercises = teaching.student_exercises || [];
+  const notes = teaching.instructor_notes || [];
+  if (!foundation.related_example && !exercises.length && !notes.length) return;
+  const section = makeDecodingElement("section", "foundation-section foundation-teaching-section");
+  section.appendChild(makeDecodingElement("h3", "foundation-section-title", "Teaching extensions"));
+  if (foundation.related_example) {
+    const related = foundation.related_example;
+    const card = makeDecodingElement("article", "foundation-related-card");
+    card.append(
+      makeDecodingElement("span", "decoding-stage-kicker", "Related curated explorer"),
+      makeDecodingElement("strong", "foundation-related-title", related.label),
+      makeDecodingElement("p", "foundation-copy", related.limitation)
+    );
+    const command = makeDecodingElement("code", "foundation-launch-command", related.launch_command);
+    command.setAttribute("aria-label", `Launch command: ${related.launch_command}`);
+    card.appendChild(command);
+    section.appendChild(card);
+  }
+  exercises.forEach((exercise) => {
+    const disclosure = makeDecodingElement("details", "foundation-teaching-disclosure");
+    disclosure.appendChild(makeDecodingElement("summary", "", `Student exercise: ${exercise.title}`));
+    disclosure.append(
+      makeDecodingElement("p", "foundation-copy", exercise.prompt),
+      makeDecodingElement("p", "foundation-exercise-hint", `Hint: ${exercise.hint}`)
+    );
+    section.appendChild(disclosure);
+  });
+  if (notes.length) {
+    const disclosure = makeDecodingElement("details", "foundation-teaching-disclosure instructor");
+    disclosure.appendChild(makeDecodingElement("summary", "", "Instructor notes"));
+    const list = makeDecodingElement("ul", "foundation-instructor-list");
+    notes.forEach((note) => {
+      const item = document.createElement("li");
+      item.append(makeDecodingElement("strong", "", note.title), document.createTextNode(` — ${note.note}`));
+      list.appendChild(item);
+    });
+    disclosure.appendChild(list);
+    section.appendChild(disclosure);
+  }
+  container.appendChild(section);
+}
+
 function renderDecodingDistribution(data) {
   const panel = $("foundation-panel");
   panel.innerHTML = "";
@@ -2024,6 +2299,7 @@ function renderDecodingDistribution(data) {
   const stageOrder = ["model_scores", "temperature", "filtering", "renormalisation", "selection"];
 
   const shell = makeDecodingElement("div", "decoding-shell");
+  renderDecodingViewNavigation(shell, foundation);
   const stageStrip = makeDecodingElement("section", "decoding-stage-strip");
   const stageCopy = makeDecodingElement("div", "decoding-stage-copy");
   stageCopy.append(
@@ -2069,6 +2345,9 @@ function renderDecodingDistribution(data) {
   });
   chartSection.appendChild(chart);
   shell.appendChild(chartSection);
+
+  const histogramSection = renderSamplingHistogram(foundation);
+  if (histogramSection) shell.appendChild(histogramSection);
 
   if (foundation.selected_token) {
     const selectedCallout = makeDecodingElement("div", "decoding-selected-callout");
@@ -2154,7 +2433,8 @@ function renderFoundationInternal(data) {
   const foundation = data.foundation_models;
   if (!foundation) return;
   if (foundation.explorer_kind === "decoding") {
-    renderDecodingDistribution(data);
+    if (foundationSequenceSearchActive(data)) renderSequenceSearch(data);
+    else renderDecodingDistribution(data);
     return;
   }
 
@@ -2386,6 +2666,7 @@ function renderDecodingContext(data) {
     makeDecodingElement("p", "foundation-copy", "The context is fixed; arbitrary custom text cannot be submitted to a model in this explorer.")
   );
   shell.appendChild(provenance);
+  appendFoundationTeachingExtensions(shell, foundation);
   panel.appendChild(shell);
 }
 
@@ -2447,6 +2728,8 @@ function renderFoundationTextPanel(data) {
   });
   overlaySection.appendChild(stream);
   shell.appendChild(overlaySection);
+
+  appendFoundationTeachingExtensions(shell, foundation);
 
   panel.appendChild(shell);
 }
@@ -3040,11 +3323,13 @@ function render() {
   const step = currentStep();
   const max = state.trace.steps?.length || 0;
   const foundationIsDecoding = isFoundationModels() && data.foundation_models?.explorer_kind === "decoding";
-  const foundationIsStatic = isFoundationModels() && !foundationIsDecoding && data.foundation_models?.mode !== "bpe";
+  const foundationIsSequenceSearch = foundationIsDecoding && foundationSequenceSearchActive(data);
+  const foundationIsStatic = foundationIsSequenceSearch || (isFoundationModels() && !foundationIsDecoding && data.foundation_models?.mode !== "bpe");
   renderPanelCopy();
   renderMetrics(data);
   document.body.classList.toggle("foundation-workbench-active", isFoundationModels());
   document.body.classList.toggle("foundation-decoding-active", foundationIsDecoding);
+  document.body.classList.toggle("foundation-sequence-active", foundationIsSequenceSearch);
   $("foundation-pipeline").classList.toggle("hidden", !isFoundationModels());
   renderFoundationPipeline(data.foundation_models);
   $("previous-button").classList.toggle("hidden", foundationIsStatic);
@@ -3222,6 +3507,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (actionSignature) {
       state.view.planningSelectedAction = actionSignature;
     }
+    render();
+  });
+  $("foundation-panel").addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-decoding-view]");
+    if (!button) return;
+    stopPlay();
+    state.view.foundationDecodingView = button.dataset.decodingView;
     render();
   });
   $("uncertainty-panel").addEventListener("click", (event) => {

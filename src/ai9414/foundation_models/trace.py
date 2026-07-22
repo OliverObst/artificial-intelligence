@@ -63,6 +63,21 @@ def build_foundation_trace(
         )
         steps = []
 
+    if problem.related_decoding_example and not custom_text_active:
+        initial_state["foundation_models"]["related_example"] = {
+            "target_explorer": "decoding",
+            "target_example": problem.related_decoding_example,
+            "label": "Continue with the matching fixed-score example",
+            "launch_command": (
+                "ai9414 demo foundation-models-decoding --example "
+                f"{problem.related_decoding_example}"
+            ),
+            "limitation": (
+                "The decoding example uses curated precomputed scores for this context; "
+                "editing the tokenisation text does not generate new model scores."
+            ),
+        }
+
     return TraceBundle(
         app_type="foundation_models",
         trace_id="foundation-models-trace",
@@ -104,7 +119,7 @@ def _build_snapshot(
             ),
             "implementation_note": (
                 "This explorer uses a simplified, deterministic BPE learner. It preserves leading whitespace "
-                "inside pre-tokenised units but does not reproduce any particular production tokenizer."
+                "inside pre-tokenised units but does not reproduce any particular production tokeniser."
             ),
             "whitespace_legend": "In token displays, ▁ marks a space, ⇥ a tab, and ↵ a line break.",
             "text": problem.text,

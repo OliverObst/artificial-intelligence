@@ -114,6 +114,30 @@ def seeded_sample(probabilities: Sequence[float], seed: int) -> int:
     return sample_from_draw(probabilities, seeded_random_draw(seed))
 
 
+def repeated_sample_counts(
+    probabilities: Sequence[float], seed: int, sample_count: int = 200
+) -> list[int]:
+    """Return reproducible counts from repeated draws of one distribution."""
+
+    distribution = renormalise(probabilities)
+    if isinstance(sample_count, bool) or int(sample_count) != sample_count:
+        raise ValueError("sample_count must be an integer.")
+    sample_count = int(sample_count)
+    if not 1 <= sample_count <= 10000:
+        raise ValueError("sample_count must be between 1 and 10000.")
+    if isinstance(seed, bool) or int(seed) != seed:
+        raise ValueError("seed must be an integer.")
+    seed = int(seed)
+    if not 0 <= seed <= 2**32 - 1:
+        raise ValueError("seed must be between 0 and 4294967295.")
+
+    counts = [0 for _ in distribution]
+    generator = random.Random(seed)
+    for _ in range(sample_count):
+        counts[sample_from_draw(distribution, generator.random())] += 1
+    return counts
+
+
 def _finite_values(values: Sequence[float], *, label: str) -> list[float]:
     result = [float(value) for value in values]
     if not result:

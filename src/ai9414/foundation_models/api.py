@@ -73,6 +73,52 @@ class TokenisationExplorer(BaseEducationalApp):
     def list_corpora(self) -> list[str]:
         return list(self.corpora.keys())
 
+    def get_instructor_notes(self) -> dict[str, Any]:
+        return {
+            "ok": True,
+            "app_type": self.app_type,
+            "explorer_kind": "tokenisation",
+            "example_name": self.example_name,
+            "notes": [
+                {
+                    "id": "boundaries-not-words",
+                    "title": "Token boundaries are learned conventions",
+                    "note": (
+                        "Ask students to compare whitespace, punctuation, and rare-name "
+                        "boundaries before discussing token counts."
+                    ),
+                },
+                {
+                    "id": "simplified-bpe",
+                    "title": "Keep the BPE claim narrow",
+                    "note": (
+                        "This deterministic word-local learner is designed to expose merge "
+                        "mechanics; it is not the tokeniser of a named production model."
+                    ),
+                },
+            ],
+        }
+
+    def get_student_exercises(self) -> dict[str, Any]:
+        return {
+            "ok": True,
+            "app_type": self.app_type,
+            "explorer_kind": "tokenisation",
+            "example_name": self.example_name,
+            "exercises": [
+                {
+                    "id": "predict-token-boundaries",
+                    "title": "Predict the boundaries",
+                    "prompt": (
+                        "Before changing the tokeniser, mark two places where character, "
+                        "word, and learned BPE tokenisation should disagree. Then check the view."
+                    ),
+                    "response_type": "short_text",
+                    "hint": "Look first at whitespace, punctuation, or uncommon fragments.",
+                }
+            ],
+        }
+
     def load_example(self, name: str) -> None:
         if name not in self.examples:
             raise AI9414Error(
@@ -274,10 +320,15 @@ class TokenisationExplorer(BaseEducationalApp):
         self.ensure_runtime_ready()
 
     def _build_bundle(self):
-        return build_foundation_trace(
+        bundle = build_foundation_trace(
             self._build_problem(),
             custom_text_active=self.custom_text is not None,
         )
+        bundle.initial_state["foundation_models"]["teaching_extensions"] = {
+            "instructor_notes": self.get_instructor_notes()["notes"],
+            "student_exercises": self.get_student_exercises()["exercises"],
+        }
+        return bundle
 
     def _build_problem(self) -> TokenisationProblem:
         corpus = self._selected_corpus()
@@ -291,6 +342,11 @@ class TokenisationExplorer(BaseEducationalApp):
             tokeniser_mode=self.options["tokeniser_mode"],
             num_merges=self.options["num_merges"],
             context_window=self.options["context_window"],
+            related_decoding_example=(
+                self.example.metadata.get("related_decoding_example")
+                if self.example is not None
+                else None
+            ),
         )
 
     def _selected_corpus(self) -> TokenisationCorpus:
@@ -336,6 +392,66 @@ class DecodingExplorer(BaseEducationalApp):
 
     def list_examples(self) -> list[str]:
         return list(self.examples.keys())
+
+    def get_instructor_notes(self) -> dict[str, Any]:
+        return {
+            "ok": True,
+            "app_type": self.app_type,
+            "explorer_kind": "decoding",
+            "example_name": self.example_name,
+            "notes": [
+                {
+                    "id": "scores-versus-rule",
+                    "title": "Separate model scores from the selection rule",
+                    "note": (
+                        "Temperature transforms fixed logits; greedy, sampling, top-k, and "
+                        "top-p determine how a next token is selected."
+                    ),
+                },
+                {
+                    "id": "local-versus-sequence",
+                    "title": "Move from local choice to sequence search",
+                    "note": (
+                        "Use the sequence tree only after the next-token distribution is clear. "
+                        "Cumulative log-probability, not one local edge, ranks continuations."
+                    ),
+                },
+            ],
+        }
+
+    def get_student_exercises(self) -> dict[str, Any]:
+        exercises = [
+            {
+                "id": "predict-filtered-set",
+                "title": "Predict the retained set",
+                "prompt": (
+                    "Choose top-k or top-p, predict which tokens survive filtering, then "
+                    "calculate the selected token's renormalised probability."
+                ),
+                "response_type": "short_text",
+                "hint": "Filtering happens after temperature and before renormalisation.",
+            }
+        ]
+        if self.example is not None and self.example.sequence_search is not None:
+            exercises.append(
+                {
+                    "id": "explain-beam-result",
+                    "title": "Explain the beam-search result",
+                    "prompt": (
+                        "Use the cumulative log-probabilities to explain why the beam-search "
+                        "winner differs from the greedy continuation."
+                    ),
+                    "response_type": "short_text",
+                    "hint": "Add edge log-probabilities along each complete path.",
+                }
+            )
+        return {
+            "ok": True,
+            "app_type": self.app_type,
+            "explorer_kind": "decoding",
+            "example_name": self.example_name,
+            "exercises": exercises,
+        }
 
     def load_example(self, name: str) -> None:
         if name not in self.examples:
@@ -387,6 +503,7 @@ class DecodingExplorer(BaseEducationalApp):
             "top_k",
             "top_p",
             "seed",
+            "show_sampling_histogram",
         }
         unknown = sorted(set(kwargs) - allowed)
         if unknown:
@@ -444,7 +561,12 @@ class DecodingExplorer(BaseEducationalApp):
         self.ensure_runtime_ready()
 
     def _build_bundle(self):
-        return build_decoding_trace(self._build_problem())
+        bundle = build_decoding_trace(self._build_problem())
+        bundle.initial_state["foundation_models"]["teaching_extensions"] = {
+            "instructor_notes": self.get_instructor_notes()["notes"],
+            "student_exercises": self.get_student_exercises()["exercises"],
+        }
+        return bundle
 
     def _build_problem(self) -> DecodingProblem:
         return DecodingProblem(
@@ -454,4 +576,12 @@ class DecodingExplorer(BaseEducationalApp):
             context_tokens=self.context_tokens,
             candidates=self.candidates,
             options=DecodingOptions.model_validate(self.options),
+            sequence_search=(
+                self.example.sequence_search if self.example is not None else None
+            ),
+            related_tokenisation_example=(
+                self.example.metadata.get("related_tokenisation_example")
+                if self.example is not None
+                else None
+            ),
         )

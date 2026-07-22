@@ -10,6 +10,7 @@ from ai9414.foundation_models import (
     DecodingExplorer,
     apply_temperature,
     greedy_select,
+    repeated_sample_counts,
     renormalise,
     sample_from_draw,
     seeded_sample,
@@ -23,6 +24,11 @@ from ai9414.foundation_models.models import (
     DecodingExample,
     DecodingOptions,
     DecodingProblem,
+    SequenceSearchExample,
+    SequenceSearchNode,
+)
+from ai9414.foundation_models.sequence_search import (
+    build_sequence_search_comparison,
 )
 
 
@@ -69,6 +75,60 @@ def test_greedy_and_seeded_sampling_are_deterministic():
     assert sample_from_draw(probabilities, 0.0) == 0
     assert sample_from_draw(probabilities, 0.4) == 1
     assert sample_from_draw(probabilities, 0.75) == 2
+
+
+def test_repeated_sampling_histogram_is_seeded_and_conserves_draws():
+    probabilities = [0.5, 0.3, 0.2]
+    first = repeated_sample_counts(probabilities, seed=17, sample_count=500)
+    second = repeated_sample_counts(probabilities, seed=17, sample_count=500)
+
+    assert first == second
+    assert sum(first) == 500
+    assert all(count >= 0 for count in first)
+    with pytest.raises(ValueError, match="sample_count"):
+        repeated_sample_counts(probabilities, seed=17, sample_count=0)
+
+
+def test_sequence_search_compares_local_and_cumulative_scores():
+    example = build_decoding_examples()["lecture_activity"].sequence_search
+    assert example is not None
+
+    comparison = build_sequence_search_comparison(example)
+
+    assert comparison["greedy_result"]["sequence"] == "mug carefully"
+    assert comparison["beam_result"]["sequence"] == "cup safely"
+    assert (
+        comparison["beam_result"]["cumulative_log_probability"]
+        > comparison["greedy_result"]["cumulative_log_probability"]
+    )
+    assert comparison["beam_result"] == comparison["globally_best_result"]
+    assert len(comparison["beam_steps"]) == 2
+    assert sum(node["globally_best"] for node in comparison["nodes"]) == 1
+
+
+def test_sequence_search_model_rejects_invalid_tree_probability_mass():
+    with pytest.raises(ValidationError, match="sum to one"):
+        SequenceSearchExample(
+            title="Invalid tree",
+            subtitle="Children do not form a distribution.",
+            nodes=[
+                SequenceSearchNode(node_id="root"),
+                SequenceSearchNode(
+                    node_id="left",
+                    parent_id="root",
+                    token=" left",
+                    conditional_probability=0.7,
+                    terminal=True,
+                ),
+                SequenceSearchNode(
+                    node_id="right",
+                    parent_id="root",
+                    token=" right",
+                    conditional_probability=0.2,
+                    terminal=True,
+                ),
+            ],
+        )
 
 
 def test_decoding_models_reject_invalid_candidates_and_options():
@@ -181,6 +241,21 @@ def test_decoding_options_rebuild_the_trace_and_return_structured_errors():
     assert invalid["ok"] is False
     assert invalid["error"]["code"] == "invalid_option_value"
 
+    histogram = app.handle_action(
+        {
+            "action": "set_option",
+            "payload": {
+                "selection_rule": "sampling",
+                "show_sampling_histogram": True,
+            },
+        }
+    )
+    histogram_data = histogram["trace"]["initial_state"]["foundation_models"][
+        "sampling_histogram"
+    ]
+    assert histogram_data["sample_count"] == 200
+    assert sum(row["count"] for row in histogram_data["rows"]) == 200
+
 
 def test_decoding_fastapi_contract_and_static_export(tmp_path):
     app = DecodingExplorer()
@@ -197,21 +272,29 @@ def test_decoding_fastapi_contract_and_static_export(tmp_path):
         assert 'id="foundation-top-k-control"' in page.text
         assert 'id="foundation-top-p-control"' in page.text
         assert 'id="foundation-seed-control"' in page.text
+        assert 'id="foundation-sampling-histogram-input"' in page.text
         assert 'data-foundation-pipeline-stage="decoding"' in page.text
 
         script = client.get("/assets/app.js")
         assert script.status_code == 200
         assert "function renderDecodingDistribution" in script.text
         assert "function renderDecodingContext" in script.text
+        assert "function renderSequenceSearch" in script.text
+        assert "function renderSamplingHistogram" in script.text
+        assert "function appendFoundationTeachingExtensions" in script.text
         assert 'makeDecodingElement("table", "decoding-table")' in script.text
         assert "arbitrary custom text cannot be submitted" in script.text
         assert 'selection_rule: event.target.value' in script.text
+        assert 'show_sampling_histogram: event.target.checked' in script.text
 
         stylesheet = client.get("/assets/style.css")
         assert stylesheet.status_code == 200
         assert ".decoding-chart-row" in stylesheet.text
         assert ".decoding-table tbody th::before" in stylesheet.text
         assert ".foundation-decoding-controls" in stylesheet.text
+        assert ".sequence-tree-group" in stylesheet.text
+        assert ".decoding-histogram-chart" in stylesheet.text
+        assert ".foundation-related-card" in stylesheet.text
 
         state = client.get("/api/state")
         assert state.status_code == 200
@@ -221,11 +304,26 @@ def test_decoding_fastapi_contract_and_static_export(tmp_path):
         assert trace.status_code == 200
         assert trace.json()["trace_id"] == "foundation-models-decoding-trace"
 
+        exercises = client.get("/api/exercises")
+        assert exercises.status_code == 200
+        assert exercises.json()["explorer_kind"] == "decoding"
+        assert {item["id"] for item in exercises.json()["exercises"]} == {
+            "predict-filtered-set",
+            "explain-beam-result",
+        }
+
+        notes = client.get("/api/instructor-notes")
+        assert notes.status_code == 200
+        assert notes.json()["notes"][0]["id"] == "scores-versus-rule"
+
     bundle_dir = app.export_solution_bundle(tmp_path / "decoding-solution")
     exported_trace = json.loads((bundle_dir / "trace.json").read_text(encoding="utf-8"))
     foundation = exported_trace["initial_state"]["foundation_models"]
     assert foundation["explorer_kind"] == "decoding"
     assert foundation["scores_are_precomputed"] is True
+    assert foundation["sequence_search"]["beam_result"]["sequence"] == "cup safely"
+    assert foundation["related_example"]["target_example"] == "decoding_context"
+    assert foundation["teaching_extensions"]["student_exercises"]
     assert exported_trace["steps"][-1]["event_type"] == "selection"
     exported_page = (bundle_dir / "index.html").read_text(encoding="utf-8")
     exported_script = (bundle_dir / "app.js").read_text(encoding="utf-8")
@@ -234,8 +332,11 @@ def test_decoding_fastapi_contract_and_static_export(tmp_path):
     )
     assert 'data-foundation-pipeline-stage="scores"' in exported_page
     assert "function renderDecodingDistribution" in exported_script
+    assert "function renderSequenceSearch" in exported_script
+    assert "function appendFoundationTeachingExtensions" in exported_script
     assert "function renderFoundationPipeline" in exported_script
     assert ".decoding-draw-marker" in exported_stylesheet
+    assert ".sequence-result-card" in exported_stylesheet
 
 
 def test_decoding_explorer_loads_a_validated_config(tmp_path):

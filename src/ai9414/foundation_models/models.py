@@ -100,6 +100,7 @@ class TokenisationProblem(AI9414Model):
     tokeniser_mode: TokeniserMode = "bpe"
     num_merges: int = 12
     context_window: int = 64
+    related_decoding_example: str | None = None
 
     @field_validator("text")
     @classmethod
@@ -149,6 +150,104 @@ class DecodingCandidate(AI9414Model):
         return logit
 
 
+class SequenceSearchNode(AI9414Model):
+    """One node in a curated continuation tree."""
+
+    node_id: str
+    parent_id: str | None = None
+    token: str = ""
+    conditional_probability: float = 1.0
+    terminal: bool = False
+
+    @field_validator("node_id")
+    @classmethod
+    def validate_node_id(cls, value: str) -> str:
+        node_id = str(value).strip()
+        if not node_id:
+            raise ValueError("A sequence-search node requires a non-empty node_id.")
+        return node_id
+
+    @field_validator("conditional_probability")
+    @classmethod
+    def validate_conditional_probability(cls, value: float) -> float:
+        probability = float(value)
+        if not math.isfinite(probability) or not 0.0 < probability <= 1.0:
+            raise ValueError(
+                "A sequence-search conditional probability must be greater than zero and at most one."
+            )
+        return probability
+
+
+class SequenceSearchExample(AI9414Model):
+    """A small fixed tree for comparing greedy decoding with beam search."""
+
+    title: str
+    subtitle: str
+    nodes: list[SequenceSearchNode]
+    beam_width: int = 2
+
+    @model_validator(mode="after")
+    def validate_tree(self) -> "SequenceSearchExample":
+        if self.beam_width < 1:
+            raise ValueError("beam_width must be positive.")
+        if len(self.nodes) < 3:
+            raise ValueError("A sequence-search tree requires at least three nodes.")
+
+        node_ids = [node.node_id for node in self.nodes]
+        if len(node_ids) != len(set(node_ids)):
+            raise ValueError("Sequence-search node IDs must be unique.")
+        node_by_id = {node.node_id: node for node in self.nodes}
+        roots = [node for node in self.nodes if node.parent_id is None]
+        if len(roots) != 1:
+            raise ValueError("A sequence-search tree requires exactly one root node.")
+        root = roots[0]
+        if root.conditional_probability != 1.0:
+            raise ValueError("The sequence-search root probability must be one.")
+
+        children: dict[str, list[SequenceSearchNode]] = {
+            node.node_id: [] for node in self.nodes
+        }
+        for node in self.nodes:
+            if node.parent_id is not None and node.parent_id not in node_by_id:
+                raise ValueError(
+                    f"Sequence-search parent '{node.parent_id}' was not found."
+                )
+
+        for node in self.nodes:
+            if node.parent_id is None:
+                continue
+            if not node.token:
+                raise ValueError("Every non-root sequence-search node needs a token.")
+            if node.parent_id == node.node_id:
+                raise ValueError("A sequence-search node cannot be its own parent.")
+            children[node.parent_id].append(node)
+
+            ancestors = {node.node_id}
+            parent_id = node.parent_id
+            while parent_id is not None:
+                if parent_id in ancestors:
+                    raise ValueError("Sequence-search nodes must not contain a cycle.")
+                ancestors.add(parent_id)
+                parent_id = node_by_id[parent_id].parent_id
+
+        for node in self.nodes:
+            node_children = children[node.node_id]
+            if node.terminal and node_children:
+                raise ValueError("A terminal sequence-search node cannot have children.")
+            if not node.terminal and not node_children:
+                raise ValueError("Every sequence-search leaf must be marked terminal.")
+            if node_children and not math.isclose(
+                math.fsum(child.conditional_probability for child in node_children),
+                1.0,
+                rel_tol=1e-9,
+                abs_tol=1e-9,
+            ):
+                raise ValueError(
+                    f"Children of sequence-search node '{node.node_id}' must sum to one."
+                )
+        return self
+
+
 class DecodingOptions(AI9414Model):
     """Validated controls for one next-token decoding decision."""
 
@@ -158,6 +257,7 @@ class DecodingOptions(AI9414Model):
     top_k: int = 3
     top_p: float = 0.7
     seed: int = 9414
+    show_sampling_histogram: bool = False
 
     @field_validator("playback_speed")
     @classmethod
@@ -209,6 +309,7 @@ class DecodingExample(AI9414Model):
     context_tokens: list[str]
     candidates: list[DecodingCandidate]
     default_options: DecodingOptions = Field(default_factory=DecodingOptions)
+    sequence_search: SequenceSearchExample | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("context_tokens")
@@ -246,6 +347,8 @@ class DecodingProblem(AI9414Model):
     context_tokens: list[str]
     candidates: list[DecodingCandidate]
     options: DecodingOptions = Field(default_factory=DecodingOptions)
+    sequence_search: SequenceSearchExample | None = None
+    related_tokenisation_example: str | None = None
 
     @field_validator("context_tokens")
     @classmethod
@@ -319,6 +422,7 @@ class DecodingConfigModel(BaseConfigModel):
             "top_k",
             "top_p",
             "seed",
+            "show_sampling_histogram",
         }
         unknown = sorted(set(value) - allowed)
         if unknown:

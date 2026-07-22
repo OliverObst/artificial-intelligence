@@ -9,6 +9,7 @@ from ai9414.core.models import TraceBundle, TraceStep, TraceSummary
 from ai9414.foundation_models.decoding import (
     apply_temperature,
     greedy_select,
+    repeated_sample_counts,
     renormalise,
     seeded_random_draw,
     seeded_sample,
@@ -17,6 +18,7 @@ from ai9414.foundation_models.decoding import (
     top_p_filter,
 )
 from ai9414.foundation_models.models import DecodingProblem, DecodingRule
+from ai9414.foundation_models.sequence_search import build_sequence_search_comparison
 
 DecodingStage = Literal[
     "model_scores",
@@ -47,6 +49,32 @@ def build_decoding_trace(problem: DecodingProblem) -> TraceBundle:
 
     computation = _compute_decoding(problem)
     initial_state = _build_snapshot(problem, computation, "model_scores")
+    foundation = initial_state["foundation_models"]
+    if problem.sequence_search is not None:
+        foundation["sequence_search"] = build_sequence_search_comparison(
+            problem.sequence_search
+        )
+    if (
+        problem.options.show_sampling_histogram
+        and problem.options.selection_rule != "greedy"
+    ):
+        foundation["sampling_histogram"] = _sampling_histogram_payload(
+            problem, computation
+        )
+    if problem.related_tokenisation_example:
+        foundation["related_example"] = {
+            "target_explorer": "tokenisation",
+            "target_example": problem.related_tokenisation_example,
+            "label": "Explore how this fixed context is tokenised",
+            "launch_command": (
+                "ai9414 demo foundation-models-tokenisation --example "
+                f"{problem.related_tokenisation_example}"
+            ),
+            "limitation": (
+                "This opens a separate curated tokenisation example; arbitrary text "
+                "still cannot be scored by the decoding explorer."
+            ),
+        }
     stages: list[tuple[DecodingStage, str, str, str]] = [
         (
             "temperature",
@@ -156,6 +184,35 @@ def _compute_decoding(problem: DecodingProblem) -> dict[str, Any]:
         "selection_intervals": intervals,
         "random_draw": random_draw,
         "selected_index": selected_index,
+    }
+
+
+def _sampling_histogram_payload(
+    problem: DecodingProblem, computation: dict[str, Any]
+) -> dict[str, Any]:
+    sample_count = 200
+    distribution = computation["renormalised_probabilities"]
+    counts = repeated_sample_counts(distribution, problem.options.seed, sample_count)
+    return {
+        "sample_count": sample_count,
+        "seed": problem.options.seed,
+        "selection_rule": problem.options.selection_rule,
+        "rows": [
+            {
+                "token": candidate.token,
+                "display_text": _display_token_text(candidate.token),
+                "accessible_label": _accessible_token_label(candidate.token),
+                "count": counts[index],
+                "observed_frequency": counts[index] / sample_count,
+                "expected_probability": distribution[index],
+                "retained": distribution[index] > 0.0,
+            }
+            for index, candidate in enumerate(computation["candidates"])
+        ],
+        "teaching_note": (
+            "Repeated samples vary around the expected distribution. The fixed seed "
+            "makes this histogram reproducible rather than claiming every run is identical."
+        ),
     }
 
 
