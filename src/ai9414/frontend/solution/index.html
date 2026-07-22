@@ -21,7 +21,28 @@
       </header>
 
       <main class="layout">
-        <section class="panel visual-panel">
+        <nav id="foundation-pipeline" class="foundation-pipeline panel hidden" aria-label="Foundation models pipeline">
+          <ol class="foundation-pipeline-list">
+            <li class="foundation-pipeline-step complete">
+              <span class="foundation-pipeline-number" aria-hidden="true">1</span>
+              <span>Input text</span>
+            </li>
+            <li class="foundation-pipeline-step current" aria-current="step">
+              <span class="foundation-pipeline-number" aria-hidden="true">2</span>
+              <span>Tokenisation</span>
+            </li>
+            <li class="foundation-pipeline-step">
+              <span class="foundation-pipeline-number" aria-hidden="true">3</span>
+              <span>Model scores</span>
+            </li>
+            <li class="foundation-pipeline-step">
+              <span class="foundation-pipeline-number" aria-hidden="true">4</span>
+              <span>Decoding</span>
+            </li>
+          </ol>
+        </nav>
+
+        <section id="left-visual-panel" class="panel visual-panel">
           <div class="panel-header">
             <div>
               <h2 id="left-panel-title">Search Tree</h2>
@@ -36,7 +57,7 @@
           <div id="resolution-proof-panel" class="logic-panel hidden" role="img" aria-label="Resolution proof steps"></div>
         </section>
 
-        <section class="panel visual-panel">
+        <section id="right-visual-panel" class="panel visual-panel">
           <div class="panel-header">
             <div>
               <h2 id="right-panel-title">Problem View</h2>
@@ -50,7 +71,7 @@
           <div id="foundation-text-panel" class="foundation-panel hidden" role="region" aria-labelledby="right-panel-title"></div>
         </section>
 
-        <section class="panel explanation-panel">
+        <section id="explanation-panel" class="panel explanation-panel">
           <div class="panel-header">
             <div>
               <h2>Explanation</h2>
@@ -84,7 +105,7 @@
           </div>
         </section>
 
-        <aside class="panel controls-panel">
+        <aside id="controls-panel" class="panel controls-panel">
           <div class="panel-header">
             <h2>Controls</h2>
           </div>
@@ -95,7 +116,7 @@
             <button id="pause-button" type="button" class="secondary-button">Pause</button>
             <button id="reset-button" type="button">Reset</button>
           </div>
-          <label class="control-block" for="speed-select">
+          <label id="speed-control" class="control-block" for="speed-select">
             <span>Playback speed</span>
             <select id="speed-select">
               <option value="0.75">0.75×</option>
@@ -140,7 +161,7 @@
               <span>Show domains on world</span>
             </label>
           </div>
-          <div class="control-block">
+          <div id="step-control" class="control-block">
             <span>Current step</span>
             <input id="step-range" type="range" min="0" max="0" value="0" />
           </div>

@@ -2017,6 +2017,11 @@ function renderFoundationInternal(data) {
   comparisonSection.appendChild(comparisonGrid);
   shell.appendChild(comparisonSection);
 
+  if (foundation.mode !== "bpe") {
+    panel.appendChild(shell);
+    return;
+  }
+
   const bpeSection = document.createElement("section");
   bpeSection.className = "foundation-section";
   const bpeHeading = document.createElement("h3");
@@ -2762,8 +2767,17 @@ function render() {
   const data = currentData();
   const step = currentStep();
   const max = state.trace.steps?.length || 0;
+  const foundationIsStatic = isFoundationModels() && data.foundation_models?.mode !== "bpe";
   renderPanelCopy();
   renderMetrics(data);
+  document.body.classList.toggle("foundation-workbench-active", isFoundationModels());
+  $("foundation-pipeline").classList.toggle("hidden", !isFoundationModels());
+  $("previous-button").classList.toggle("hidden", foundationIsStatic);
+  $("next-button").classList.toggle("hidden", foundationIsStatic);
+  $("play-button").classList.toggle("hidden", foundationIsStatic);
+  $("pause-button").classList.toggle("hidden", foundationIsStatic);
+  $("speed-control").classList.toggle("hidden", foundationIsStatic);
+  $("step-control").classList.toggle("hidden", foundationIsStatic);
   $("step-readout").textContent = `${state.stepIndex} / ${max}`;
   $("step-event").textContent = step.event_type || "initialise";
   $("step-label").textContent = step.label;

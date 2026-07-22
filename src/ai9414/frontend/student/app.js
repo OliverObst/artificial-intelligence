@@ -7390,6 +7390,11 @@ function renderFoundationInternal(data) {
   comparisonSection.appendChild(comparisonGrid);
   shell.appendChild(comparisonSection);
 
+  if (foundation.mode !== "bpe") {
+    panel.appendChild(shell);
+    return;
+  }
+
   const bpeSection = document.createElement("section");
   bpeSection.className = "foundation-section";
   const bpeHeading = document.createElement("h3");
@@ -7412,12 +7417,7 @@ function renderFoundationInternal(data) {
   const summaryValue = document.createElement("strong");
   summaryValue.textContent = `${foundation.bpe?.merge_step || 0} / ${foundation.bpe?.requested_merges || 0}`;
   summaryCard.append(summaryLabel, summaryValue);
-  if (foundation.mode !== "bpe") {
-    const copy = document.createElement("div");
-    copy.className = "foundation-bpe-copy";
-    copy.textContent = "Switch to learned BPE to step through one merge per replay step.";
-    summaryCard.appendChild(copy);
-  } else if (foundation.bpe?.selected_pair) {
+  if (foundation.bpe?.selected_pair) {
     const selectedPair = foundation.bpe.selected_pair;
     const merge = document.createElement("div");
     merge.className = "foundation-bpe-merge";
@@ -8295,6 +8295,9 @@ function renderUncertaintyWorld(data) {
 
 function renderControls() {
   const livePythonApp = isLivePythonApp();
+  const foundation = currentData()?.foundation_models;
+  const foundationIsStatic = isFoundationModels() && foundation?.mode !== "bpe";
+  const foundationIsBpe = isFoundationModels() && foundation?.mode === "bpe";
   const generatedProblemApp =
     livePythonApp && !isDelivery() && !isLogic() && !isResolution() && !isStrips() && !isUncertainty() && !isCspFamily() && !isFoundationModels();
   $("example-control-label").textContent = generatedProblemApp ? "Configuration" : "Example";
@@ -8305,9 +8308,9 @@ function renderControls() {
   $("logic-order-control").classList.toggle("hidden", !isLogic());
   $("resolution-input-panel").classList.toggle("hidden", !isResolution());
   $("foundation-mode-control").classList.toggle("hidden", !isFoundationModels());
-  $("foundation-corpus-control").classList.toggle("hidden", !isFoundationModels());
-  $("foundation-merges-control").classList.toggle("hidden", !isFoundationModels());
-  $("foundation-context-control").classList.toggle("hidden", !isFoundationModels());
+  $("foundation-corpus-control").classList.toggle("hidden", !foundationIsBpe);
+  $("foundation-merges-control").classList.toggle("hidden", !foundationIsBpe);
+  $("foundation-impact-disclosure").classList.toggle("hidden", !isFoundationModels());
   $("csp-algorithm-control").classList.toggle("hidden", !isCspFamily());
   $("csp-variable-order-control").classList.toggle("hidden", !isCspFamily());
   $("csp-value-order-control").classList.toggle("hidden", !isCspFamily());
@@ -8317,7 +8320,7 @@ function renderControls() {
   $("planning-toggle-grid").classList.toggle("hidden", !isStrips());
   $("uncertainty-toggle-grid").classList.toggle("hidden", !isUncertainty());
   $("uncertainty-action-panel").classList.toggle("hidden", !isUncertainty());
-  $("quick-player").classList.toggle("hidden", isUncertainty());
+  $("quick-player").classList.toggle("hidden", isUncertainty() || isFoundationModels());
   $("uncertainty-quick-actions").classList.toggle("hidden", !isUncertainty());
   $("csp-toggle-grid").classList.toggle("hidden", !isCspFamily());
   $("size-control").classList.toggle("hidden", !generatedProblemApp);
@@ -8337,6 +8340,14 @@ function renderControls() {
   $("logic-legend").classList.toggle("hidden", !isLogic());
   $("csp-legend").classList.toggle("hidden", !isCspFamily());
   $("uncertainty-legend").classList.toggle("hidden", !isUncertainty());
+  document.body.classList.toggle("foundation-workbench-active", isFoundationModels());
+  $("foundation-pipeline").classList.toggle("hidden", !isFoundationModels());
+  $("previous-button").classList.toggle("hidden", foundationIsStatic);
+  $("next-button").classList.toggle("hidden", foundationIsStatic);
+  $("play-button").classList.toggle("hidden", foundationIsStatic);
+  $("pause-button").classList.toggle("hidden", foundationIsStatic);
+  $("speed-control").classList.toggle("hidden", foundationIsStatic);
+  $("step-control").classList.toggle("hidden", foundationIsStatic);
 }
 
 function render() {

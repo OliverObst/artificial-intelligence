@@ -15,7 +15,7 @@ This repository contains the Phase 1 reference infrastructure for the `ai9414` p
 - `ai9414.delivery.DeliveryDemo` with fixed office-grid DFS examples and live-Python handoff
 - `ai9414.logic.DpllDemo` with built-in SAT and entailment playback examples plus live-Python DPLL handoff
 - `ai9414.uncertainty.BayesFilterDemo` with one-dimensional corridor localisation, interactive sensor and motion updates, and Bayes-filter trace export
-- `ai9414.foundation_models.TokenisationExplorer` with curated text scenarios, token comparisons, and toy BPE merge replay
+- `ai9414.foundation_models.TokenisationExplorer` with curated text scenarios, explicit whitespace semantics, token comparisons, and simplified BPE merge replay
 - Depth-first branch-and-bound trace generation in Python
 - Synchronised two-panel replay UI for the search tree and geometric graph
 
@@ -44,6 +44,14 @@ The student shell uses the standard routes:
 - `GET /api/errors`
 
 The solution bundle uses static `index.html` plus `trace.json` and performs no backend calls. To support this, the shared `TraceBundle` now carries an `initial_state` snapshot alongside the step patches.
+
+Foundation-model demos carry a `foundation_models.explorer_kind` discriminator so
+the shared shell can present tokenisation and decoding as consecutive stages of
+one teaching pipeline. They use a foundation-model-specific workbench within the
+same student and solution assets: input and contextual controls appear first, the
+dominant teaching representation spans the available width, and the explanation
+and replay state follow it. Character and word tokenisation are static views;
+only learned BPE exposes corpus, merge, and replay controls.
 
 ## Packaging Notes
 
@@ -90,6 +98,14 @@ src/ai9414/logic/
   solver.py
   student.py
   trace.py
+
+src/ai9414/foundation_models/
+  __init__.py
+  api.py
+  examples.py
+  models.py
+  student.py
+  trace.py
 ```
 
 - `api.py`: public `SearchDemo` entry point
@@ -107,4 +123,10 @@ The logic package follows the same overall contract, but its right-hand panel re
 
 The uncertainty package follows the same replay-first contract, but swaps the search tree for a Bayes-filter inspector on the left and an office-map belief overlay on the right. Each replay step shows prior belief, prediction, observation likelihoods, and posterior for a discrete localisation problem.
 
-The foundation-models package keeps the same shell while swapping both visual panes to text-oriented views: the right-hand panel shows editable text with token-boundary overlays, and the left-hand panel shows token lists, token statistics, comparison summaries, and the replayable BPE merge-learning state.
+The foundation-models package keeps the common API and export contract while
+using its specialised workbench. `TokenisationExplorer` builds deterministic
+character, rule-based word, and simplified BPE representations locally. The
+character tokeniser preserves every input character, including whitespace; BPE
+uses visible word-start markers and deterministic tie-breaking. Token-budget
+figures are explicitly illustrative. No pretrained model is bundled or called,
+and the current package does not generate model scores for arbitrary input.

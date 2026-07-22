@@ -151,3 +151,23 @@ def test_foundation_models_fastapi_routes_work():
         assert (
             'id="step-explanation-live" role="status" aria-live="polite"' in page.text
         )
+        assert (
+            'id="foundation-pipeline" class="foundation-pipeline panel hidden"'
+            in page.text
+        )
+        assert 'aria-current="step"' in page.text
+        assert 'id="foundation-impact-disclosure"' in page.text
+        assert "Example token budget" in page.text
+        assert 'id="speed-control"' in page.text
+        assert 'id="step-control"' in page.text
+
+        script = client.get("/assets/app.js")
+        assert script.status_code == 200
+        assert 'foundation.mode !== "bpe"' in script.text
+        assert 'foundation-workbench-active' in script.text
+        assert 'isUncertainty() || isFoundationModels()' in script.text
+
+        stylesheet = client.get("/assets/style.css")
+        assert stylesheet.status_code == 200
+        assert "body.foundation-workbench-active .layout" in stylesheet.text
+        assert "body.foundation-workbench-active .foundation-token-list" in stylesheet.text

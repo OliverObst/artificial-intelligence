@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ai9414</title>
-    <link rel="stylesheet" href="/assets/style.css?v=20260603" />
+    <link rel="stylesheet" href="/assets/style.css?v=20260722" />
   </head>
   <body>
     <div class="page-shell">
@@ -22,7 +22,28 @@
       </header>
 
       <main class="layout">
-        <section class="panel visual-panel">
+        <nav id="foundation-pipeline" class="foundation-pipeline panel hidden" aria-label="Foundation models pipeline">
+          <ol class="foundation-pipeline-list">
+            <li class="foundation-pipeline-step complete">
+              <span class="foundation-pipeline-number" aria-hidden="true">1</span>
+              <span>Input text</span>
+            </li>
+            <li class="foundation-pipeline-step current" aria-current="step">
+              <span class="foundation-pipeline-number" aria-hidden="true">2</span>
+              <span>Tokenisation</span>
+            </li>
+            <li class="foundation-pipeline-step">
+              <span class="foundation-pipeline-number" aria-hidden="true">3</span>
+              <span>Model scores</span>
+            </li>
+            <li class="foundation-pipeline-step">
+              <span class="foundation-pipeline-number" aria-hidden="true">4</span>
+              <span>Decoding</span>
+            </li>
+          </ol>
+        </nav>
+
+        <section id="left-visual-panel" class="panel visual-panel">
           <div class="panel-header">
             <div>
               <h2 id="left-panel-title">Search Tree</h2>
@@ -37,7 +58,7 @@
           <div id="resolution-proof-panel" class="logic-panel hidden" role="img" aria-label="Resolution proof steps"></div>
         </section>
 
-        <section class="panel visual-panel">
+        <section id="right-visual-panel" class="panel visual-panel">
           <div class="panel-header">
             <div>
               <h2 id="right-panel-title">Problem View</h2>
@@ -83,7 +104,7 @@
           <div id="foundation-text-panel" class="foundation-panel hidden" role="region" aria-labelledby="right-panel-title"></div>
         </section>
 
-        <section class="panel explanation-panel">
+        <section id="explanation-panel" class="panel explanation-panel">
           <div class="panel-header">
             <div>
               <h2>Explanation</h2>
@@ -117,7 +138,7 @@
           </div>
         </section>
 
-        <aside class="panel controls-panel">
+        <aside id="controls-panel" class="panel controls-panel">
           <div class="panel-header">
             <h2>Controls</h2>
           </div>
@@ -165,15 +186,19 @@
             </select>
           </label>
 
-          <label id="foundation-context-control" class="control-block hidden" for="foundation-context-select">
-            <span>Context window</span>
-            <select id="foundation-context-select">
-              <option value="32">32</option>
-              <option value="64">64</option>
-              <option value="128">128</option>
-              <option value="256">256</option>
-            </select>
-          </label>
+          <details id="foundation-impact-disclosure" class="foundation-impact-disclosure hidden">
+            <summary>Why token count matters</summary>
+            <p class="muted">This example budget illustrates how tokenisation changes the amount of text that fits. It is not a limit from a running model.</p>
+            <label id="foundation-context-control" class="control-block" for="foundation-context-select">
+              <span>Example token budget</span>
+              <select id="foundation-context-select">
+                <option value="32">32</option>
+                <option value="64">64</option>
+                <option value="128">128</option>
+                <option value="256">256</option>
+              </select>
+            </label>
+          </details>
 
           <label id="logic-mode-control" class="control-block hidden" for="logic-mode-select">
             <span>Problem mode</span>
@@ -205,7 +230,7 @@
             <input id="seed-input" type="number" min="1" step="1" placeholder="random" />
           </label>
 
-          <label class="control-block" for="speed-select">
+          <label id="speed-control" class="control-block" for="speed-select">
             <span>Playback speed</span>
             <select id="speed-select">
               <option value="0.75">0.75×</option>
@@ -373,7 +398,7 @@ A
             </label>
           </div>
 
-          <div class="control-block">
+          <div id="step-control" class="control-block">
             <span>Current step</span>
             <input id="step-range" type="range" min="0" max="0" value="0" />
             <div id="step-readout" class="muted">0 / 0</div>
@@ -426,6 +451,6 @@ A
       <p class="page-credit">Copyright 2026 UNSW. Author: Oliver Obst &lt;o.obst@unsw.edu.au&gt;. Released under GNU GPL v3.</p>
     </div>
 
-    <script src="/assets/app.js?v=20260603" defer></script>
+    <script src="/assets/app.js?v=20260722" defer></script>
   </body>
 </html>

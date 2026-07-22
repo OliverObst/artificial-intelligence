@@ -85,6 +85,13 @@ def test_solution_replay_export(tmp_path: Path, precomputed_demo):
     assert (bundle_dir / "index.html").exists()
     assert (bundle_dir / "trace.json").exists()
     assert (bundle_dir / "student-assets" / "style.css").exists()
+    solution_html = (bundle_dir / "index.html").read_text(encoding="utf-8")
+    assert 'id="foundation-pipeline"' in solution_html
+    assert 'id="speed-control"' in solution_html
+    assert 'id="step-control"' in solution_html
+    solution_script = (bundle_dir / "app.js").read_text(encoding="utf-8")
+    assert 'foundation-workbench-active' in solution_script
+    assert 'foundation.mode !== "bpe"' in solution_script
     trace_payload = (bundle_dir / "trace.json").read_text(encoding="utf-8")
     assert '"initial_state"' in trace_payload
     assert '"is_complete": true' in trace_payload
