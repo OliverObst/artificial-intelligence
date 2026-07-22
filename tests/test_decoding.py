@@ -189,6 +189,30 @@ def test_decoding_fastapi_contract_and_static_export(tmp_path):
         assert manifest.status_code == 200
         assert manifest.json()["app_title"].endswith("Decoding Explorer")
 
+        page = client.get("/")
+        assert page.status_code == 200
+        assert 'id="foundation-decoding-controls"' in page.text
+        assert 'id="foundation-decoding-rule-select"' in page.text
+        assert 'id="foundation-temperature-input"' in page.text
+        assert 'id="foundation-top-k-control"' in page.text
+        assert 'id="foundation-top-p-control"' in page.text
+        assert 'id="foundation-seed-control"' in page.text
+        assert 'data-foundation-pipeline-stage="decoding"' in page.text
+
+        script = client.get("/assets/app.js")
+        assert script.status_code == 200
+        assert "function renderDecodingDistribution" in script.text
+        assert "function renderDecodingContext" in script.text
+        assert 'makeDecodingElement("table", "decoding-table")' in script.text
+        assert "arbitrary custom text cannot be submitted" in script.text
+        assert 'selection_rule: event.target.value' in script.text
+
+        stylesheet = client.get("/assets/style.css")
+        assert stylesheet.status_code == 200
+        assert ".decoding-chart-row" in stylesheet.text
+        assert ".decoding-table tbody th::before" in stylesheet.text
+        assert ".foundation-decoding-controls" in stylesheet.text
+
         state = client.get("/api/state")
         assert state.status_code == 200
         assert state.json()["data"]["foundation_models"]["explorer_kind"] == "decoding"
@@ -203,6 +227,15 @@ def test_decoding_fastapi_contract_and_static_export(tmp_path):
     assert foundation["explorer_kind"] == "decoding"
     assert foundation["scores_are_precomputed"] is True
     assert exported_trace["steps"][-1]["event_type"] == "selection"
+    exported_page = (bundle_dir / "index.html").read_text(encoding="utf-8")
+    exported_script = (bundle_dir / "app.js").read_text(encoding="utf-8")
+    exported_stylesheet = (bundle_dir / "student-assets" / "style.css").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-foundation-pipeline-stage="scores"' in exported_page
+    assert "function renderDecodingDistribution" in exported_script
+    assert "function renderFoundationPipeline" in exported_script
+    assert ".decoding-draw-marker" in exported_stylesheet
 
 
 def test_decoding_explorer_loads_a_validated_config(tmp_path):

@@ -23,19 +23,19 @@
       <main class="layout">
         <nav id="foundation-pipeline" class="foundation-pipeline panel hidden" aria-label="Foundation models pipeline">
           <ol class="foundation-pipeline-list">
-            <li class="foundation-pipeline-step complete">
+            <li class="foundation-pipeline-step complete" data-foundation-pipeline-stage="input">
               <span class="foundation-pipeline-number" aria-hidden="true">1</span>
               <span>Input text</span>
             </li>
-            <li class="foundation-pipeline-step current" aria-current="step">
+            <li class="foundation-pipeline-step current" data-foundation-pipeline-stage="tokenisation" aria-current="step">
               <span class="foundation-pipeline-number" aria-hidden="true">2</span>
               <span>Tokenisation</span>
             </li>
-            <li class="foundation-pipeline-step">
+            <li class="foundation-pipeline-step" data-foundation-pipeline-stage="scores">
               <span class="foundation-pipeline-number" aria-hidden="true">3</span>
               <span>Model scores</span>
             </li>
-            <li class="foundation-pipeline-step">
+            <li class="foundation-pipeline-step" data-foundation-pipeline-stage="decoding">
               <span class="foundation-pipeline-number" aria-hidden="true">4</span>
               <span>Decoding</span>
             </li>

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ai9414</title>
-    <link rel="stylesheet" href="/assets/style.css?v=20260722" />
+    <link rel="stylesheet" href="/assets/style.css?v=20260722-2" />
   </head>
   <body>
     <div class="page-shell">
@@ -24,19 +24,19 @@
       <main class="layout">
         <nav id="foundation-pipeline" class="foundation-pipeline panel hidden" aria-label="Foundation models pipeline">
           <ol class="foundation-pipeline-list">
-            <li class="foundation-pipeline-step complete">
+            <li class="foundation-pipeline-step complete" data-foundation-pipeline-stage="input">
               <span class="foundation-pipeline-number" aria-hidden="true">1</span>
               <span>Input text</span>
             </li>
-            <li class="foundation-pipeline-step current" aria-current="step">
+            <li class="foundation-pipeline-step current" data-foundation-pipeline-stage="tokenisation" aria-current="step">
               <span class="foundation-pipeline-number" aria-hidden="true">2</span>
               <span>Tokenisation</span>
             </li>
-            <li class="foundation-pipeline-step">
+            <li class="foundation-pipeline-step" data-foundation-pipeline-stage="scores">
               <span class="foundation-pipeline-number" aria-hidden="true">3</span>
               <span>Model scores</span>
             </li>
-            <li class="foundation-pipeline-step">
+            <li class="foundation-pipeline-step" data-foundation-pipeline-stage="decoding">
               <span class="foundation-pipeline-number" aria-hidden="true">4</span>
               <span>Decoding</span>
             </li>
@@ -159,6 +159,42 @@
             <span id="example-control-label">Example</span>
             <select id="example-select"></select>
           </label>
+
+          <fieldset id="foundation-decoding-controls" class="foundation-decoding-controls hidden">
+            <legend>Next-token settings</legend>
+            <p class="foundation-control-note">Temperature transforms the distribution. The selection rule then chooses a token.</p>
+
+            <label class="control-block" for="foundation-decoding-rule-select">
+              <span>Selection rule</span>
+              <select id="foundation-decoding-rule-select">
+                <option value="greedy">Greedy</option>
+                <option value="sampling">Sampling</option>
+                <option value="top_k">Top-k sampling</option>
+                <option value="top_p">Top-p sampling</option>
+              </select>
+            </label>
+
+            <label class="control-block" for="foundation-temperature-input">
+              <span>Temperature <output id="foundation-temperature-output" for="foundation-temperature-input">1.00</output></span>
+              <input id="foundation-temperature-input" type="range" min="0.05" max="5" step="0.05" value="1" />
+            </label>
+
+            <label id="foundation-top-k-control" class="control-block hidden" for="foundation-top-k-input">
+              <span>Candidate count, k</span>
+              <input id="foundation-top-k-input" type="number" min="1" step="1" value="3" />
+            </label>
+
+            <label id="foundation-top-p-control" class="control-block hidden" for="foundation-top-p-input">
+              <span>Probability mass, p <output id="foundation-top-p-output" for="foundation-top-p-input">0.70</output></span>
+              <input id="foundation-top-p-input" type="range" min="0.05" max="1" step="0.05" value="0.7" />
+            </label>
+
+            <div id="foundation-seed-control" class="control-block hidden">
+              <label for="foundation-seed-input">Sampling seed</label>
+              <input id="foundation-seed-input" type="number" min="0" max="4294967295" step="1" value="9414" />
+              <button id="foundation-resample-button" type="button" class="secondary-button">Use next seed</button>
+            </div>
+          </fieldset>
 
           <label id="foundation-mode-control" class="control-block hidden" for="foundation-mode-select">
             <span>Tokeniser</span>
@@ -451,6 +487,6 @@ A
       <p class="page-credit">Copyright 2026 UNSW. Author: Oliver Obst &lt;o.obst@unsw.edu.au&gt;. Released under GNU GPL v3.</p>
     </div>
 
-    <script src="/assets/app.js?v=20260722" defer></script>
+    <script src="/assets/app.js?v=20260722-2" defer></script>
   </body>
 </html>

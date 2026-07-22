@@ -135,12 +135,15 @@ function currentStep() {
 
 function renderPanelCopy() {
   if (isFoundationModels()) {
-    $("left-panel-title").textContent = "Tokenisation State";
-    $("left-panel-subtitle").textContent =
-      "Token sequence, token counts, comparisons, and BPE merge steps.";
-    $("right-panel-title").textContent = "Text View";
-    $("right-panel-subtitle").textContent =
-      "Visible text with token boundaries drawn directly onto the input.";
+    const foundationIsDecoding = currentData().foundation_models?.explorer_kind === "decoding";
+    $("left-panel-title").textContent = foundationIsDecoding ? "Next-token Distribution" : "Tokenisation State";
+    $("left-panel-subtitle").textContent = foundationIsDecoding
+      ? "Fixed model scores through temperature, filtering, renormalisation, and selection."
+      : "Token sequence, token counts, comparisons, and BPE merge steps.";
+    $("right-panel-title").textContent = foundationIsDecoding ? "Context and Assumptions" : "Text View";
+    $("right-panel-subtitle").textContent = foundationIsDecoding
+      ? "Fixed context, exported settings, and the source of the candidate scores."
+      : "Visible text with token boundaries drawn directly onto the input.";
     $("search-toggle-grid").classList.add("hidden");
     $("planning-toggle-grid").classList.add("hidden");
     $("csp-view-control").classList.add("hidden");
@@ -374,7 +377,22 @@ function renderPanelCopy() {
 
 function renderMetrics(data) {
   if (isFoundationModels()) {
-    const stats = data.foundation_models?.stats || {};
+    const foundation = data.foundation_models || {};
+    if (foundation.explorer_kind === "decoding") {
+      const candidates = foundation.candidate_scores || [];
+      $("metric-1-label").textContent = "Candidate tokens";
+      $("metric-1-value").textContent = String(candidates.length);
+      $("metric-2-label").textContent = "Retained";
+      $("metric-2-value").textContent = foundation.stage === "model_scores" || foundation.stage === "temperature"
+        ? "not filtered"
+        : `${foundation.retained_count ?? 0} / ${candidates.length}`;
+      $("metric-3-label").textContent = "Selection rule";
+      $("metric-3-value").textContent = foundation.selection_rule_label || "unknown";
+      $("metric-4-label").textContent = "Selected token";
+      $("metric-4-value").textContent = foundation.selected_token?.display_text || foundation.selected_token?.token || "pending";
+      return;
+    }
+    const stats = foundation.stats || {};
     $("metric-1-label").textContent = "Input characters";
     $("metric-1-value").textContent = String(stats.character_count || 0);
     $("metric-2-label").textContent = "Tokens";
@@ -1951,11 +1969,194 @@ function renderPlanningWorldPanel(data) {
   panel.appendChild(shell);
 }
 
+function decodingStageLabel(stage) {
+  return {
+    model_scores: "Model scores",
+    temperature: "Temperature",
+    filtering: "Filtering",
+    renormalisation: "Renormalisation",
+    selection: "Selection",
+  }[stage] || "Decoding";
+}
+
+function formatDecodingProbability(value) {
+  return value === null || value === undefined ? "—" : `${(Number(value) * 100).toFixed(1)}%`;
+}
+
+function formatDecodingNumber(value, digits = 3) {
+  return value === null || value === undefined ? "—" : Number(value).toFixed(digits);
+}
+
+function decodingVisibleProbability(candidate) {
+  return candidate.renormalised_probability ?? candidate.transformed_probability ?? candidate.model_probability ?? 0;
+}
+
+function makeDecodingElement(tagName, className, textContent) {
+  const element = document.createElement(tagName);
+  if (className) element.className = className;
+  if (textContent !== undefined) element.textContent = textContent;
+  return element;
+}
+
+function renderFoundationPipeline(foundation) {
+  if (!foundation) return;
+  const currentStage = foundation.explorer_kind === "decoding"
+    ? foundation.stage === "model_scores" ? "scores" : "decoding"
+    : "tokenisation";
+  const stages = ["input", "tokenisation", "scores", "decoding"];
+  const currentIndex = stages.indexOf(currentStage);
+  document.querySelectorAll("[data-foundation-pipeline-stage]").forEach((item) => {
+    const itemIndex = stages.indexOf(item.dataset.foundationPipelineStage);
+    const isCurrent = itemIndex === currentIndex;
+    item.classList.toggle("complete", itemIndex < currentIndex);
+    item.classList.toggle("current", isCurrent);
+    if (isCurrent) item.setAttribute("aria-current", "step");
+    else item.removeAttribute("aria-current");
+  });
+}
+
+function renderDecodingDistribution(data) {
+  const panel = $("foundation-panel");
+  panel.innerHTML = "";
+  const foundation = data.foundation_models;
+  if (!foundation) return;
+  const candidates = foundation.candidate_scores || [];
+  const stageOrder = ["model_scores", "temperature", "filtering", "renormalisation", "selection"];
+
+  const shell = makeDecodingElement("div", "decoding-shell");
+  const stageStrip = makeDecodingElement("section", "decoding-stage-strip");
+  const stageCopy = makeDecodingElement("div", "decoding-stage-copy");
+  stageCopy.append(
+    makeDecodingElement("span", "decoding-stage-kicker", `Stage ${Math.max(1, stageOrder.indexOf(foundation.stage) + 1)} of ${stageOrder.length}`),
+    makeDecodingElement("h3", "decoding-stage-title", decodingStageLabel(foundation.stage)),
+    makeDecodingElement("p", "foundation-copy", foundation.status || "")
+  );
+  stageStrip.append(stageCopy, makeDecodingElement("span", "decoding-rule-chip", foundation.selection_rule_label || "Selection rule"));
+  shell.appendChild(stageStrip);
+
+  const chartSection = makeDecodingElement("section", "foundation-section");
+  chartSection.appendChild(makeDecodingElement("h3", "foundation-section-title", "Candidate distribution"));
+  const chartCopy = foundation.stage === "model_scores"
+    ? "Bars show probabilities obtained from the fixed candidate logits."
+    : foundation.stage === "temperature" || foundation.stage === "filtering"
+    ? "Bars show the after-temperature probabilities; filtered candidates remain visible for comparison."
+    : "Bars show the renormalised probabilities after filtering.";
+  chartSection.appendChild(makeDecodingElement("p", "foundation-copy", chartCopy));
+  const chart = makeDecodingElement("div", "decoding-chart");
+  chart.setAttribute("aria-hidden", "true");
+  candidates.forEach((candidate) => {
+    const row = makeDecodingElement("div", "decoding-chart-row");
+    const token = makeDecodingElement("span", "decoding-token-label", candidate.display_text || candidate.token);
+    const track = makeDecodingElement("span", "decoding-bar-track");
+    const fill = makeDecodingElement("span", "decoding-bar-fill");
+    if (candidate.retained === false) fill.classList.add("filtered");
+    if (candidate.selected === true) fill.classList.add("selected");
+    fill.style.width = `${Math.max(0, Math.min(100, decodingVisibleProbability(candidate) * 100))}%`;
+    track.appendChild(fill);
+    const value = makeDecodingElement("span", "decoding-bar-value", formatDecodingProbability(decodingVisibleProbability(candidate)));
+    const stateLabel = candidate.selected === true
+      ? "Selected"
+      : candidate.retained === false
+      ? "Filtered out"
+      : candidate.retained === true
+      ? "Retained"
+      : "Not filtered yet";
+    const badge = makeDecodingElement("span", "decoding-state-badge", stateLabel);
+    if (candidate.selected === true) badge.classList.add("selected");
+    if (candidate.retained === false) badge.classList.add("filtered");
+    row.append(token, track, value, badge);
+    chart.appendChild(row);
+  });
+  chartSection.appendChild(chart);
+  shell.appendChild(chartSection);
+
+  if (foundation.selected_token) {
+    const selectedCallout = makeDecodingElement("div", "decoding-selected-callout");
+    selectedCallout.append(
+      makeDecodingElement("span", "decoding-selected-label", "Selected next token"),
+      makeDecodingElement("strong", "decoding-selected-token", foundation.selected_token.display_text || foundation.selected_token.token)
+    );
+    shell.appendChild(selectedCallout);
+  }
+
+  if (foundation.random_draw !== null && foundation.random_draw !== undefined) {
+    const selectedCandidate = candidates.find((candidate) => candidate.selected);
+    const interval = selectedCandidate?.selection_interval;
+    const drawCard = makeDecodingElement("section", "decoding-draw-card");
+    drawCard.appendChild(makeDecodingElement("h3", "foundation-section-title", "Seeded random draw"));
+    const drawTrack = makeDecodingElement("div", "decoding-draw-track");
+    const marker = makeDecodingElement("span", "decoding-draw-marker");
+    marker.style.left = `${Math.max(0, Math.min(100, Number(foundation.random_draw) * 100))}%`;
+    drawTrack.appendChild(marker);
+    drawCard.appendChild(drawTrack);
+    drawCard.appendChild(makeDecodingElement("p", "foundation-copy", `Seed ${foundation.seed} gives draw ${formatDecodingNumber(foundation.random_draw, 6)}.`));
+    if (interval) {
+      drawCard.appendChild(makeDecodingElement(
+        "p",
+        "decoding-interval-copy",
+        `It falls in the interval [${formatDecodingNumber(interval.lower, 6)}, ${formatDecodingNumber(interval.upper, 6)}) assigned to ${selectedCandidate.display_text || selectedCandidate.token}.`
+      ));
+    }
+    shell.appendChild(drawCard);
+  }
+
+  const tableSection = makeDecodingElement("section", "foundation-section decoding-table-section");
+  tableSection.appendChild(makeDecodingElement("h3", "foundation-section-title", "Exact candidate data"));
+  const table = makeDecodingElement("table", "decoding-table");
+  const caption = document.createElement("caption");
+  caption.textContent = `Candidate probability data at the ${decodingStageLabel(foundation.stage).toLowerCase()} stage.`;
+  table.appendChild(caption);
+  const headings = ["Token", "Logit", "Model prob.", "After temp.", "Cum. mass", "Retained", "Renormalised", "Result"];
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  headings.forEach((heading) => {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = heading;
+    headRow.appendChild(cell);
+  });
+  head.appendChild(headRow);
+  table.appendChild(head);
+  const body = document.createElement("tbody");
+  candidates.forEach((candidate) => {
+    const row = document.createElement("tr");
+    if (candidate.selected === true) row.classList.add("selected");
+    const values = [
+      candidate.display_text || candidate.token,
+      formatDecodingNumber(candidate.logit),
+      formatDecodingProbability(candidate.model_probability),
+      formatDecodingProbability(candidate.transformed_probability),
+      formatDecodingProbability(candidate.cumulative_probability),
+      candidate.retained === null || candidate.retained === undefined ? "Not applied" : candidate.retained ? "Yes" : "No",
+      formatDecodingProbability(candidate.renormalised_probability),
+      candidate.selected === null || candidate.selected === undefined ? "Pending" : candidate.selected ? "Selected" : "Not selected",
+    ];
+    values.forEach((value, index) => {
+      const cell = document.createElement(index === 0 ? "th" : "td");
+      if (index === 0) cell.scope = "row";
+      cell.dataset.label = headings[index];
+      cell.textContent = value;
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
+  table.appendChild(body);
+  const tableWrap = makeDecodingElement("div", "decoding-table-wrap");
+  tableWrap.appendChild(table);
+  tableSection.appendChild(tableWrap);
+  shell.appendChild(tableSection);
+  panel.appendChild(shell);
+}
+
 function renderFoundationInternal(data) {
   const panel = $("foundation-panel");
   panel.innerHTML = "";
   const foundation = data.foundation_models;
   if (!foundation) return;
+  if (foundation.explorer_kind === "decoding") {
+    renderDecodingDistribution(data);
+    return;
+  }
 
   const shell = document.createElement("div");
   shell.className = "foundation-shell";
@@ -2121,11 +2322,82 @@ function renderFoundationInternal(data) {
   panel.appendChild(shell);
 }
 
+function renderDecodingContext(data) {
+  const panel = $("foundation-text-panel");
+  panel.innerHTML = "";
+  const foundation = data.foundation_models;
+  if (!foundation) return;
+
+  const shell = makeDecodingElement("div", "foundation-shell decoding-context-shell");
+  const contextSection = makeDecodingElement("section", "foundation-section");
+  contextSection.appendChild(makeDecodingElement("h3", "foundation-section-title", "Fixed context"));
+  contextSection.appendChild(makeDecodingElement(
+    "p",
+    "foundation-copy",
+    "These are the tokens that precede the candidate next token. Whitespace markers use the same notation as the tokenisation explorer."
+  ));
+  const tokenList = makeDecodingElement("div", "foundation-token-list decoding-context-tokens");
+  tokenList.setAttribute("role", "list");
+  tokenList.setAttribute("aria-label", `Context token sequence: ${(foundation.context_tokens || []).map((token) => token.accessible_label || token.text).join(", ")}`);
+  (foundation.context_tokens || []).forEach((tokenData) => {
+    const card = makeDecodingElement("div", "foundation-token-card");
+    card.setAttribute("role", "listitem");
+    card.setAttribute("aria-label", `Context token ${tokenData.index}: ${tokenData.accessible_label || tokenData.text}`);
+    const meta = makeDecodingElement("span", "foundation-token-meta", `token ${tokenData.index}`);
+    meta.setAttribute("aria-hidden", "true");
+    const token = makeDecodingElement("span", "foundation-token-text", tokenData.display_text || tokenData.text);
+    token.setAttribute("aria-hidden", "true");
+    card.append(meta, token);
+    tokenList.appendChild(card);
+  });
+  contextSection.appendChild(tokenList);
+  shell.appendChild(contextSection);
+
+  const settingsSection = makeDecodingElement("section", "foundation-section");
+  settingsSection.appendChild(makeDecodingElement("h3", "foundation-section-title", "Active decoding settings"));
+  const limit = foundation.selection_rule === "top_k"
+    ? `k = ${foundation.top_k}`
+    : foundation.selection_rule === "top_p"
+    ? `p = ${Number(foundation.top_p).toFixed(2)}`
+    : "No probability filter";
+  const seed = foundation.selection_rule === "greedy" ? "Not used" : String(foundation.seed);
+  const settings = [
+    ["Rule", foundation.selection_rule_label || "unknown"],
+    ["Temperature", Number(foundation.temperature).toFixed(2)],
+    ["Active limit", limit],
+    ["Seed", seed],
+  ];
+  const settingsGrid = makeDecodingElement("dl", "decoding-settings-grid");
+  settings.forEach(([label, value]) => {
+    const card = makeDecodingElement("div", "decoding-setting-card");
+    card.append(
+      makeDecodingElement("dt", "decoding-setting-label", label),
+      makeDecodingElement("dd", "decoding-setting-value", value)
+    );
+    settingsGrid.appendChild(card);
+  });
+  settingsSection.appendChild(settingsGrid);
+  shell.appendChild(settingsSection);
+
+  const provenance = makeDecodingElement("aside", "decoding-provenance");
+  provenance.append(
+    makeDecodingElement("h3", "foundation-section-title", "Precomputed teaching scores"),
+    makeDecodingElement("p", "foundation-copy", foundation.implementation_note || "The candidate scores are fixed teaching data."),
+    makeDecodingElement("p", "foundation-copy", "The context is fixed; arbitrary custom text cannot be submitted to a model in this explorer.")
+  );
+  shell.appendChild(provenance);
+  panel.appendChild(shell);
+}
+
 function renderFoundationTextPanel(data) {
   const panel = $("foundation-text-panel");
   panel.innerHTML = "";
   const foundation = data.foundation_models;
   if (!foundation) return;
+  if (foundation.explorer_kind === "decoding") {
+    renderDecodingContext(data);
+    return;
+  }
 
   const shell = document.createElement("div");
   shell.className = "foundation-shell";
@@ -2767,11 +3039,14 @@ function render() {
   const data = currentData();
   const step = currentStep();
   const max = state.trace.steps?.length || 0;
-  const foundationIsStatic = isFoundationModels() && data.foundation_models?.mode !== "bpe";
+  const foundationIsDecoding = isFoundationModels() && data.foundation_models?.explorer_kind === "decoding";
+  const foundationIsStatic = isFoundationModels() && !foundationIsDecoding && data.foundation_models?.mode !== "bpe";
   renderPanelCopy();
   renderMetrics(data);
   document.body.classList.toggle("foundation-workbench-active", isFoundationModels());
+  document.body.classList.toggle("foundation-decoding-active", foundationIsDecoding);
   $("foundation-pipeline").classList.toggle("hidden", !isFoundationModels());
+  renderFoundationPipeline(data.foundation_models);
   $("previous-button").classList.toggle("hidden", foundationIsStatic);
   $("next-button").classList.toggle("hidden", foundationIsStatic);
   $("play-button").classList.toggle("hidden", foundationIsStatic);

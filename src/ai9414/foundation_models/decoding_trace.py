@@ -349,8 +349,8 @@ def _selection_annotation(problem: DecodingProblem, computation: dict[str, Any])
     interval = computation["selection_intervals"][selected_index]
     return (
         f"Seed {problem.options.seed} gives draw {computation['random_draw']:.6f}. "
-        f"It falls in '{token}'s cumulative interval [{interval['lower']:.6f}, "
-        f"{interval['upper']:.6f}), so that token is selected."
+        f"It falls in the cumulative interval [{interval['lower']:.6f}, "
+        f"{interval['upper']:.6f}) assigned to '{token}', so that token is selected."
     )
 
 
