@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-AU">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -32,7 +32,7 @@
           <div id="csp-panel" class="csp-panel hidden" role="img" aria-label="Constraint satisfaction state"></div>
           <div id="planning-panel" class="planning-panel hidden" role="img" aria-label="Planning state"></div>
           <div id="uncertainty-panel" class="uncertainty-panel hidden" role="img" aria-label="Belief-state view"></div>
-          <div id="foundation-panel" class="foundation-panel hidden" role="img" aria-label="Tokenisation state"></div>
+          <div id="foundation-panel" class="foundation-panel hidden" role="region" aria-labelledby="left-panel-title"></div>
           <div id="resolution-proof-panel" class="logic-panel hidden" role="img" aria-label="Resolution proof steps"></div>
         </section>
 
@@ -47,7 +47,7 @@
           <div id="planning-world-panel" class="planning-world-panel hidden" role="img" aria-label="Planning world details"></div>
           <div id="uncertainty-world-panel" class="uncertainty-world-panel hidden" role="img" aria-label="Belief-state world details"></div>
           <div id="logic-problem-panel" class="logic-panel hidden" role="img" aria-label="Clause view"></div>
-          <div id="foundation-text-panel" class="foundation-panel hidden" role="img" aria-label="Tokenised text view"></div>
+          <div id="foundation-text-panel" class="foundation-panel hidden" role="region" aria-labelledby="right-panel-title"></div>
         </section>
 
         <section class="panel explanation-panel">
@@ -59,9 +59,11 @@
           </div>
           <div id="message-banner" class="message-banner hidden" role="status"></div>
           <p id="step-readout" class="muted">0 / 0</p>
-          <h3 id="step-label">Initial state</h3>
-          <p id="step-annotation">Loading exported trace...</p>
-          <p id="step-note" class="muted"></p>
+          <div id="step-explanation-live" role="status" aria-live="polite" aria-atomic="true">
+            <h3 id="step-label">Initial state</h3>
+            <p id="step-annotation">Loading exported trace...</p>
+            <p id="step-note" class="muted"></p>
+          </div>
           <div class="metric-grid">
             <div class="metric-card">
               <span id="metric-1-label" class="metric-label">Current path cost</span>

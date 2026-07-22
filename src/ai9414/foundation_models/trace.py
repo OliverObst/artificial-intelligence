@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from typing import Any
 
 from ai9414.core.models import TraceBundle, TraceStep, TraceSummary
 from ai9414.foundation_models.models import TokenisationProblem, TokeniserMode
-from ai9414.foundation_models.student import apply_bpe, tokenize_characters, tokenize_words
+from ai9414.foundation_models.student import (
+    BPELearningState,
+    BPEPair,
+    apply_bpe,
+    build_bpe_learning_states,
+    tokenize_characters,
+    tokenize_words,
+)
 
 MODE_LABELS: dict[TokeniserMode, str] = {
     "character": "Character tokeniser",
@@ -23,7 +29,7 @@ def build_foundation_trace(
 ) -> TraceBundle:
     """Build the replay bundle for the foundation models tokenisation explorer."""
 
-    bpe_states = _build_bpe_learning_states(problem.corpus_texts, problem.num_merges)
+    bpe_states = build_bpe_learning_states(problem.corpus_texts, problem.num_merges)
 
     if problem.tokeniser_mode == "bpe":
         initial_state = _build_snapshot(
@@ -73,26 +79,39 @@ def build_foundation_trace(
 def _build_snapshot(
     problem: TokenisationProblem,
     *,
-    learning_state: dict[str, Any],
+    learning_state: BPELearningState,
     custom_text_active: bool,
 ) -> dict[str, Any]:
     merges = list(learning_state["learned_merges"])
     current_tokens = _tokenise_with_mode(problem.text, problem.tokeniser_mode, merges)
-    comparison = _build_comparison(problem.text, merges, problem.context_window, problem.tokeniser_mode)
+    comparison = _build_comparison(
+        problem.text, merges, problem.context_window, problem.tokeniser_mode
+    )
     return {
         "example_title": problem.title,
         "example_subtitle": problem.subtitle,
         "algorithm_label": "Foundation Models Demo - Tokenisation Explorer",
         "algorithm_note": (
-            "Character and word tokenisers are static. Learned BPE adds merge steps that change the token boundaries."
+            "Character tokens include whitespace. The rule-based word tokeniser omits separators. "
+            "Simplified BPE keeps leading whitespace and adds one word-local merge per replay step."
         ),
         "foundation_models": {
+            "explorer_kind": "tokenisation",
             "mode": problem.tokeniser_mode,
             "mode_label": MODE_LABELS[problem.tokeniser_mode],
-            "status": _status_text(problem.tokeniser_mode, learning_state, problem.num_merges),
+            "status": _status_text(
+                problem.tokeniser_mode, learning_state, problem.num_merges
+            ),
+            "implementation_note": (
+                "This explorer uses a simplified, deterministic BPE learner. It preserves leading whitespace "
+                "inside pre-tokenised units but does not reproduce any particular production tokenizer."
+            ),
+            "whitespace_legend": "In token displays, ▁ marks a space, ⇥ a tab, and ↵ a line break.",
             "text": problem.text,
             "custom_text_active": custom_text_active,
-            "overlay_segments": _build_overlay_segments(problem.text, problem.tokeniser_mode, merges),
+            "overlay_segments": _build_overlay_segments(
+                problem.text, problem.tokeniser_mode, merges
+            ),
             "tokens": _build_token_rows(current_tokens),
             "stats": _build_stats(problem.text, current_tokens, problem.context_window),
             "comparison": comparison,
@@ -111,7 +130,9 @@ def _build_snapshot(
                 "applied_merge_count": len(learning_state["learned_merges"]),
                 "learned_merges": [
                     _merge_descriptor(pair, index)
-                    for index, pair in enumerate(learning_state["learned_merges"], start=1)
+                    for index, pair in enumerate(
+                        learning_state["learned_merges"], start=1
+                    )
                 ],
                 "selected_pair": (
                     None
@@ -120,7 +141,18 @@ def _build_snapshot(
                         "left": learning_state["selected_pair"][0],
                         "right": learning_state["selected_pair"][1],
                         "merged": "".join(learning_state["selected_pair"]),
+                        "display_left": _display_token_text(
+                            learning_state["selected_pair"][0]
+                        ),
+                        "display_right": _display_token_text(
+                            learning_state["selected_pair"][1]
+                        ),
+                        "display_merged": _display_token_text(
+                            "".join(learning_state["selected_pair"])
+                        ),
                         "count": learning_state["selected_pair_count"],
+                        "tied_candidate_count": learning_state["tied_candidate_count"],
+                        "tie_break_rule": learning_state["tie_break_rule"],
                     }
                 ),
                 "pair_counts": [
@@ -128,7 +160,8 @@ def _build_snapshot(
                     for pair, count in learning_state["pair_counts"][:8]
                 ],
                 "segmented_corpus": [
-                    _format_segmented_text(text_units) for text_units in learning_state["segmented_corpus"]
+                    _format_segmented_text(text_units)
+                    for text_units in learning_state["segmented_corpus"]
                 ],
                 "trace_ready": problem.tokeniser_mode == "bpe",
             },
@@ -136,47 +169,9 @@ def _build_snapshot(
     }
 
 
-def _build_bpe_learning_states(corpus: list[str], num_merges: int) -> list[dict[str, Any]]:
-    segmented_corpus = [[list(token) for token in tokenize_words(text)] for text in corpus]
-    states: list[dict[str, Any]] = [
-        {
-            "merge_step": 0,
-            "learned_merges": [],
-            "pair_counts": _sorted_pair_counts(segmented_corpus),
-            "selected_pair": None,
-            "selected_pair_count": None,
-            "segmented_corpus": _clone_segmented_corpus(segmented_corpus),
-        }
-    ]
-
-    learned_merges: list[tuple[str, str]] = []
-    for merge_index in range(max(0, int(num_merges))):
-        pair_counts = _sorted_pair_counts(segmented_corpus)
-        if not pair_counts:
-            break
-        selected_pair, count = pair_counts[0]
-        learned_merges.append(selected_pair)
-        segmented_corpus = [
-            [_merge_symbol_pair(symbols, selected_pair) for symbols in text_units]
-            for text_units in segmented_corpus
-        ]
-        states.append(
-            {
-                "merge_step": merge_index + 1,
-                "learned_merges": list(learned_merges),
-                "pair_counts": pair_counts,
-                "selected_pair": selected_pair,
-                "selected_pair_count": count,
-                "segmented_corpus": _clone_segmented_corpus(segmented_corpus),
-            }
-        )
-
-    if len(states) == 1 and num_merges > 0:
-        states[0]["pair_counts"] = []
-    return states
-
-
-def _tokenise_with_mode(text: str, mode: TokeniserMode, merges: list[tuple[str, str]]) -> list[str]:
+def _tokenise_with_mode(
+    text: str, mode: TokeniserMode, merges: list[BPEPair]
+) -> list[str]:
     if mode == "character":
         return tokenize_characters(text)
     if mode == "word":
@@ -186,7 +181,7 @@ def _tokenise_with_mode(text: str, mode: TokeniserMode, merges: list[tuple[str, 
 
 def _build_comparison(
     text: str,
-    merges: list[tuple[str, str]],
+    merges: list[BPEPair],
     context_window: int,
     active_mode: TokeniserMode,
 ) -> list[dict[str, Any]]:
@@ -207,17 +202,38 @@ def _build_comparison(
     return comparison
 
 
-def _build_overlay_segments(text: str, mode: TokeniserMode, merges: list[tuple[str, str]]) -> list[dict[str, Any]]:
+def _build_overlay_segments(
+    text: str, mode: TokeniserMode, merges: list[BPEPair]
+) -> list[dict[str, Any]]:
     segments: list[dict[str, Any]] = []
     token_index = 0
 
     if mode == "character":
         for character in text:
-            if character.isspace():
-                segments.append({"kind": "whitespace", "text": character})
-            else:
-                segments.append({"kind": "token", "text": character, "token_index": token_index})
-                token_index += 1
+            segments.append(
+                {
+                    "kind": "token",
+                    "text": character,
+                    "display_text": _display_token_text(character),
+                    "accessible_label": _accessible_token_label(character),
+                    "token_index": token_index,
+                }
+            )
+            token_index += 1
+        return segments
+
+    if mode == "bpe":
+        for token in apply_bpe(text, merges):
+            segments.append(
+                {
+                    "kind": "token",
+                    "text": token,
+                    "display_text": _display_token_text(token),
+                    "accessible_label": _accessible_token_label(token),
+                    "token_index": token_index,
+                }
+            )
+            token_index += 1
         return segments
 
     cursor = 0
@@ -225,10 +241,16 @@ def _build_overlay_segments(text: str, mode: TokeniserMode, merges: list[tuple[s
         start, end, token = match
         if start > cursor:
             segments.append({"kind": "whitespace", "text": text[cursor:start]})
-        parts = [token] if mode == "word" else apply_bpe(token, merges)
-        for part in parts:
-            segments.append({"kind": "token", "text": part, "token_index": token_index})
-            token_index += 1
+        segments.append(
+            {
+                "kind": "token",
+                "text": token,
+                "display_text": _display_token_text(token),
+                "accessible_label": _accessible_token_label(token),
+                "token_index": token_index,
+            }
+        )
+        token_index += 1
         cursor = end
     if cursor < len(text):
         segments.append({"kind": "whitespace", "text": text[cursor:]})
@@ -236,7 +258,10 @@ def _build_overlay_segments(text: str, mode: TokeniserMode, merges: list[tuple[s
 
 
 def tokenize_words_with_spans(text: str) -> list[tuple[int, int, str]]:
-    return [(match.start(), match.end(), match.group(0)) for match in tokenize_words_pattern().finditer(text)]
+    return [
+        (match.start(), match.end(), match.group(0))
+        for match in tokenize_words_pattern().finditer(text)
+    ]
 
 
 def tokenize_words_pattern():
@@ -246,16 +271,14 @@ def tokenize_words_pattern():
 
 
 def _build_token_rows(tokens: list[str]) -> list[dict[str, Any]]:
-    token_ids: dict[str, int] = {}
     rows: list[dict[str, Any]] = []
     for index, token in enumerate(tokens):
-        if token not in token_ids:
-            token_ids[token] = len(token_ids)
         rows.append(
             {
                 "index": index,
                 "text": token,
-                "token_id": token_ids[token],
+                "display_text": _display_token_text(token),
+                "accessible_label": _accessible_token_label(token),
             }
         )
     return rows
@@ -263,7 +286,11 @@ def _build_token_rows(tokens: list[str]) -> list[dict[str, Any]]:
 
 def _build_stats(text: str, tokens: list[str], context_window: int) -> dict[str, Any]:
     token_count = len(tokens)
-    average_length = 0.0 if token_count == 0 else round(sum(len(token) for token in tokens) / token_count, 2)
+    average_length = (
+        0.0
+        if token_count == 0
+        else round(sum(len(token) for token in tokens) / token_count, 2)
+    )
     return {
         "character_count": len(text),
         "token_count": token_count,
@@ -272,74 +299,96 @@ def _build_stats(text: str, tokens: list[str], context_window: int) -> dict[str,
         "context_used": token_count,
         "context_remaining": max(context_window - token_count, 0),
         "context_usage": f"{token_count} / {context_window}",
+        "token_budget_is_illustrative": True,
     }
 
 
-def _status_text(mode: TokeniserMode, learning_state: dict[str, Any], requested_merges: int) -> str:
+def _status_text(
+    mode: TokeniserMode, learning_state: BPELearningState, requested_merges: int
+) -> str:
     if mode != "bpe":
         return "tokenised"
     if learning_state["merge_step"] == 0:
         return "ready to learn"
-    if learning_state["merge_step"] < requested_merges and learning_state["pair_counts"]:
+    if (
+        learning_state["merge_step"] < requested_merges
+        and learning_state["pair_counts"]
+    ):
         return "learning merges"
     return "merges applied"
 
 
-def _merge_step_label(state: dict[str, Any]) -> str:
+def _merge_step_label(state: BPELearningState) -> str:
     pair = state["selected_pair"]
     if pair is None:
         return "Initial segmentation"
-    return f"Merge {state['merge_step']}: {pair[0]} + {pair[1]} -> {pair[0]}{pair[1]}"
+    return (
+        f"Merge {state['merge_step']}: {_display_token_text(pair[0])} + "
+        f"{_display_token_text(pair[1])} -> {_display_token_text(pair[0] + pair[1])}"
+    )
 
 
-def _merge_step_annotation(state: dict[str, Any]) -> str:
+def _merge_step_annotation(state: BPELearningState) -> str:
     pair = state["selected_pair"]
     if pair is None:
         return "The corpus starts at character level, so every frequent adjacent pair is still visible."
-    return (
+    annotation = (
         f"The pair {_pair_label(pair)} appears {state['selected_pair_count']} time(s), "
-        f"so the learner promotes it to the new token '{pair[0]}{pair[1]}'."
+        f"so the learner promotes it to the new token '{_display_token_text(pair[0] + pair[1])}'."
     )
+    if state["tied_candidate_count"] > 1:
+        annotation += (
+            f" {state['tied_candidate_count']} pairs share that frequency; this deterministic demo then uses "
+            "alphabetical symbol-pair order."
+        )
+    return annotation
 
 
-def _merge_descriptor(pair: tuple[str, str], index: int) -> str:
-    return f"{index}. {_pair_label(pair)} -> {pair[0]}{pair[1]}"
+def _merge_descriptor(pair: BPEPair, index: int) -> str:
+    return f"{index}. {_pair_label(pair)} -> {_display_token_text(pair[0] + pair[1])}"
 
 
-def _pair_label(pair: tuple[str, str]) -> str:
-    return f"{pair[0]} + {pair[1]}"
-
-
-def _sorted_pair_counts(segmented_corpus: list[list[list[str]]]) -> list[tuple[tuple[str, str], int]]:
-    pair_counts: Counter[tuple[str, str]] = Counter()
-    for text_units in segmented_corpus:
-        for symbols in text_units:
-            pair_counts.update(zip(symbols, symbols[1:]))
-    return sorted(
-        pair_counts.items(),
-        key=lambda item: (-item[1], item[0][0], item[0][1]),
-    )
-
-
-def _merge_symbol_pair(symbols: list[str], pair: tuple[str, str]) -> list[str]:
-    if len(symbols) < 2:
-        return list(symbols)
-
-    merged: list[str] = []
-    index = 0
-    while index < len(symbols):
-        if index + 1 < len(symbols) and (symbols[index], symbols[index + 1]) == pair:
-            merged.append(symbols[index] + symbols[index + 1])
-            index += 2
-        else:
-            merged.append(symbols[index])
-            index += 1
-    return merged
-
-
-def _clone_segmented_corpus(segmented_corpus: list[list[list[str]]]) -> list[list[list[str]]]:
-    return [[list(symbols) for symbols in text_units] for text_units in segmented_corpus]
+def _pair_label(pair: BPEPair) -> str:
+    return f"{_display_token_text(pair[0])} + {_display_token_text(pair[1])}"
 
 
 def _format_segmented_text(text_units: list[list[str]]) -> str:
-    return "   ".join(" ".join(symbols) for symbols in text_units)
+    return "   |   ".join(
+        " ".join(_display_token_text(symbol) for symbol in symbols)
+        for symbols in text_units
+    )
+
+
+def _display_token_text(token: str) -> str:
+    replacements = {
+        " ": "▁",
+        "\t": "⇥",
+        "\n": "↵",
+        "\r": "␍",
+    }
+    return "".join(replacements.get(character, character) for character in token)
+
+
+def _accessible_token_label(token: str) -> str:
+    replacements = {
+        " ": "space",
+        "\t": "tab",
+        "\n": "line break",
+        "\r": "carriage return",
+    }
+    parts: list[str] = []
+    text_buffer: list[str] = []
+
+    def flush_text() -> None:
+        if text_buffer:
+            parts.append("".join(text_buffer))
+            text_buffer.clear()
+
+    for character in token:
+        if character in replacements:
+            flush_text()
+            parts.append(replacements[character])
+        else:
+            text_buffer.append(character)
+    flush_text()
+    return " ".join(parts)

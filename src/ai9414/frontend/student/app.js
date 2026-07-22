@@ -5332,7 +5332,10 @@ function currentStep() {
       event_type: "initialise",
       label: "Initial state",
       annotation: data.algorithm_note || "The view is ready.",
-      teaching_note: "Step forward or press play to begin.",
+      teaching_note:
+        isFoundationModels() && !trace.steps?.length
+          ? "This tokeniser is static. Edit the input or choose learned BPE to explore merge steps."
+          : "Step forward or press play to begin.",
     };
   }
   return trace.steps[state.player.stepIndex - 1];
@@ -5479,13 +5482,13 @@ function renderPanelCopy(data) {
 function renderMetrics(data) {
   if (isFoundationModels()) {
     const stats = data.foundation_models?.stats || {};
-    $("metric-1-label").textContent = "Characters";
+    $("metric-1-label").textContent = "Input characters";
     $("metric-1-value").textContent = String(stats.character_count || 0);
     $("metric-2-label").textContent = "Tokens";
     $("metric-2-value").textContent = String(stats.token_count || 0);
     $("metric-3-label").textContent = "Avg token length";
     $("metric-3-value").textContent = String(stats.average_token_length ?? 0);
-    $("metric-4-label").textContent = "Context usage";
+    $("metric-4-label").textContent = "Illustrative token budget";
     $("metric-4-value").textContent = stats.context_usage || "0 / 64";
     return;
   }
@@ -7330,17 +7333,26 @@ function renderFoundationInternal(data) {
   tokensHeading.className = "foundation-section-title";
   tokensHeading.textContent = "Token sequence";
   tokensSection.appendChild(tokensHeading);
+  const tokensLegend = document.createElement("p");
+  tokensLegend.className = "foundation-copy";
+  tokensLegend.textContent = foundation.whitespace_legend || "";
+  tokensSection.appendChild(tokensLegend);
   const tokenList = document.createElement("div");
   tokenList.className = "foundation-token-list";
+  tokenList.setAttribute("role", "list");
   (foundation.tokens || []).forEach((token) => {
     const card = document.createElement("div");
     card.className = "foundation-token-card";
+    card.setAttribute("role", "listitem");
+    card.setAttribute("aria-label", `Token ${token.index}: ${token.accessible_label || token.text}`);
     const meta = document.createElement("span");
     meta.className = "foundation-token-meta";
-    meta.textContent = `token ${token.index}  |  id ${token.token_id}`;
+    meta.textContent = `token ${token.index}`;
+    meta.setAttribute("aria-hidden", "true");
     const text = document.createElement("span");
     text.className = "foundation-token-text";
-    text.textContent = token.text;
+    text.textContent = token.display_text || token.text;
+    text.setAttribute("aria-hidden", "true");
     card.append(meta, text);
     tokenList.appendChild(card);
   });
@@ -7371,7 +7383,7 @@ function renderFoundationInternal(data) {
     count.textContent = `${entry.token_count} tokens`;
     const stats = document.createElement("div");
     stats.className = "foundation-comparison-subtext";
-    stats.textContent = `avg ${entry.average_token_length} chars  |  context ${entry.context_usage}`;
+    stats.textContent = `avg ${entry.average_token_length} chars  |  example budget ${entry.context_usage}`;
     card.append(label, count, stats);
     comparisonGrid.appendChild(card);
   });
@@ -7384,6 +7396,10 @@ function renderFoundationInternal(data) {
   bpeHeading.className = "foundation-section-title";
   bpeHeading.textContent = "BPE learning trace";
   bpeSection.appendChild(bpeHeading);
+  const implementationNote = document.createElement("p");
+  implementationNote.className = "foundation-copy";
+  implementationNote.textContent = foundation.implementation_note || "";
+  bpeSection.appendChild(implementationNote);
 
   const bpeGrid = document.createElement("div");
   bpeGrid.className = "foundation-bpe-grid";
@@ -7402,12 +7418,16 @@ function renderFoundationInternal(data) {
     copy.textContent = "Switch to learned BPE to step through one merge per replay step.";
     summaryCard.appendChild(copy);
   } else if (foundation.bpe?.selected_pair) {
+    const selectedPair = foundation.bpe.selected_pair;
     const merge = document.createElement("div");
     merge.className = "foundation-bpe-merge";
-    merge.textContent = `${foundation.bpe.selected_pair.left} + ${foundation.bpe.selected_pair.right} -> ${foundation.bpe.selected_pair.merged}`;
+    merge.textContent = `${selectedPair.display_left || selectedPair.left} + ${selectedPair.display_right || selectedPair.right} -> ${selectedPair.display_merged || selectedPair.merged}`;
     const copy = document.createElement("div");
     copy.className = "foundation-bpe-copy";
-    copy.textContent = `Selected because it appears ${foundation.bpe.selected_pair.count} time(s) in the current corpus segmentation.`;
+    copy.textContent =
+      selectedPair.tied_candidate_count > 1
+        ? `It appears ${selectedPair.count} time(s). ${selectedPair.tied_candidate_count} pairs are tied, so the demo uses ${selectedPair.tie_break_rule}.`
+        : `Selected because it appears ${selectedPair.count} time(s) in the current corpus segmentation.`;
     summaryCard.append(merge, copy);
   } else {
     const copy = document.createElement("div");
@@ -7505,8 +7525,12 @@ function renderFoundationTextPanel(data) {
   inputSection.className = "foundation-section";
   const inputHeading = document.createElement("h3");
   inputHeading.className = "foundation-section-title";
-  inputHeading.textContent = foundation.custom_text_active ? "Custom text" : "Current text";
+  const inputLabel = document.createElement("label");
+  inputLabel.htmlFor = "foundation-textarea";
+  inputLabel.textContent = foundation.custom_text_active ? "Custom text" : "Current text";
+  inputHeading.appendChild(inputLabel);
   const inputCopy = document.createElement("p");
+  inputCopy.id = "foundation-text-help";
   inputCopy.className = "foundation-copy";
   inputCopy.textContent =
     foundation.mode === "bpe"
@@ -7517,6 +7541,7 @@ function renderFoundationTextPanel(data) {
   textarea.className = "foundation-textarea";
   textarea.value = foundation.text || "";
   textarea.spellcheck = false;
+  textarea.setAttribute("aria-describedby", "foundation-text-help");
   const actions = document.createElement("div");
   actions.className = "foundation-text-actions";
   const applyButton = document.createElement("button");
@@ -7540,6 +7565,12 @@ function renderFoundationTextPanel(data) {
   overlaySection.appendChild(overlayHeading);
   const stream = document.createElement("div");
   stream.className = "foundation-token-stream";
+  stream.setAttribute("role", "group");
+  const accessibleSequence = (foundation.overlay_segments || [])
+    .filter((segment) => segment.kind === "token")
+    .map((segment) => segment.accessible_label || segment.text)
+    .join(", ");
+  stream.setAttribute("aria-label", `Token boundary sequence: ${accessibleSequence}`);
   (foundation.overlay_segments || []).forEach((segment) => {
     if (segment.kind === "whitespace") {
       const space = document.createElement("span");
@@ -7550,7 +7581,8 @@ function renderFoundationTextPanel(data) {
     }
     const chip = document.createElement("span");
     chip.className = `foundation-token-chip${foundation.mode === "bpe" ? " active" : ""}`;
-    chip.textContent = segment.text;
+    chip.textContent = segment.display_text || segment.text;
+    chip.setAttribute("aria-hidden", "true");
     stream.appendChild(chip);
   });
   overlaySection.appendChild(stream);

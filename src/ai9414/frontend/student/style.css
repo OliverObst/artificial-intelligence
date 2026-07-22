@@ -37,6 +37,14 @@ textarea {
   font: inherit;
 }
 
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--best);
+  outline-offset: 3px;
+}
+
 .page-shell {
   max-width: 1380px;
   margin: 0 auto;
@@ -1346,6 +1354,7 @@ textarea {
 }
 
 .foundation-section-title {
+  display: block;
   margin: 0 0 12px;
   font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   font-size: 1.05rem;
