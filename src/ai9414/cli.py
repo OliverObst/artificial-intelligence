@@ -144,7 +144,9 @@ def _run_demo_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def _print_overview(parser: argparse.ArgumentParser, *, file: TextIO | None = None) -> None:
+def _print_overview(
+    parser: argparse.ArgumentParser, *, file: TextIO | None = None
+) -> None:
     output = file or sys.stdout
     parser.print_help(file=output)
     print(file=output)
@@ -293,6 +295,22 @@ def demo_specs() -> tuple[DemoSpec, ...]:
             aliases=("foundation_models",),
         ),
         DemoSpec(
+            name="foundation-models-tokenisation",
+            title="Tokenisation Explorer",
+            description="Foundation models tokenisation explorer",
+            default_example="simple_sentence",
+            factory=_create_foundation_models_demo,
+            aliases=("foundation-tokenisation", "tokenisation"),
+        ),
+        DemoSpec(
+            name="foundation-models-decoding",
+            title="Decoding Explorer",
+            description="Foundation models next-token decoding explorer",
+            default_example="lecture_activity",
+            factory=_create_foundation_models_decoding_demo,
+            aliases=("foundation-decoding", "decoding"),
+        ),
+        DemoSpec(
             name="csp-map",
             title="CSP Map Colouring",
             description="CSP map colouring",
@@ -395,6 +413,12 @@ def _create_foundation_models_demo() -> BaseEducationalApp:
     from ai9414.foundation_models import TokenisationExplorer
 
     return TokenisationExplorer()
+
+
+def _create_foundation_models_decoding_demo() -> BaseEducationalApp:
+    from ai9414.foundation_models import DecodingExplorer
+
+    return DecodingExplorer()
 
 
 def _create_csp_demo() -> BaseEducationalApp:

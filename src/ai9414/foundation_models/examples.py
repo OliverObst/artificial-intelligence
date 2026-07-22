@@ -1,8 +1,16 @@
-"""Curated examples and corpora for the tokenisation explorer."""
+"""Curated inputs for the foundation-model teaching explorers."""
 
 from __future__ import annotations
 
-from ai9414.foundation_models.models import TokenisationCorpus, TokenisationExample
+import math
+
+from ai9414.foundation_models.models import (
+    DecodingCandidate,
+    DecodingExample,
+    DecodingOptions,
+    TokenisationCorpus,
+    TokenisationExample,
+)
 
 
 def build_examples() -> dict[str, TokenisationExample]:
@@ -108,3 +116,135 @@ def build_corpora() -> dict[str, TokenisationCorpus]:
         ),
     ]
     return {corpus.name: corpus for corpus in corpora}
+
+
+def build_decoding_examples() -> dict[str, DecodingExample]:
+    """Return deterministic next-token score distributions for decoding lessons."""
+
+    examples = [
+        DecodingExample(
+            name="lecture_activity",
+            title="Decoding choices",
+            subtitle=(
+                "The lecture mini-activity distribution makes greedy, top-k, and top-p "
+                "decisions directly comparable."
+            ),
+            context_tokens=["The", " robot", " picked", " up", " the"],
+            candidates=_candidates_from_probabilities(
+                [
+                    ("mug", 0.35),
+                    ("cup", 0.22),
+                    ("bowl", 0.16),
+                    ("robot", 0.09),
+                    ("blue", 0.07),
+                    ("floor", 0.05),
+                    ("banana", 0.04),
+                    ("other", 0.02),
+                ]
+            ),
+            default_options=DecodingOptions(
+                selection_rule="top_p",
+                top_k=3,
+                top_p=0.7,
+                seed=9414,
+            ),
+            metadata={
+                "source": "Foundation Models lecture mini-activity: Decoding Choices",
+                "scores_are_precomputed": True,
+            },
+        ),
+        DecodingExample(
+            name="peaked_distribution",
+            title="Peaked distribution",
+            subtitle="One candidate dominates, so low temperature makes the preference even sharper.",
+            context_tokens=["The", " capital", " of", " France", " is"],
+            candidates=_candidates_from_probabilities(
+                [
+                    ("Paris", 0.82),
+                    ("Lyon", 0.06),
+                    ("London", 0.04),
+                    ("Berlin", 0.03),
+                    ("located", 0.02),
+                    ("a", 0.015),
+                    ("France", 0.01),
+                    ("other", 0.005),
+                ]
+            ),
+            default_options=DecodingOptions(
+                selection_rule="greedy",
+                temperature=0.7,
+                top_k=3,
+                top_p=0.9,
+                seed=9414,
+            ),
+            metadata={"scores_are_precomputed": True},
+        ),
+        DecodingExample(
+            name="flat_distribution",
+            title="Flat distribution",
+            subtitle="Several candidates are plausible, making seeded sampling visibly consequential.",
+            context_tokens=["The", " robot", " could"],
+            candidates=_candidates_from_probabilities(
+                [
+                    ("move", 0.16),
+                    ("wait", 0.15),
+                    ("turn", 0.14),
+                    ("pick", 0.13),
+                    ("scan", 0.12),
+                    ("signal", 0.11),
+                    ("stop", 0.10),
+                    ("other", 0.09),
+                ]
+            ),
+            default_options=DecodingOptions(
+                selection_rule="sampling",
+                temperature=1.3,
+                top_k=4,
+                top_p=0.8,
+                seed=9414,
+            ),
+            metadata={"scores_are_precomputed": True},
+        ),
+        DecodingExample(
+            name="long_tail_distribution",
+            title="Long-tail distribution",
+            subtitle="Top-p adapts the candidate-set size while removing a low-probability tail.",
+            context_tokens=["For", " the", " project", ",", " we", " should"],
+            candidates=_candidates_from_probabilities(
+                [
+                    ("plan", 0.28),
+                    ("use", 0.18),
+                    ("build", 0.13),
+                    ("first", 0.10),
+                    ("consider", 0.08),
+                    ("test", 0.06),
+                    ("ask", 0.05),
+                    ("document", 0.04),
+                    ("compare", 0.03),
+                    ("revisit", 0.025),
+                    ("carefully", 0.02),
+                    ("other", 0.005),
+                ]
+            ),
+            default_options=DecodingOptions(
+                selection_rule="top_p",
+                temperature=1.0,
+                top_k=5,
+                top_p=0.9,
+                seed=9414,
+            ),
+            metadata={"scores_are_precomputed": True},
+        ),
+    ]
+    return {example.name: example for example in examples}
+
+
+def _candidates_from_probabilities(
+    entries: list[tuple[str, float]],
+) -> list[DecodingCandidate]:
+    """Encode a readable curated distribution as fixed logits."""
+
+    return [
+        DecodingCandidate(token=token, logit=math.log(probability))
+        for token, probability in entries
+    ]

@@ -1,4 +1,4 @@
-"""Student-facing API for the foundation models tokenisation explorer."""
+"""Student-facing APIs for the foundation-model teaching explorers."""
 
 from __future__ import annotations
 
@@ -6,10 +6,22 @@ import copy
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
 from ai9414.core import BaseEducationalApp
 from ai9414.core.errors import AI9414Error
-from ai9414.foundation_models.examples import build_corpora, build_examples
+from ai9414.foundation_models.decoding_trace import build_decoding_trace
+from ai9414.foundation_models.examples import (
+    build_corpora,
+    build_decoding_examples,
+    build_examples,
+)
 from ai9414.foundation_models.models import (
+    DecodingCandidate,
+    DecodingConfigModel,
+    DecodingExample,
+    DecodingOptions,
+    DecodingProblem,
     TokenisationConfigModel,
     TokenisationCorpus,
     TokenisationExample,
@@ -99,7 +111,13 @@ class TokenisationExplorer(BaseEducationalApp):
         self.reset_runtime()
 
     def set_options(self, **kwargs: Any) -> None:
-        allowed = {"playback_speed", "tokeniser_mode", "corpus", "num_merges", "context_window"}
+        allowed = {
+            "playback_speed",
+            "tokeniser_mode",
+            "corpus",
+            "num_merges",
+            "context_window",
+        }
         unknown = sorted(set(kwargs) - allowed)
         if unknown:
             raise AI9414Error(
@@ -221,7 +239,9 @@ class TokenisationExplorer(BaseEducationalApp):
             self._trace_bundle = self._build_bundle()
         return self._trace_bundle.model_dump()
 
-    def handle_app_command(self, command: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def handle_app_command(
+        self, command: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
         if command == "set_text":
             text = payload.get("text")
             if not isinstance(text, str):
@@ -263,7 +283,8 @@ class TokenisationExplorer(BaseEducationalApp):
         corpus = self._selected_corpus()
         return TokenisationProblem(
             title=self.base_title or "Tokenisation explorer",
-            subtitle=self.base_subtitle or "Compare text representations across several tokenisers.",
+            subtitle=self.base_subtitle
+            or "Compare text representations across several tokenisers.",
             text=self.custom_text or self.base_text,
             corpus_name=corpus.name,
             corpus_texts=corpus.texts,
@@ -281,3 +302,156 @@ class TokenisationExplorer(BaseEducationalApp):
                 details={"available_corpora": self.list_corpora()},
             )
         return self.corpora[corpus_name]
+
+
+class DecodingExplorer(BaseEducationalApp):
+    """Replay-first next-token decoding over curated, precomputed logits."""
+
+    def __init__(
+        self,
+        *,
+        example: str | None = None,
+        mode: str = "student",
+        execution_mode: str = "precomputed",
+    ) -> None:
+        if execution_mode != "precomputed":
+            raise AI9414Error(
+                code="unsupported_action",
+                message="DecodingExplorer currently supports precomputed execution mode only.",
+            )
+        super().__init__(
+            app_type="foundation_models",
+            app_title="Foundation Models Demo - Decoding Explorer",
+            execution_mode="precomputed",
+            mode=mode,
+        )
+        self.examples = build_decoding_examples()
+        self.example: DecodingExample | None = None
+        self.base_title = ""
+        self.base_subtitle = ""
+        self.context_tokens: list[str] = []
+        self.candidates: list[DecodingCandidate] = []
+        self.options: dict[str, Any] = {}
+        self.load_example(example or "lecture_activity")
+
+    def list_examples(self) -> list[str]:
+        return list(self.examples.keys())
+
+    def load_example(self, name: str) -> None:
+        if name not in self.examples:
+            raise AI9414Error(
+                code="example_not_found",
+                message=f"Example '{name}' was not found.",
+                details={"available_examples": self.list_examples()},
+            )
+        self.example_name = name
+        self.config_name = None
+        self.example = self.examples[name]
+        self.base_title = self.example.title
+        self.base_subtitle = self.example.subtitle
+        self.context_tokens = list(self.example.context_tokens)
+        self.candidates = list(self.example.candidates)
+        self.options = self.example.default_options.model_dump()
+        self.reset_runtime()
+
+    def load_config(self, path: str) -> None:
+        raw = self.load_base_config(path)
+        try:
+            config = DecodingConfigModel.model_validate(raw)
+        except ValidationError as exc:
+            raise AI9414Error(
+                code="invalid_configuration_file",
+                message=(
+                    f"Configuration file '{Path(path).name}' is invalid: "
+                    f"{exc.errors()[0]['msg']}."
+                ),
+                details={"path": str(Path(path).expanduser()), "errors": exc.errors()},
+            ) from exc
+
+        self.example_name = None
+        self.config_name = Path(path).name
+        self.example = None
+        self.base_title = config.data.title
+        self.base_subtitle = config.data.subtitle
+        self.context_tokens = list(config.data.context_tokens)
+        self.candidates = list(config.data.candidates)
+        self.options = DecodingOptions().model_dump()
+        self.set_options(**config.options)
+        self.reset_runtime()
+
+    def set_options(self, **kwargs: Any) -> None:
+        allowed = {
+            "playback_speed",
+            "selection_rule",
+            "temperature",
+            "top_k",
+            "top_p",
+            "seed",
+        }
+        unknown = sorted(set(kwargs) - allowed)
+        if unknown:
+            raise AI9414Error(
+                code="invalid_option_value",
+                message=f"Unknown option(s): {', '.join(unknown)}.",
+                details={"allowed_options": sorted(allowed)},
+            )
+
+        try:
+            options = DecodingOptions.model_validate({**self.options, **kwargs})
+        except ValidationError as exc:
+            raise AI9414Error(
+                code="invalid_option_value",
+                message=exc.errors()[0]["msg"].removeprefix("Value error, "),
+                details={"errors": exc.errors()},
+            ) from exc
+        if options.top_k > len(self.candidates):
+            raise AI9414Error(
+                code="invalid_option_value",
+                message="top_k cannot exceed the candidate count.",
+                details={"candidate_count": len(self.candidates)},
+            )
+        self.options = options.model_dump()
+
+    def build_initial_state(self) -> dict[str, Any]:
+        bundle = self._build_bundle()
+        self._trace_bundle = bundle
+        data = copy.deepcopy(bundle.initial_state)
+        data["playback_speed"] = self.options["playback_speed"]
+        data["options"] = {
+            key: value for key, value in self.options.items() if key != "playback_speed"
+        }
+        return {
+            "schema_version": "1.0",
+            "app_type": self.app_type,
+            "example_name": self.example_name,
+            "config_name": self.config_name,
+            "options": self.options,
+            "view": {"current_step": self.current_step},
+            "data": data,
+        }
+
+    def build_trace(self) -> dict[str, Any]:
+        if self._trace_bundle is None:
+            self._trace_bundle = self._build_bundle()
+        return self._trace_bundle.model_dump()
+
+    def reset_runtime(self) -> None:
+        self.current_step = 0
+        self._base_state_data = {}
+        self._current_state_data = {}
+        self._trace_bundle = None
+        self._trace_cache_complete = False
+        self.ensure_runtime_ready()
+
+    def _build_bundle(self):
+        return build_decoding_trace(self._build_problem())
+
+    def _build_problem(self) -> DecodingProblem:
+        return DecodingProblem(
+            title=self.base_title or "Decoding explorer",
+            subtitle=self.base_subtitle
+            or "Inspect one deterministic next-token decoding decision.",
+            context_tokens=self.context_tokens,
+            candidates=self.candidates,
+            options=DecodingOptions.model_validate(self.options),
+        )

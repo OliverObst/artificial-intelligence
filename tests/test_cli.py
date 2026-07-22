@@ -22,6 +22,8 @@ def test_cli_lists_available_demos(capsys):
     assert "logic-dpll" in captured.out
     assert "logic-resolution" in captured.out
     assert "csp-delivery" in captured.out
+    assert "foundation-models-tokenisation" in captured.out
+    assert "foundation-models-decoding" in captured.out
 
 
 def test_cli_lists_examples_for_one_demo(capsys):
@@ -50,6 +52,22 @@ def test_cli_lists_resolution_examples(capsys):
     assert "- chain_refutation" in captured.out
     assert "- wumpus_no_breeze" in captured.out
     assert "- wumpus_forced_pit" in captured.out
+
+
+def test_cli_exposes_explicit_foundation_model_explorers(capsys):
+    assert cli.main(["list", "--examples", "foundation-models-decoding"]) == 0
+
+    captured = capsys.readouterr()
+    assert "foundation-models-decoding examples:" in captured.out
+    assert "- lecture_activity" in captured.out
+    assert "- peaked_distribution" in captured.out
+
+    backwards_compatible = cli.resolve_demo_spec("foundation-models").factory()
+    tokenisation = cli.resolve_demo_spec("foundation-models-tokenisation").factory()
+    decoding = cli.resolve_demo_spec("foundation-models-decoding").factory()
+    assert backwards_compatible.app_title.endswith("Tokenisation Explorer")
+    assert tokenisation.app_title.endswith("Tokenisation Explorer")
+    assert decoding.app_title.endswith("Decoding Explorer")
 
 
 def test_cli_launches_requested_demo(monkeypatch):
@@ -142,7 +160,10 @@ def test_cli_loads_configuration_before_launch(monkeypatch, tmp_path: Path):
         encoding="utf-8",
     )
 
-    assert cli.main(["demo", "graph-bnb", "--config", str(config_path), "--no-browser"]) == 0
+    assert (
+        cli.main(["demo", "graph-bnb", "--config", str(config_path), "--no-browser"])
+        == 0
+    )
 
     app = launched["app"]
     assert app.app_type == "search"
