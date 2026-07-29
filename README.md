@@ -1,10 +1,10 @@
 # AI9414
 
-`ai9414` is a Python teaching toolkit for interactive artificial intelligence demos. It opens small browser-based visualisations for search, logic, uncertainty, constraint satisfaction, planning, and tokenisation, with simple installed commands that are easy to use in class.
+`ai9414` is a Python teaching toolkit for interactive artificial intelligence demos. It opens small browser-based visualisations for search, logic, uncertainty, constraint satisfaction, planning, and foundation models, with simple installed commands that are easy to use in class.
 
 ![AI9414 branch-and-bound demo screenshot](https://raw.githubusercontent.com/OliverObst/artificial-intelligence/main/docs/images/bnb-demo.png)
 
-It currently includes sixteen ready-to-run demos:
+It currently includes seventeen ready-to-run demos:
 
 - labyrinth DFS search
 - office delivery DFS search
@@ -18,6 +18,7 @@ It currently includes sixteen ready-to-run demos:
 - propositional resolution/refutation
 - reasoning with uncertainty belief-state explorer
 - foundation models tokenisation explorer
+- foundation models next-token decoding explorer
 - CSP map colouring
 - CSP delivery time-slot assignment
 - STRIPS planning
@@ -48,7 +49,9 @@ It currently includes sixteen ready-to-run demos:
 - `reasoning with uncertainty belief-state explorer`
   Start with `ai9414 demo uncertainty`
 - `foundation models tokenisation explorer`
-  Start with `ai9414 demo foundation-models`
+  Start with `ai9414 demo foundation-models-tokenisation`
+- `foundation models next-token decoding explorer`
+  Start with `ai9414 demo foundation-models-decoding`
 - `CSP map colouring`
   Start with `ai9414 demo csp-map`
 - `CSP delivery time-slot assignment`
@@ -62,7 +65,7 @@ It currently includes sixteen ready-to-run demos:
 
 - one installed package with a small command-line interface: `ai9414 ...`
 - browser-based visualisations with packaged frontend assets and no separate web build step
-- curated examples for search, logic, uncertainty, CSP, planning, and tokenisation
+- curated examples for search, logic, uncertainty, CSP, planning, tokenisation, and decoding
 - graph-search examples use conventional `S` and `G` labels for start and goal nodes
 - Python APIs for loading custom problems and launching demos directly from code
 - replayable traces for classroom walkthroughs and static solution export
@@ -179,6 +182,12 @@ To start the foundation models tokenisation example directly from the repository
 
 ```bash
 uv run python examples/foundation_models_demo.py
+```
+
+To start the foundation models decoding example:
+
+```bash
+uv run ai9414 demo foundation-models-decoding
 ```
 
 To start the CSP map-colouring example directly from the repository:
@@ -346,6 +355,16 @@ app = TokenisationExplorer()
 app.load_corpus("office_messages")
 app.learn_merges(12)
 app.set_text("Deliver parcel to Office A before 10:30.")
+app.show()
+```
+
+Foundation models decoding example:
+
+```python
+from ai9414.foundation_models import DecodingExplorer
+
+app = DecodingExplorer()
+app.load_example("lecture_activity")
 app.show()
 ```
 
