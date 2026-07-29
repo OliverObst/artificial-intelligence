@@ -1,0 +1,13 @@
+\documentclass[preview,border=4pt]{standalone}
+\usepackage{amsmath,amssymb,mathtools}
+\newcommand{\model}[1]{\{#1\}}
+\begin{document}
+\[
+\begin{aligned}
+    (Summer \rightarrow Snow) \rightarrow Bizarre
+      &\equiv \neg(\neg Summer \lor Snow) \lor Bizarre\\
+      &\equiv (Summer \land \neg Snow) \lor Bizarre\\
+      &\equiv (Summer \lor Bizarre) \land (\neg Snow \lor Bizarre)
+  \end{aligned}
+\]
+\end{document}

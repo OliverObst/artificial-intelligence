@@ -1,0 +1,14 @@
+\documentclass[preview,border=4pt]{standalone}
+\usepackage{amsmath,amssymb,mathtools}
+\newcommand{\model}[1]{\{#1\}}
+\begin{document}
+\[
+\begin{aligned}
+    ((\neg T \lor F) \rightarrow \neg(T \lor T)) \land (T \leftrightarrow T)
+      &= ((F \lor F) \rightarrow \neg T) \land T\\
+      &= (F \rightarrow F) \land T\\
+      &= T \land T\\
+      &= T
+  \end{aligned}
+\]
+\end{document}
