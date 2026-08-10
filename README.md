@@ -695,3 +695,7 @@ examples/
 tests/
 docs/
 ```
+
+## Acknowledgements
+
+Thanks to Yi Luo <yi.luo7@student.unsw.edu.au> for reporting the uncertainty demo reset-state bug fixed after version 0.2.0.

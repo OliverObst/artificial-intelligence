@@ -367,8 +367,7 @@ class BayesFilterDemo(BaseEducationalApp):
                 }
             )
         elif command == "reset_all":
-            self.events = []
-            self.reset_runtime()
+            self.reset()
         elif command == "randomise_corridor":
             self._randomise_corridor()
         elif command == "set_sensor_model":
@@ -431,6 +430,13 @@ class BayesFilterDemo(BaseEducationalApp):
         self._trace_cache_complete = True
         self.current_step = next_step
         self._current_state_data = self._state_at_index(self.current_step)
+
+    def reset(self) -> None:
+        """Return the interactive corridor and its random stream to their initial state."""
+        self.events = []
+        if self.problem is not None:
+            self._rng = random.Random(self.problem.random_seed)
+        self.reset_runtime()
 
     def _append_event(self, event: dict[str, Any]) -> None:
         self.events.append(event)

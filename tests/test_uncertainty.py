@@ -1,3 +1,5 @@
+from importlib import resources
+
 from fastapi.testclient import TestClient
 
 from ai9414.core.server import create_fastapi_app
@@ -68,6 +70,61 @@ def test_reset_all_keeps_trace_payload_available():
     assert response["state"]["view"]["current_step"] == 0
     assert trace["steps"] == []
     assert trace["initial_state"]["uncertainty"]["posterior_belief"] == [0.1] * 10
+
+
+def test_move_after_reset_all_starts_from_initial_belief():
+    app = BayesFilterDemo(
+        motion_success=0.5,
+        motion_stay=0.5,
+        motion_overshoot=0.0,
+    )
+    app.handle_app_command("move", {"direction": "right"})
+    app.handle_app_command("move", {"direction": "right"})
+    app.handle_app_command("reset_all", {})
+
+    response = app.handle_app_command("move", {"direction": "left"})
+    fresh_response = BayesFilterDemo(
+        motion_success=0.5,
+        motion_stay=0.5,
+        motion_overshoot=0.0,
+    ).handle_app_command("move", {"direction": "left"})
+
+    assert len(response["trace"]["steps"]) == 1
+    assert (
+        response["state"]["data"]["uncertainty"]["posterior_belief"]
+        == fresh_response["state"]["data"]["uncertainty"]["posterior_belief"]
+    )
+    assert (
+        response["state"]["data"]["uncertainty"]["current_true_position"]
+        == fresh_response["state"]["data"]["uncertainty"]["current_true_position"]
+    )
+
+
+def test_standard_reset_action_clears_uncertainty_runtime_state():
+    app = BayesFilterDemo()
+    app.handle_app_command("move", {"direction": "right"})
+
+    reset_response = app.handle_action({"action": "reset"})
+    move_response = app.handle_app_command("move", {"direction": "left"})
+
+    assert reset_response["trace"]["steps"] == []
+    assert reset_response["state"]["view"]["current_step"] == 0
+    assert len(move_response["trace"]["steps"]) == 1
+
+
+def test_main_reset_clears_uncertainty_backend_state():
+    app_js = (
+        resources.files("ai9414.frontend")
+        .joinpath("student")
+        .joinpath("app.js")
+        .read_text(encoding="utf-8")
+    )
+
+    reset_handler = app_js.split('$("reset-button").addEventListener', maxsplit=1)[1]
+    reset_handler = reset_handler.split('$("reload-button").addEventListener', maxsplit=1)[0]
+
+    assert 'state.player.mode !== "live"' in reset_handler
+    assert 'await runUncertaintyCommand("reset_all")' in reset_handler
 
 
 def test_bayes_filter_exercise_factory_hides_true_position():

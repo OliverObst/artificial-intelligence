@@ -9597,8 +9597,12 @@ function bindEvents() {
       }
     });
   });
-  $("reset-button").addEventListener("click", () => {
+  $("reset-button").addEventListener("click", async () => {
     stopPlay();
+    if (isUncertainty() && state.player.mode !== "live") {
+      await runUncertaintyCommand("reset_all");
+      return;
+    }
     state.player.stepIndex = 0;
     state.view.planningSelectedAction = "";
     render();
