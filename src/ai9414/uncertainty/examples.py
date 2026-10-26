@@ -10,7 +10,7 @@ def build_examples() -> dict[str, UncertaintyExample]:
         UncertaintyExample(
             name="two_doors",
             title="Two identical doors",
-            subtitle="A uniform prior becomes ambiguous after one door reading, then motion and later evidence resolve it.",
+            subtitle="A door reading supports two locations; motion and later evidence shift both hypotheses without resolving the tie.",
             problem=make_problem(
                 title="Two identical doors",
                 subtitle="Default 10-cell corridor with doors at cells 2 and 6.",
@@ -44,10 +44,10 @@ def build_examples() -> dict[str, UncertaintyExample]:
         UncertaintyExample(
             name="bad_sensor",
             title="Bad sensor",
-            subtitle="A weak sensor can make evidence barely useful or actively misleading.",
+            subtitle="A positive reading gives weak evidence against being at a door when the hit rate is below the false alarm rate.",
             problem=make_problem(
                 title="Bad sensor",
-                subtitle="The hit rate is no better than the false alarm rate.",
+                subtitle="The sensor is weakly informative, with the direction of evidence reversed.",
                 landmarks={"door": [2, 6], "wall": [10]},
                 true_position=6,
                 sensor_hit=0.45,

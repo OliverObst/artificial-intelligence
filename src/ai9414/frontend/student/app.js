@@ -1792,204 +1792,50 @@ Your solver returns:
 - optional stats
 `;
 
-const UNCERTAINTY_PYTHON_STUB = `"""
-Week 7: Reasoning with uncertainty
-Bayes filter corridor exercise
-
-This file asks you to implement the two main operations used by a simple
-Bayes filter:
-
-1. sensor_update:
-   Use noisy evidence to update a belief distribution.
-
-2. motion_update:
-   Use an uncertain action model to predict the next belief distribution.
-
-The belief is a list of probabilities, one per corridor cell.
-The probabilities should always sum to 1.
-"""
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-
-
-@dataclass
-class Corridor:
-    cells: int
-    door_cells: set[int]
-
-
-@dataclass
-class SensorModel:
-    hit: float = 0.8
-    false_alarm: float = 0.2
-
-
-@dataclass
-class MotionModel:
-    success: float = 0.8
-    stay: float = 0.1
-    overshoot: float = 0.1
-
-
-def normalise(values: list[float]) -> list[float]:
-    """
-    Return a new list whose values sum to 1.
-
-    TODO:
-    - compute the total
-    - raise ValueError if the total is zero
-    - divide each value by the total
-    """
-    raise NotImplementedError
-
-
-def sensor_update(
-    belief: list[float],
-    corridor: Corridor,
-    sensor: SensorModel,
-    sees_door: bool,
-) -> list[float]:
-    """
-    Update belief after observing whether the robot sees a door.
-
-    If the robot is at a door cell:
-        P(sees_door=True) = sensor.hit
-
-    If the robot is not at a door cell:
-        P(sees_door=True) = sensor.false_alarm
-
-    TODO:
-    - for each cell, compute the likelihood of the observation
-    - multiply the old belief by that likelihood
-    - normalise the result
-    """
-    raise NotImplementedError
-
-
-def motion_update_right(
-    belief: list[float],
-    motion: MotionModel,
-) -> list[float]:
-    """
-    Predict the next belief after the robot tries to move right.
-
-    The motion model is:
-
-    - success:   move one cell right
-    - stay:      remain in the same cell
-    - overshoot: move two cells right
-
-    At the end of the corridor, clamp movement to the last cell.
-
-    TODO:
-    - create a new belief list filled with zeros
-    - distribute probability mass from each old cell
-    - return the new belief
-    """
-    raise NotImplementedError
-
-
-def most_likely_cell(belief: list[float]) -> int:
-    """
-    Return the 1-based index of the most likely cell.
-    """
-    return max(range(len(belief)), key=lambda i: belief[i]) + 1
-
-
-def assert_close(a: float, b: float, eps: float = 1e-6) -> None:
-    assert abs(a - b) < eps, f"{a} != {b}"
-
-
-def run_checks() -> None:
-    corridor = Corridor(cells=5, door_cells={1, 3})
-    sensor = SensorModel(hit=0.8, false_alarm=0.2)
-    motion = MotionModel(success=0.8, stay=0.1, overshoot=0.1)
-
-    belief = [0.2] * 5
-    updated = sensor_update(belief, corridor, sensor, sees_door=True)
-
-    assert_close(sum(updated), 1.0)
-
-    expected = [
-        0.04 / 0.44,
-        0.16 / 0.44,
-        0.04 / 0.44,
-        0.16 / 0.44,
-        0.04 / 0.44,
-    ]
-
-    for got, exp in zip(updated, expected):
-        assert_close(got, exp)
-
-    moved = motion_update_right(updated, motion)
-    assert_close(sum(moved), 1.0)
-
-    print("All checks passed.")
-
-
-def run_demo() -> None:
-    corridor = Corridor(cells=5, door_cells={1, 3})  # cells 2 and 4
-    sensor = SensorModel(hit=0.8, false_alarm=0.2)
-    motion = MotionModel(success=0.8, stay=0.1, overshoot=0.1)
-
-    belief = [1 / corridor.cells] * corridor.cells
-
-    print("Initial belief:")
-    print(belief)
-
-    belief = sensor_update(belief, corridor, sensor, sees_door=True)
-    print("\\nAfter sensing a door:")
-    print(belief)
-    print("Most likely cell:", most_likely_cell(belief))
-
-    belief = motion_update_right(belief, motion)
-    print("\\nAfter moving right:")
-    print(belief)
-    print("Most likely cell:", most_likely_cell(belief))
-
-    belief = sensor_update(belief, corridor, sensor, sees_door=False)
-    print("\\nAfter sensing no door:")
-    print(belief)
-    print("Most likely cell:", most_likely_cell(belief))
-
-
-if __name__ == "__main__":
-    run_demo()
-    # Uncomment once you have implemented the TODO functions:
-    # run_checks()
-`;
-
-const UNCERTAINTY_PYTHON_REQUIREMENTS = ``;
+const UNCERTAINTY_PYTHON_REQUIREMENTS = `ai9414>=0.2.1\n`;
 
 const UNCERTAINTY_PYTHON_README = `# Week 7 Bayes filter corridor
 
-This folder contains the Week 7 reasoning-with-uncertainty exercise stub.
-Your job is to implement the Bayes-filter update rules directly.
+Implement normalise, sensor_update and motion_update_right in
+week7_bayes_filter_stub.py. The core functions use only the Python standard
+library. The live browser workflow also uses ai9414.
 
-## install
+## Install
 
-No external dependency is required for the core exercise. The requirements file
-is included only so the folder matches the other ai9414 downloads.
+    python -m pip install -r requirements.txt
 
-    pip install -r requirements.txt
+## Standalone checks and example
 
-## run
+After implementing the three functions:
 
-Run the exercise script with:
+    python week7_bayes_filter_stub.py --check
+    python week7_bayes_filter_stub.py --demo
+
+The standalone example has five cells and doors at cells 2 and 4.
+
+## Live browser workflow
+
+Start your solver and leave this terminal running:
 
     python week7_bayes_filter_stub.py
 
-## what to implement
+In a second terminal, launch the browser demo:
 
-Open week7_bayes_filter_stub.py and implement:
+    ai9414 demo uncertainty
 
-- normalise(...)
-- sensor_update(...)
-- motion_update_right(...)
+Click Solve with Python. The browser sends its current corridor and scripted
+sequence to http://127.0.0.1:9414/solve and receives a replayable belief trace.
+Use Next or Play to inspect the returned updates. If a function is unfinished,
+the browser displays which function to implement. Save your changes and restart
+the solver before trying again.
 
-Once those are complete, uncomment run_checks() at the bottom of the file.
+The browser defaults to ten cells and doors at cells 2 and 6. Its final belief
+has a tie between cells 3 and 7. The adapter passes the selected landmark's
+zero-based cells to your four-argument sensor_update function, so other example
+landmarks work too.
+
+Manual Sense and Move buttons use the built-in demo. Solve with Python runs
+your functions on the example's scripted sequence.
 `;
 
 const CSP_PYTHON_STUB = `from __future__ import annotations
@@ -5371,6 +5217,8 @@ function currentStep() {
       teaching_note:
         isFoundationModels() && !trace.steps?.length
           ? "This tokeniser is static. Edit the input or choose learned BPE to explore merge steps."
+          : isUncertainty() && !trace.steps?.length
+          ? "Click Sense or Move to create an update, or Solve with Python to run your local solver."
           : "Step forward or press play to begin.",
     };
   }
@@ -5595,8 +5443,8 @@ function renderMetrics(data) {
   }
   if (isUncertainty()) {
     const uncertainty = data.uncertainty || {};
-    $("metric-1-label").textContent = "Most likely cell";
-    $("metric-1-value").textContent = uncertainty.most_likely_cell ? `cell ${uncertainty.most_likely_cell}` : "none";
+    $("metric-1-label").textContent = "Most likely cells";
+    $("metric-1-value").textContent = uncertaintyMostLikelyText(uncertainty);
     $("metric-2-label").textContent = "Confidence";
     $("metric-2-value").textContent = `${Math.round((uncertainty.most_likely_probability || 0) * 100)}%`;
     $("metric-3-label").textContent = "Entropy";
@@ -8464,6 +8312,14 @@ function uncertaintyLandmarkText(cell) {
   return (cell.landmarks || []).length ? cell.landmarks.join(", ").replace(/_/g, " ") : "none";
 }
 
+function uncertaintyMostLikelyText(uncertainty) {
+  const cells = uncertainty.most_likely_cells ||
+    (uncertainty.most_likely_cell ? [uncertainty.most_likely_cell] : []);
+  if (!cells.length) return "none";
+  if (cells.length === uncertainty.cell_count) return "all cells (tied)";
+  return cells.length === 1 ? `cell ${cells[0]}` : `cells ${cells.join(", ")} (tied)`;
+}
+
 function uncertaintyWarningText(uncertainty) {
   if (uncertainty.warning) return uncertainty.warning;
   if (uncertainty.weak_maximum) return "Most likely does not mean certain.";
@@ -8522,7 +8378,7 @@ function renderUncertaintyInternal(data) {
   beliefSection.appendChild(beliefGrid);
   const total = document.createElement("p");
   total.className = "uncertainty-note";
-  total.textContent = `Total probability: ${formatProbability(uncertainty.total_probability, 3)}. Most likely position: cell ${uncertainty.most_likely_cell}, P = ${formatProbability(uncertainty.most_likely_probability, 2)}.`;
+  total.textContent = `Total probability: ${formatProbability(uncertainty.total_probability, 3)}. Most likely: ${uncertaintyMostLikelyText(uncertainty)}, P = ${formatProbability(uncertainty.most_likely_probability, 2)}.`;
   beliefSection.appendChild(total);
   shell.appendChild(beliefSection);
 
@@ -8618,7 +8474,7 @@ function renderUncertaintyInternal(data) {
     const label = document.createElement("strong");
     label.textContent = `${entry.step_index}. ${entry.label}`;
     const meta = document.createElement("span");
-    meta.textContent = `${entry.summary} | peak cell ${entry.most_likely_cell}, P = ${formatProbability(entry.most_likely_probability, 2)}`;
+    meta.textContent = `${entry.summary} | peak ${uncertaintyMostLikelyText(entry)}, P = ${formatProbability(entry.most_likely_probability, 2)}`;
     button.append(label, meta);
     historyList.appendChild(button);
   });
@@ -8658,7 +8514,7 @@ function renderUncertaintyWorldPanel(data) {
     },
     {
       label: "Most likely",
-      value: `cell ${uncertainty.most_likely_cell}`,
+      value: uncertaintyMostLikelyText(uncertainty),
     },
     {
       label: "Confidence",
@@ -8774,7 +8630,7 @@ function renderUncertaintyWorld(data) {
         x: 500,
         y: 105,
       },
-      `Total probability ${formatProbability(uncertainty.total_probability, 3)} | most likely cell ${uncertainty.most_likely_cell}`
+      `Total probability ${formatProbability(uncertainty.total_probability, 3)} | most likely ${uncertaintyMostLikelyText(uncertainty)}`
     )
   );
 
@@ -9330,7 +9186,19 @@ async function solveWithPython() {
   }
 }
 
-function downloadPythonStub() {
+async function downloadPythonStub() {
+  let uncertaintyStub = "";
+  if (isUncertainty()) {
+    try {
+      const response = await fetch("/assets/week7_bayes_filter_stub.py");
+      if (!response.ok) throw new Error("Could not download the Bayes-filter starter.");
+      uncertaintyStub = await response.text();
+    } catch (error) {
+      setMessage(error.message || "Could not download the Bayes-filter starter.");
+      render();
+      return;
+    }
+  }
   const archive = createZipArchive(
     isLogic()
       ? [
@@ -9340,7 +9208,7 @@ function downloadPythonStub() {
         ]
       : isUncertainty()
       ? [
-          { name: "ai9414/week7_bayes_filter_stub.py", content: UNCERTAINTY_PYTHON_STUB },
+          { name: "ai9414/week7_bayes_filter_stub.py", content: uncertaintyStub },
           { name: "ai9414/requirements.txt", content: UNCERTAINTY_PYTHON_REQUIREMENTS },
           { name: "ai9414/README.md", content: UNCERTAINTY_PYTHON_README },
         ]

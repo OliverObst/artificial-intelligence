@@ -470,8 +470,8 @@ function renderMetrics(data) {
   }
   if (isUncertainty()) {
     const uncertainty = data.uncertainty || {};
-    $("metric-1-label").textContent = "Most likely cell";
-    $("metric-1-value").textContent = uncertainty.most_likely_cell ? `cell ${uncertainty.most_likely_cell}` : "none";
+    $("metric-1-label").textContent = "Most likely cells";
+    $("metric-1-value").textContent = uncertaintyMostLikelyText(uncertainty);
     $("metric-2-label").textContent = "Confidence";
     $("metric-2-value").textContent = `${Math.round((uncertainty.most_likely_probability || 0) * 100)}%`;
     $("metric-3-label").textContent = "Entropy";
@@ -3016,6 +3016,14 @@ function uncertaintyLandmarkText(cell) {
   return (cell.landmarks || []).length ? cell.landmarks.join(", ").replace(/_/g, " ") : "none";
 }
 
+function uncertaintyMostLikelyText(uncertainty) {
+  const cells = uncertainty.most_likely_cells ||
+    (uncertainty.most_likely_cell ? [uncertainty.most_likely_cell] : []);
+  if (!cells.length) return "none";
+  if (cells.length === uncertainty.cell_count) return "all cells (tied)";
+  return cells.length === 1 ? `cell ${cells[0]}` : `cells ${cells.join(", ")} (tied)`;
+}
+
 function uncertaintyWarningText(uncertainty) {
   if (uncertainty.warning) return uncertainty.warning;
   if (uncertainty.weak_maximum) return "Most likely does not mean certain.";
@@ -3073,7 +3081,7 @@ function renderUncertaintyInternal(data) {
   beliefSection.appendChild(beliefGrid);
   const total = document.createElement("p");
   total.className = "uncertainty-note";
-  total.textContent = `Total probability: ${formatProbability(uncertainty.total_probability, 3)}. Most likely position: cell ${uncertainty.most_likely_cell}, P = ${formatProbability(uncertainty.most_likely_probability, 2)}.`;
+  total.textContent = `Total probability: ${formatProbability(uncertainty.total_probability, 3)}. Most likely: ${uncertaintyMostLikelyText(uncertainty)}, P = ${formatProbability(uncertainty.most_likely_probability, 2)}.`;
   beliefSection.appendChild(total);
   shell.appendChild(beliefSection);
 
@@ -3156,7 +3164,7 @@ function renderUncertaintyInternal(data) {
     const label = document.createElement("strong");
     label.textContent = `${entry.step_index}. ${entry.label}`;
     const meta = document.createElement("span");
-    meta.textContent = `${entry.summary} | peak cell ${entry.most_likely_cell}, P = ${formatProbability(entry.most_likely_probability, 2)}`;
+    meta.textContent = `${entry.summary} | peak ${uncertaintyMostLikelyText(entry)}, P = ${formatProbability(entry.most_likely_probability, 2)}`;
     button.append(label, meta);
     historyList.appendChild(button);
   });
@@ -3189,7 +3197,7 @@ function renderUncertaintyWorldPanel(data) {
     },
     {
       label: "Most likely",
-      value: `cell ${uncertainty.most_likely_cell}`,
+      value: uncertaintyMostLikelyText(uncertainty),
     },
     {
       label: "Confidence",
@@ -3264,7 +3272,7 @@ function renderUncertaintyWorld(data) {
     svgNode(
       "text",
       { class: "uncertainty-world-subtitle", x: 500, y: 105 },
-      `Total probability ${formatProbability(uncertainty.total_probability, 3)} | most likely cell ${uncertainty.most_likely_cell}`
+      `Total probability ${formatProbability(uncertainty.total_probability, 3)} | most likely ${uncertaintyMostLikelyText(uncertainty)}`
     )
   );
 

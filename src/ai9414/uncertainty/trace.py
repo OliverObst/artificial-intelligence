@@ -20,9 +20,6 @@ ALGORITHM_NOTE = (
     "A Bayes filter keeps a whole probability distribution over possible states. "
     "Sensor updates usually concentrate belief; uncertain motion usually spreads it."
 )
-SENSOR_WARNING = (
-    "This sensor is not informative. It is no better than, or worse than, a false alarm model."
-)
 
 
 def build_uncertainty_trace(
@@ -191,14 +188,18 @@ def apply_operation(
             landmark,
             present,
         )
+        expected = reference_normalise(unnormalised)
+        if normalise_fn is not None:
+            normalised = validate_belief(
+                normalise_fn(list(unnormalised)), problem.cells, function_name="normalise"
+            )
+            if not beliefs_close(normalised, expected):
+                raise ValueError("normalise must preserve the relative probability masses.")
         if sensor_update_fn is None:
             posterior = reference_sensor_update(prior, problem, active_sensor, present, landmark)
         else:
             posterior = sensor_update_fn(copy.deepcopy(prior), problem, active_sensor, present, landmark)
-        if normalise_fn is not None:
-            posterior = normalise_fn([value * 1.0 for value in posterior])
         posterior = validate_belief(posterior, problem.cells, function_name="sensor_update")
-        expected = reference_normalise(unnormalised)
         if not beliefs_close(posterior, expected):
             raise ValueError("sensor_update returned a distribution that does not match the Bayes sensor update.")
         label = f"Sense {'no ' if not present else ''}{format_landmark(landmark)}"
@@ -243,6 +244,7 @@ def apply_operation(
             )
             if not beliefs_close(student_posterior, posterior):
                 raise ValueError("motion_update_right returned a distribution that does not match the reference update.")
+            posterior = student_posterior
         posterior = validate_belief(posterior, problem.cells, function_name="motion_update")
         new_true_position = operation.get("true_position")
         if new_true_position is None:
@@ -531,12 +533,15 @@ def build_snapshot(
     status: str,
 ) -> dict[str, Any]:
     rows = build_cell_rows(problem, prior, predicted, likelihoods, unnormalised, posterior, true_position)
-    most_likely_index = max(range(len(posterior)), key=lambda index: posterior[index])
+    peak_cells = most_likely_cells(posterior)
+    most_likely_index = peak_cells[0] - 1
     entropy = belief_entropy(posterior)
     total_probability = sum(posterior)
     warning = ""
     if not sensor_model.informative:
-        warning = SENSOR_WARNING
+        warning = "This sensor is uninformative: equal hit and false alarm rates leave belief unchanged for possible observations."
+    elif sensor_model.hit < sensor_model.false_alarm:
+        warning = "This sensor provides reversed evidence: a positive reading favours cells without the observed landmark."
     elif not math.isclose(total_probability, 1.0, rel_tol=1e-6, abs_tol=1e-6):
         warning = "Warning: belief does not sum to 1. Check the update rule."
     return {
@@ -576,7 +581,11 @@ def build_snapshot(
             "history": copy.deepcopy(history),
             "most_likely_index": most_likely_index,
             "most_likely_cell": most_likely_index + 1,
-            "most_likely_label": f"Cell {most_likely_index + 1}",
+            "most_likely_cells": peak_cells,
+            "most_likely_label": (
+                f"Cell {peak_cells[0]}" if len(peak_cells) == 1
+                else "Cells " + ", ".join(str(cell) for cell in peak_cells)
+            ),
             "most_likely_probability": float(posterior[most_likely_index]),
             "weak_maximum": posterior[most_likely_index] < 0.5,
             "normalisation_constant": float(normalisation_constant),
@@ -598,7 +607,7 @@ def build_cell_rows(
     posterior: Belief,
     true_position: int | None,
 ) -> list[dict[str, Any]]:
-    most_likely_index = max(range(len(posterior)), key=lambda index: posterior[index])
+    peak_cells = set(most_likely_cells(posterior))
     rows = []
     for index in range(problem.cells):
         landmarks = [name for name, indices in problem.landmarks.items() if index in indices]
@@ -615,7 +624,7 @@ def build_cell_rows(
                 "unnormalised": float(unnormalised[index]),
                 "posterior": float(posterior[index]),
                 "is_true_position": true_position == index,
-                "is_most_likely": most_likely_index == index,
+                "is_most_likely": index + 1 in peak_cells,
             }
         )
     return rows
@@ -630,6 +639,7 @@ def reset_history_entry(problem: CorridorProblem, belief: Belief) -> dict[str, A
         "belief_before": list(belief),
         "belief_after": list(belief),
         "most_likely_cell": max(range(problem.cells), key=lambda index: belief[index]) + 1,
+        "most_likely_cells": most_likely_cells(belief),
         "most_likely_probability": max(belief),
         "true_position": problem.initial_true_position,
     }
@@ -656,6 +666,7 @@ def build_history_entry(
         "belief_before": list(before),
         "belief_after": list(after),
         "most_likely_cell": most_likely_index + 1,
+        "most_likely_cells": most_likely_cells(after),
         "most_likely_probability": float(after[most_likely_index]),
         "true_position": true_position,
         "sensor_model": sensor_model.model_dump(),
@@ -716,6 +727,15 @@ def motion_annotation(posterior: Belief, direction: str) -> str:
 def top_cell_labels(belief: Belief, *, limit: int = 2) -> str:
     ordered = sorted(range(len(belief)), key=lambda index: belief[index], reverse=True)[:limit]
     return " and ".join(f"cell {index + 1} (P = {belief[index]:.2f})" for index in ordered)
+
+
+def most_likely_cells(belief: Belief) -> list[int]:
+    """Return all one-based maxima, allowing for floating-point round-off."""
+    peak = max(belief)
+    return [
+        index + 1 for index, probability in enumerate(belief)
+        if math.isclose(probability, peak, rel_tol=1e-9, abs_tol=1e-12)
+    ]
 
 
 def format_landmark(landmark: str) -> str:

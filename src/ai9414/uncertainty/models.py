@@ -26,7 +26,8 @@ class SensorModel(AI9414Model):
 
     @property
     def informative(self) -> bool:
-        return self.hit > self.false_alarm
+        """Different likelihoods carry information, including reversed sensors."""
+        return self.hit != self.false_alarm
 
 
 class MotionModel(AI9414Model):

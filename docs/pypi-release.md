@@ -13,8 +13,8 @@ The repository is now structured for PyPI distribution:
 Run the following from a clean working tree:
 
 ```bash
-uv sync --extra dev
-uv run pytest
+uv sync --locked --extra dev --no-default-groups
+uv run --no-sync pytest
 uv build
 uv run twine check dist/*
 ```
@@ -47,13 +47,15 @@ Before the first upload:
 
 ## Release checklist
 
-1. Bump `version` in `pyproject.toml`.
-2. Commit and push the version bump to `main`.
-3. Rebuild locally with `uv build`.
-4. Re-run `uv run twine check dist/*`.
-5. Test-install the wheel in a fresh virtual environment.
+1. Bump `version` in `pyproject.toml` and run `uv lock`.
+2. Run the tests, build, distribution checks and fresh-wheel verification above.
+3. Commit and push the release changes to `main`.
+4. Confirm that the committed version matches the tested distributions.
+5. Check that the new version has not already been published.
 6. Tag the release, for example `git tag v0.1.1 && git push origin v0.1.1`.
-7. GitHub Actions will build the distributions and publish them to PyPI.
+7. GitHub Actions will run the tests, build the distributions and publish them to PyPI.
+8. Verify the workflow succeeded, install the published version in a fresh
+   environment, and create a GitHub release with the changes and upgrade command.
 
 ## Manual fallback
 

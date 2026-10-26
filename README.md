@@ -323,6 +323,16 @@ app = BayesFilterDemo.example("two_doors")
 app.show()
 ```
 
+In the browser, click **Sense door**, **Move right**, then **Sense no door**.
+The final belief has two equally likely locations, cells 3 and 7. **Reset**
+clears the interactive history and restores the initial belief and random stream.
+
+**Download Python stub** supplies the three Bayes-filter functions to implement.
+Run the downloaded script to start the local solver, then click **Solve with
+Python** to replay its result. The same script supports `--check` and `--demo`
+for standalone work. See the [uncertainty exercise guide](docs/uncertainty.md)
+for the complete workflow.
+
 Set up a custom corridor:
 
 ```python
@@ -698,4 +708,4 @@ docs/
 
 ## Acknowledgements
 
-Thanks to Yi Luo <yi.luo7@student.unsw.edu.au> for reporting the uncertainty demo reset-state bug fixed after version 0.2.0.
+Thanks to Yi Luo <yi.luo7@student.unsw.edu.au> for reporting the uncertainty demo reset-state bug fixed in version 0.2.1.

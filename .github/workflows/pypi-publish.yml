@@ -24,6 +24,12 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
 
+      - name: Install test dependencies
+        run: uv sync --locked --extra dev --no-default-groups
+
+      - name: Run tests
+        run: uv run --no-sync pytest
+
       - name: Build distributions
         run: uv build
 
